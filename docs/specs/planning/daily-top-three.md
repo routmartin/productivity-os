@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Proposed
 
 ## Problem
 
@@ -42,28 +42,37 @@ I know what deserves my attention.
 4. A task cannot appear more than once in the same day's Top 3. The same task may
    appear in the Top 3 of different dates.
 5. Only eligible tasks may be newly selected. A task is eligible when it is active
-   and incomplete, and does not belong to an archived project.
+   and incomplete, has not been deleted, and does not belong to an archived
+   project. (Active, incomplete, and deleted are defined by the Task Management
+   specification.)
 6. When a Top 3 task is completed, it remains in that day's Top 3 at its position,
-   is marked completed, and continues to occupy its slot.
-7. When a completed Top 3 task is reopened, it remains in that day's Top 3 and is
-   displayed as incomplete.
-8. Unfinished Top 3 tasks do not automatically carry over to the next day. Each
+   is marked completed, and continues to occupy its slot. Completed is a terminal
+   lifecycle state: a completed task remains completed and cannot be reopened
+   (per the Task Management specification).
+7. Unfinished Top 3 tasks do not automatically carry over to the next day. Each
    day's Top 3 is selected explicitly.
-9. Removing a task from the Top 3 does not delete the task, and frees its slot.
-10. The Top 3 for today and future dates can be edited (add, reorder, remove). The
-    Top 3 for past dates is view-only.
-11. If a selected task is deleted, it is immediately removed from the active Top 3
-    (today and future dates) and its slot is freed. Its historical selection is
-    preserved: when viewing that date's history, the deleted task is displayed as
-    "Deleted task" at its original position.
-12. If a selected task belongs to an archived project, the task remains visible in
+8. Removing a task from the Top 3 does not delete the task. Remaining tasks shift
+   upward to fill the freed position (for example, removing the task at position 1
+   moves positions 2 and 3 up to positions 1 and 2).
+9. The Top 3 for today and future dates can be edited (add, reorder, remove). The
+   Top 3 for past dates is view-only.
+10. If a selected task is deleted, it is immediately removed from the active Top 3
+    (today and future dates) and remaining tasks shift upward to fill the freed
+    position. Its historical selection is preserved and becomes visible once that
+    date is viewed as history: the deleted task is displayed as "Deleted task" at
+    its original position. Restoring a deleted task does not re-add it to any
+    Top 3; a restored task can be newly selected again while it is eligible.
+11. If a selected task belongs to an archived project, the task remains visible in
     that day's existing Top 3.
-13. There is no separate Top 3 history feature. Viewing previous dates is the
+12. There is no separate Top 3 history feature. Viewing previous dates is the
     history.
-14. When a selection is rejected because the Top 3 is full, the user receives
+13. When a selection is rejected because the Top 3 is full, the user receives
     clear feedback that the Top 3 is full.
-15. When a task cannot be selected because it is ineligible, the user receives
+14. When a task cannot be selected because it is ineligible, the user receives
     clear feedback explaining why.
+15. When viewing a past date, each task's completion state is frozen as it was at
+    the end of that calendar day. Completing the task on a later date does not
+    change the historical view.
 
 ## Constraints
 
@@ -74,7 +83,14 @@ I know what deserves my attention.
 2. Top 3 selections must be persisted server-side and associated with the user and
    the date.
 3. The backend must support multi-device synchronization of Top 3 selections.
-   Concurrent edits to the same date's Top 3 are resolved with last-write-wins.
+   Concurrent edits to the same date's Top 3 are resolved with last-write-wins
+   based on server receipt time.
+
+## Known Limitations
+
+- Last-write-wins uses server receipt time: an edit made on an offline device can
+  overwrite a newer edit from another device when it reconnects. Accepted for now;
+  revisit if conflict handling becomes a priority.
 
 ## Acceptance Criteria
 
@@ -143,18 +159,12 @@ Given a task is in a date's Top 3,
 when the project it belongs to is archived,
 then the task remains visible in that date's Top 3.
 
-### AC-011 — Reopened task remains in Top 3
-
-Given a completed task is in today's Top 3,
-when the task is reopened,
-then the task remains in today's Top 3 and is displayed as incomplete.
-
 ### AC-012 — Removing a task frees its slot without deleting it
 
-Given a task is in today's Top 3,
-when the user removes it from today's Top 3,
-then the task no longer appears in today's Top 3, its slot is freed, and the task
-itself still exists.
+Given today's Top 3 contains tasks at positions 1–3,
+when the user removes the task at position 1,
+then the task no longer appears in today's Top 3, the task itself still exists,
+and the remaining tasks shift upward to positions 1 and 2.
 
 ### AC-013 — No automatic carry-over
 
@@ -178,7 +188,8 @@ then the modification is rejected and the saved Top 3 is unchanged.
 
 Given a task is in the Top 3 of today or a future date,
 when the task is deleted,
-then it is immediately removed from that active Top 3 and its slot is freed.
+then it is immediately removed from that active Top 3 and remaining tasks shift
+upward to fill the freed position.
 
 ### AC-017 — Deleted task preserved in historical view
 
@@ -227,7 +238,19 @@ then the saved Top 3 remains associated with its original calendar date.
 
 Given the same date's Top 3 is edited on two devices,
 when both edits are synchronized,
-then the most recent write wins.
+then the edit most recently received by the server wins.
+
+### AC-025 — Historical completion state is frozen (completed later)
+
+Given a task in date D's Top 3 was incomplete at the end of date D,
+when the task is completed on a later date and the user views date D,
+then the task is displayed as incomplete on date D.
+
+### AC-027 — Restoring a deleted task does not re-add it
+
+Given a task was removed from today's active Top 3 because it was deleted,
+when the task is restored,
+then the task does not reappear in today's Top 3.
 
 ## Edge Cases
 
@@ -235,9 +258,10 @@ then the most recent write wins.
 - Fewer than three eligible tasks exist: the user may select fewer than three;
   this is a valid state (AC-021).
 - A task is deleted after being selected: it is immediately removed from the
-  active Top 3 and its slot is freed (AC-016); its historical selection is
-  preserved and shown as "Deleted task" at its original position in that date's
-  history (AC-017).
+  active Top 3 and remaining tasks shift upward (AC-016); its historical
+  selection is preserved and shown as "Deleted task" at its original position
+  once that date is viewed as history (AC-017). Restoring the task later does
+  not re-add it to any Top 3 (AC-027).
 - A task belongs to an archived project: it remains visible in an existing Top 3
   (AC-010) but cannot be newly selected (AC-009).
 
@@ -251,17 +275,20 @@ then the most recent write wins.
 
 ## Dependencies
 
-- Task management specification.
-- Daily planning specification.
+- Task management specification (`docs/specs/tasks/task-management.md`): source
+  of truth for the task lifecycle. It defines "active", "incomplete", and
+  "deleted" (its Rules 13–19), makes Completed a terminal state (its Rule 9,
+  AC-017), and defines the soft-delete and restore behavior this specification
+  relies on (its Rules 15–18).
+- Daily planning specification: defines the "daily dashboard".
+- Project management specification: defines "archived project" behavior.
+
+These dependencies are acknowledged and do not block this specification from
+being Proposed.
 
 ## Open Questions
 
-- When a task is removed or deleted from a Top 3, do remaining tasks keep their
-  positions or shift to fill the gap?
-- When viewing a past date, is each task's completion status rendered from its
-  current state or frozen as of that date?
-- Is a same-day historical view available (e.g., after a task is deleted on the
-  same day it was selected), or does "history" only apply to past dates?
+None.
 
 ## Change History
 
@@ -276,3 +303,17 @@ then the most recent write wins.
   default position is the next available position; full-Top-3 rejections and
   ineligible selections produce clear user-facing feedback; visual prominence
   deferred to design.
+- Resolved remaining product decisions: removal and deletion shift remaining tasks
+  upward; historical views freeze completion state at the end of the calendar day;
+  same-day deletions become visible once the date is viewed as history; confirmed
+  "next available position" means the lowest unoccupied position; last-write-wins
+  uses server receipt time (documented as a known limitation); cross-spec terms
+  remain non-blocking dependencies. Status changed to Proposed.
+- Cross-spec reconciliation with Task Management (lifecycle source of truth):
+  removed reopening of completed tasks — Completed is terminal. Deleted Rule 7
+  (reopen) and AC-011/AC-026; renumbered Rules 8–16 to 7–15; Rule 6 now states
+  completed tasks remain completed; Rule 15 no longer references reopening.
+  Eligibility explicitly excludes deleted tasks (Rule 5). Restoring a deleted
+  task does not re-add it to any Top 3 (Rule 10, new AC-027). Dependencies now
+  name Task Management and Project management explicitly. Status remains
+  Proposed.
