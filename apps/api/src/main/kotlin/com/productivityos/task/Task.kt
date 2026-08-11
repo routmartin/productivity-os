@@ -30,6 +30,20 @@ data class Task(
         return copy(status = TaskStatus.COMPLETED, completedAt = now)
     }
 
+    fun cancel(): Task {
+        require(canBeCancelled) { "Cannot cancel a task in $status state" }
+        require(deletedAt == null) { "Cannot cancel a deleted task" }
+        return copy(status = TaskStatus.CANCELLED)
+    }
+
+    fun reopen(): Task {
+        requireTransition(TaskStatus.CANCELLED, TaskStatus.PLANNED)
+        return copy(status = TaskStatus.PLANNED)
+    }
+
+    private val canBeCancelled: Boolean
+        get() = status == TaskStatus.INBOX || status == TaskStatus.PLANNED || status == TaskStatus.IN_PROGRESS
+
     private fun requireTransition(from: TaskStatus, to: TaskStatus) {
         require(status == from) {
             "Cannot transition from $status to $to"

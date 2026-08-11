@@ -4,5 +4,6 @@ enum class TaskStatus {
     INBOX,
     PLANNED,
     IN_PROGRESS,
-    COMPLETED
+    COMPLETED,
+    CANCELLED
 }

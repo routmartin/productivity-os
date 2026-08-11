@@ -22,6 +22,8 @@ class TaskController(
     private val listTasksService: ListTasksService,
     private val transitionTaskService: TransitionTaskService,
     private val completeTaskService: CompleteTaskService,
+    private val cancelTaskService: CancelTaskService,
+    private val reopenTaskService: ReopenTaskService,
     private val deleteTaskService: DeleteTaskService,
     private val restoreTaskService: RestoreTaskService,
     private val currentUser: CurrentUser
@@ -55,6 +57,16 @@ class TaskController(
     @PostMapping("/{id}/completion")
     fun complete(@PathVariable id: UUID): TaskResponse {
         return completeTaskService.complete(id, currentUser.id())
+    }
+
+    @PostMapping("/{id}/cancellation")
+    fun cancel(@PathVariable id: UUID): TaskResponse {
+        return cancelTaskService.cancel(id, currentUser.id())
+    }
+
+    @PostMapping("/{id}/reopening")
+    fun reopen(@PathVariable id: UUID): TaskResponse {
+        return reopenTaskService.reopen(id, currentUser.id())
     }
 
     @DeleteMapping("/{id}")
