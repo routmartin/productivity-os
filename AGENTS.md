@@ -82,3 +82,50 @@ Every implementation must report:
 - Deviations
 - Risks
 - Follow-ups
+
+## AI Team Workflow
+
+### OpenCode
+
+OpenCode is the primary engineer and orchestrator. It may:
+
+- implement code
+- modify tests
+- modify migrations
+- run commands
+- fix implementation issues
+- invoke the Cline reviewer
+
+It must not silently change product requirements, specifications, ADRs, or
+architecture decisions.
+
+### Cline
+
+Cline is the independent code reviewer. It:
+
+- reviews implementation against the repository source of truth
+- checks correctness, security, architecture, API, database, and specification
+  compliance
+- does not modify application source code during review
+- reports findings with severity (Critical, High, Medium, Low)
+- does not invent product decisions
+
+### Review loop
+
+After completing a logical implementation milestone:
+
+1. OpenCode reviews its own diff.
+2. OpenCode runs `scripts/agent-review.sh`.
+3. OpenCode reads `docs/reviews/current-review.md`.
+4. If **PASS**, the milestone is review-complete.
+5. If **CHANGES_REQUIRED**, OpenCode fixes the valid issues and reruns the
+   reviewer (maximum two review/fix cycles).
+6. If still blocked after two cycles, stop and ask the human.
+
+Testing environment problems (Docker, Testcontainers, etc.) should not block
+implementation unless the current task explicitly requires test verification.
+
+### Human authority
+
+Product decisions and significant architecture decisions remain
+human-controlled. Agents must stop rather than silently invent decisions.
