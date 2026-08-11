@@ -1,5 +1,6 @@
 package com.productivityos.task
 
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -9,6 +10,7 @@ import java.util.UUID
 @Transactional
 class DeleteTaskService(
     private val taskRepository: TaskRepository,
+    private val eventPublisher: ApplicationEventPublisher,
     private val clock: Clock
 ) {
 
@@ -22,5 +24,7 @@ class DeleteTaskService(
         entity.deletedAt = clock.instant()
         entity.updatedAt = clock.instant()
         taskRepository.save(entity)
+
+        eventPublisher.publishEvent(TaskDeletedEvent(taskId, ownerId))
     }
 }
