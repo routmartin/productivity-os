@@ -36,6 +36,17 @@ class TaskEntity(
     val dueDate: LocalDate? = null,
 
     @Enumerated(EnumType.STRING)
+    @Column
+    val priority: Priority? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column
+    val energy: Energy? = null,
+
+    @Column(name = "estimated_duration_minutes")
+    val estimatedDurationMinutes: Int? = null,
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var status: TaskStatus = TaskStatus.INBOX,
 
@@ -61,6 +72,9 @@ class TaskEntity(
         title = title,
         description = description,
         dueDate = dueDate,
+        priority = priority,
+        energy = energy,
+        estimatedDurationMinutes = estimatedDurationMinutes,
         status = status,
         completedAt = completedAt,
         deletedAt = deletedAt,
@@ -68,12 +82,24 @@ class TaskEntity(
     )
 
     companion object {
-        fun from(ownerId: UUID, title: String, description: String?, dueDate: LocalDate?, now: Instant): TaskEntity =
+        fun from(
+            ownerId: UUID,
+            title: String,
+            description: String?,
+            dueDate: LocalDate?,
+            priority: Priority? = null,
+            energy: Energy? = null,
+            estimatedDurationMinutes: Int? = null,
+            now: Instant
+        ): TaskEntity =
             TaskEntity(
                 userId = ownerId,
                 title = title,
                 description = description,
                 dueDate = dueDate,
+                priority = priority,
+                energy = energy,
+                estimatedDurationMinutes = estimatedDurationMinutes,
                 createdAt = now,
                 updatedAt = now
             )

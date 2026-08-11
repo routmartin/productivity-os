@@ -20,6 +20,9 @@ class CreateTaskService(
             title = request.title,
             description = request.description,
             dueDate = request.dueDate,
+            priority = request.priority,
+            energy = request.energy,
+            estimatedDurationMinutes = request.estimatedDurationMinutes,
             now = now
         )
         val saved = taskRepository.save(entity)
