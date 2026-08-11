@@ -15,35 +15,32 @@ LATEST_FILE="$REPO_ROOT/gpt/current.md"
   echo "**Repository:** $REPO_ROOT"
   echo ""
 
-  echo "## Files"
+  for module in user task goal project topthree; do
+    echo "### Source ($module module)"
+    echo ""
+    find "apps/api/src/main/kotlin/com/productivityos/$module" -name "*.kt" 2>/dev/null | sort | while read f; do
+      echo "- \`$f\`"
+    done
+    echo ""
+  done
+
+  echo "### Source (api/other)"
   echo ""
-  echo "### Source (user module)"
-  echo ""
-  find apps/api/src/main/kotlin/com/productivityos/user -name "*.kt" | sort | while read f; do
+  find apps/api/src/main/kotlin/com/productivityos -maxdepth 1 -name "*.kt" 2>/dev/null | sort | while read f; do
     echo "- \`$f\`"
   done
   echo ""
-  echo "### Source (task module)"
-  echo ""
-  find apps/api/src/main/kotlin/com/productivityos/task -name "*.kt" | sort | while read f; do
+  find apps/api/src/main/kotlin/com/productivityos/api -name "*.kt" 2>/dev/null | sort | while read f; do
     echo "- \`$f\`"
   done
-  echo ""
-  echo "### Source (other)"
-  echo ""
-  find apps/api/src/main/kotlin/com/productivityos -maxdepth 1 -name "*.kt" | sort | while read f; do
-    echo "- \`$f\`"
-  done
-  echo ""
-  find apps/api/src/main/kotlin/com/productivityos/api -name "*.kt" | sort | while read f; do
-    echo "- \`$f\`"
-  done
+
   echo ""
   echo "### Migrations"
   echo ""
   find apps/api/src/main/resources/db/migration -name "*.sql" | sort | while read f; do
     echo "- \`$f\`"
   done
+
   echo ""
   echo "### Config"
   echo ""
@@ -52,12 +49,14 @@ LATEST_FILE="$REPO_ROOT/gpt/current.md"
   echo "- \`docker-compose.yml\`"
   echo "- \`settings.gradle.kts\`"
   echo "- \`build.gradle.kts\`"
+
   echo ""
   echo "### Agent infrastructure"
   echo ""
   echo "- \`.cline/rules/reviewer.md\`"
   echo "- \`.opencode/commands/review.md\`"
   echo "- \`scripts/agent-review.sh\`"
+
   echo ""
   echo "## Database Tables"
   echo ""
@@ -66,6 +65,11 @@ LATEST_FILE="$REPO_ROOT/gpt/current.md"
   echo "| V1__baseline.sql | pgcrypto extension |"
   echo "| V2__users.sql | users, refresh_tokens |"
   echo "| V3__tasks.sql | tasks |"
+  echo "| V4__task_cancelled.sql | (CHECK constraint update) |"
+  echo "| V5__daily_top_three.sql | daily_top_three |"
+  echo "| V6__projects.sql | projects, tasks.project_id |"
+  echo "| V7__task_attributes.sql | tasks.priority, energy, estimated_duration_minutes |"
+  echo "| V8__goals.sql | goals, projects FK |"
 
   echo ""
   echo "## API Endpoints"
@@ -75,22 +79,61 @@ LATEST_FILE="$REPO_ROOT/gpt/current.md"
   echo "| Method | Path | Response |"
   echo "|--------|------|----------|"
   echo "| POST | /api/v1/auth/register | 201 { id, email, timezone } |"
-  echo "| POST | /api/v1/auth/login | 200 { accessToken, user } + Set-Cookie: refresh_token |"
-  echo "| POST | /api/v1/auth/refresh | 200 { accessToken } + Set-Cookie: refresh_token |"
-  echo "| POST | /api/v1/auth/logout | 204 + Set-Cookie: refresh_token= (cleared) |"
-  echo "| GET | /api/v1/health | 200 { status: \"ok\" } |"
+  echo "| POST | /api/v1/auth/login | 200 { accessToken, user } |"
+  echo "| POST | /api/v1/auth/refresh | 200 { accessToken } |"
+  echo "| POST | /api/v1/auth/logout | 204 |"
+  echo "| GET | /api/v1/health | 200 { status } |"
+
   echo ""
-  echo "### Protected (Authorization: Bearer \<jwt\>)"
+  echo "### Tasks (Authorization: Bearer \<jwt\>)"
   echo ""
-  echo "| Method | Path | Response |"
-  echo "|--------|------|----------|"
-  echo "| POST | /api/v1/tasks | 201 { id, ownerId, title, status: \"INBOX\", ... } |"
-  echo "| GET | /api/v1/tasks?page=&size= | 200 [ { ... } ] |"
-  echo "| POST | /api/v1/tasks/{id}/plan | 200 { ... status: \"PLANNED\" } |"
-  echo "| POST | /api/v1/tasks/{id}/start | 200 { ... status: \"IN_PROGRESS\" } |"
-  echo "| POST | /api/v1/tasks/{id}/completion | 200 { ... status: \"COMPLETED\", completedAt } |"
-  echo "| DELETE | /api/v1/tasks/{id} | 204 |"
-  echo "| POST | /api/v1/tasks/{id}/restoration | 200 { ... deletedAt: null } |"
+  echo "| Method | Path | Purpose |"
+  echo "|--------|------|---------|"
+  echo "| POST | /api/v1/tasks | Create task |"
+  echo "| GET | /api/v1/tasks?page=&size= | List active tasks |"
+  echo "| POST | /api/v1/tasks/{id}/plan | Inbox→Planned |"
+  echo "| POST | /api/v1/tasks/{id}/start | Planned→InProgress |"
+  echo "| POST | /api/v1/tasks/{id}/completion | InProgress→Completed |"
+  echo "| POST | /api/v1/tasks/{id}/cancellation | →Cancelled |"
+  echo "| POST | /api/v1/tasks/{id}/reopening | Cancelled→Planned |"
+  echo "| DELETE | /api/v1/tasks/{id} | Soft delete |"
+  echo "| POST | /api/v1/tasks/{id}/restoration | Restore |"
+  echo "| PUT | /api/v1/tasks/{id}/project | Assign to project |"
+
+  echo ""
+  echo "### Daily Top 3"
+  echo ""
+  echo "| Method | Path | Purpose |"
+  echo "|--------|------|---------|"
+  echo "| GET | /api/v1/daily-top-three/{date} | View Top 3 |"
+  echo "| POST | /api/v1/daily-top-three/{date} | Select task |"
+  echo "| PUT | /api/v1/daily-top-three/{date}/{id}/position | Reorder |"
+  echo "| DELETE | /api/v1/daily-top-three/{date}/{id} | Remove |"
+
+  echo ""
+  echo "### Projects"
+  echo ""
+  echo "| Method | Path | Purpose |"
+  echo "|--------|------|---------|"
+  echo "| POST | /api/v1/projects | Create (Draft) |"
+  echo "| GET | /api/v1/projects | List all |"
+  echo "| GET | /api/v1/projects/{id} | Get by ID |"
+  echo "| POST | /api/v1/projects/{id}/activation | Draft→Active |"
+  echo "| POST | /api/v1/projects/{id}/completion | Active→Completed |"
+  echo "| POST | /api/v1/projects/{id}/archival | Completed→Archived |"
+
+  echo ""
+  echo "### Goals"
+  echo ""
+  echo "| Method | Path | Purpose |"
+  echo "|--------|------|---------|"
+  echo "| POST | /api/v1/goals | Create (Draft) |"
+  echo "| GET | /api/v1/goals | List all |"
+  echo "| GET | /api/v1/goals/{id} | Get by ID |"
+  echo "| POST | /api/v1/goals/{id}/activation | Draft→Active |"
+  echo "| POST | /api/v1/goals/{id}/completion | Active→Completed |"
+  echo "| POST | /api/v1/goals/{id}/reopening | Completed→Active |"
+  echo "| POST | /api/v1/goals/{id}/archival | Completed→Archived |"
 
   echo ""
   echo "## Error Handling"
@@ -102,16 +145,17 @@ LATEST_FILE="$REPO_ROOT/gpt/current.md"
   echo "| DuplicateEmailException | 409 | EMAIL_TAKEN |"
   echo "| DataIntegrityViolationException | 409 | EMAIL_TAKEN |"
   echo "| DateTimeException | 400 | INVALID_TIMEZONE |"
-  echo "| MethodArgumentNotValidException | 400 | VALIDATION_ERROR (per-field) |"
+  echo "| MethodArgumentNotValidException | 400 | VALIDATION_ERROR |"
   echo "| TaskNotFoundException | 404 | NOT_FOUND |"
   echo "| IllegalArgumentException | 409 | CONFLICT |"
+  echo "| Exception (fallback) | 500 | INTERNAL_ERROR |"
 
   echo ""
   echo "## Build"
   echo ""
 
-  if ./gradlew --no-daemon --no-build-cache compileKotlin compileTestKotlin -q 2>&1; then
-    echo "**BUILD: PASS** — compileKotlin + compileTestKotlin"
+  if ./gradlew --no-daemon --no-build-cache :apps:api:compileKotlin :apps:api:compileTestKotlin -q 2>&1; then
+    echo "**BUILD: PASS**"
   else
     echo "**BUILD: FAIL**"
   fi
