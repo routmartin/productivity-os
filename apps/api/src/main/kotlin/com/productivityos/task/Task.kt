@@ -12,7 +12,8 @@ data class Task(
     val dueDate: LocalDate? = null,
     val status: TaskStatus = TaskStatus.INBOX,
     val completedAt: Instant? = null,
-    val deletedAt: Instant? = null
+    val deletedAt: Instant? = null,
+    val projectId: UUID? = null
 ) {
 
     fun plan(): Task {

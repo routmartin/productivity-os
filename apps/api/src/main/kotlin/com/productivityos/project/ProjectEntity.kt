@@ -1,4 +1,4 @@
-package com.productivityos.task
+package com.productivityos.project
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -14,8 +14,8 @@ import java.time.LocalDate
 import java.util.UUID
 
 @Entity
-@Table(name = "tasks")
-class TaskEntity(
+@Table(name = "projects")
+class ProjectEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID? = null,
@@ -23,8 +23,8 @@ class TaskEntity(
     @Column(name = "user_id", nullable = false)
     val userId: UUID,
 
-    @Column(name = "project_id")
-    var projectId: UUID? = null,
+    @Column(name = "goal_id")
+    val goalId: UUID? = null,
 
     @Column(nullable = false)
     val title: String,
@@ -32,18 +32,15 @@ class TaskEntity(
     @Column
     val description: String? = null,
 
-    @Column(name = "due_date")
-    val dueDate: LocalDate? = null,
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var status: TaskStatus = TaskStatus.INBOX,
+    var status: ProjectStatus = ProjectStatus.DRAFT,
+
+    @Column
+    val deadline: LocalDate? = null,
 
     @Column(name = "completed_at")
     var completedAt: Instant? = null,
-
-    @Column(name = "deleted_at")
-    var deletedAt: Instant? = null,
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
@@ -54,26 +51,25 @@ class TaskEntity(
     @Version
     var version: Long = 0
 ) {
-
-    fun toDomain(): Task = Task(
+    fun toDomain(): Project = Project(
         id = id!!,
-        ownerId = userId,
+        userId = userId,
         title = title,
         description = description,
-        dueDate = dueDate,
+        goalId = goalId,
         status = status,
-        completedAt = completedAt,
-        deletedAt = deletedAt,
-        projectId = projectId
+        deadline = deadline,
+        completedAt = completedAt
     )
 
     companion object {
-        fun from(ownerId: UUID, title: String, description: String?, dueDate: LocalDate?, now: Instant): TaskEntity =
-            TaskEntity(
-                userId = ownerId,
+        fun from(userId: UUID, title: String, description: String?, goalId: UUID?, deadline: LocalDate?, now: Instant): ProjectEntity =
+            ProjectEntity(
+                userId = userId,
                 title = title,
                 description = description,
-                dueDate = dueDate,
+                goalId = goalId,
+                deadline = deadline,
                 createdAt = now,
                 updatedAt = now
             )

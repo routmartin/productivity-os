@@ -1,33 +1,31 @@
-package com.productivityos.task
+package com.productivityos.project
 
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
-data class TaskResponse(
+data class ProjectResponse(
     val id: UUID,
-    val ownerId: UUID,
+    val userId: UUID,
     val title: String,
     val description: String?,
-    val dueDate: LocalDate?,
-    val status: TaskStatus,
+    val goalId: UUID?,
+    val status: ProjectStatus,
+    val deadline: LocalDate?,
     val completedAt: Instant?,
-    val deletedAt: Instant?,
-    val projectId: UUID?,
     val createdAt: Instant,
     val updatedAt: Instant
 ) {
     companion object {
-        fun from(entity: TaskEntity): TaskResponse = TaskResponse(
+        fun from(entity: ProjectEntity): ProjectResponse = ProjectResponse(
             id = entity.id!!,
-            ownerId = entity.userId,
+            userId = entity.userId,
             title = entity.title,
             description = entity.description,
-            dueDate = entity.dueDate,
+            goalId = entity.goalId,
             status = entity.status,
+            deadline = entity.deadline,
             completedAt = entity.completedAt,
-            deletedAt = entity.deletedAt,
-            projectId = entity.projectId,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt
         )
