@@ -1,0 +1,79 @@
+package com.productivityos.project
+
+import com.productivityos.task.TaskRepository
+import com.productivityos.user.CurrentUser
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.Clock
+import java.util.UUID
+
+@Service
+@Transactional
+class ProjectService(
+    private val projectRepository: ProjectRepository,
+    private val taskRepository: TaskRepository,
+    private val currentUser: CurrentUser,
+    private val clock: Clock
+) {
+    fun create(request: CreateProjectRequest): ProjectResponse {
+        val now = clock.instant()
+        val entity = ProjectEntity.from(
+            userId = currentUser.id(),
+            title = request.title,
+            description = request.description,
+            goalId = request.goalId,
+            deadline = request.deadline,
+            now = now
+        )
+        return ProjectResponse.from(projectRepository.save(entity))
+    }
+
+    @Transactional(readOnly = true)
+    fun listAll(): List<ProjectResponse> {
+        return projectRepository.findAllByUserId(currentUser.id())
+            .map { ProjectResponse.from(it) }
+    }
+
+    @Transactional(readOnly = true)
+    fun getById(projectId: UUID, userId: UUID): ProjectResponse {
+        return ProjectResponse.from(loadOwned(projectId, userId))
+    }
+
+    fun activate(projectId: UUID, userId: UUID): ProjectResponse {
+        val entity = loadOwned(projectId, userId)
+        entity.toDomain().activate()
+        entity.status = ProjectStatus.ACTIVE
+        entity.updatedAt = clock.instant()
+        return ProjectResponse.from(projectRepository.save(entity))
+    }
+
+    fun complete(projectId: UUID, userId: UUID): ProjectResponse {
+        val entity = loadOwned(projectId, userId)
+        val unresolvedCount = taskRepository.countByProjectIdAndUserIdAndStatusNotCompleted(
+            projectId, userId
+        )
+        require(unresolvedCount == 0L) {
+            "Project has $unresolvedCount unresolved incomplete task(s)"
+        }
+        val completed = entity.toDomain().complete(clock.instant())
+        entity.status = ProjectStatus.COMPLETED
+        entity.completedAt = completed.completedAt
+        entity.updatedAt = clock.instant()
+        return ProjectResponse.from(projectRepository.save(entity))
+    }
+
+    fun archive(projectId: UUID, userId: UUID): ProjectResponse {
+        val entity = loadOwned(projectId, userId)
+        entity.toDomain().archive()
+        entity.status = ProjectStatus.ARCHIVED
+        entity.updatedAt = clock.instant()
+        return ProjectResponse.from(projectRepository.save(entity))
+    }
+
+    private fun loadOwned(projectId: UUID, userId: UUID): ProjectEntity {
+        val entity = projectRepository.findById(projectId).orElse(null)
+            ?: throw NoSuchElementException("Project not found: $projectId")
+        require(entity.userId == userId) { "Project does not belong to the current user" }
+        return entity
+    }
+}
