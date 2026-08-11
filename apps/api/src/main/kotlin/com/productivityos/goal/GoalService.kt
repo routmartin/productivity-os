@@ -2,7 +2,6 @@ package com.productivityos.goal
 
 import com.productivityos.project.ProjectRepository
 import com.productivityos.project.ProjectStatus
-import com.productivityos.user.CurrentUser
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -13,13 +12,12 @@ import java.util.UUID
 class GoalService(
     private val goalRepository: GoalRepository,
     private val projectRepository: ProjectRepository,
-    private val currentUser: CurrentUser,
     private val clock: Clock
 ) {
-    fun create(request: CreateGoalRequest): GoalResponse {
+    fun create(userId: UUID, request: CreateGoalRequest): GoalResponse {
         val now = clock.instant()
         val entity = GoalEntity.from(
-            userId = currentUser.id(),
+            userId = userId,
             title = request.title,
             description = request.description,
             deadline = request.deadline,
@@ -99,8 +97,8 @@ class GoalService(
     }
 
     @Transactional(readOnly = true)
-    fun listAll(): List<GoalResponse> {
-        return goalRepository.findAllByUserId(currentUser.id())
+    fun listAll(userId: UUID): List<GoalResponse> {
+        return goalRepository.findAllByUserId(userId)
             .map { GoalResponse.from(it) }
     }
 

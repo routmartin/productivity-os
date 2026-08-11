@@ -20,14 +20,14 @@ class ProjectController(
 ) {
     @PostMapping
     fun create(@Valid @RequestBody request: CreateProjectRequest): ResponseEntity<ProjectResponse> {
-        val project = projectService.create(request)
+        val project = projectService.create(currentUser.id(), request)
         val location = URI.create("/api/v1/projects/${project.id}")
         return ResponseEntity.created(location).body(project)
     }
 
     @GetMapping
     fun list(): List<ProjectResponse> {
-        return projectService.listAll()
+        return projectService.listAll(currentUser.id())
     }
 
     @GetMapping("/{id}")

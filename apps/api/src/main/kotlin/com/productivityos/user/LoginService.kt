@@ -4,12 +4,7 @@ import org.springframework.security.crypto.argon2.Argon2PasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
 import java.time.Clock
-import java.util.Base64
-
-class AuthenticationException(message: String) : RuntimeException(message)
 
 @Service
 @Transactional
@@ -44,7 +39,7 @@ class LoginService(
 
         val accessToken = tokenService.generateAccessToken(user.id!!)
         val refreshToken = tokenService.generateRefreshToken()
-        val refreshTokenHash = hashToken(refreshToken)
+        val refreshTokenHash = TokenHasher.hash(refreshToken)
 
         val persisted = RefreshToken(
             userId = user.id,
@@ -60,11 +55,5 @@ class LoginService(
             refreshToken = refreshToken,
             user = user
         )
-    }
-
-    private fun hashToken(token: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val hash = digest.digest(token.toByteArray(StandardCharsets.UTF_8))
-        return Base64.getEncoder().encodeToString(hash)
     }
 }

@@ -1,4 +1,4 @@
-package com.productivityos.user
+package com.productivityos.config
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

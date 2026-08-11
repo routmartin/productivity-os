@@ -2,10 +2,7 @@ package com.productivityos.user
 
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
 import java.time.Clock
-import java.util.Base64
 
 @Service
 @Transactional
@@ -21,7 +18,7 @@ class RefreshTokenService(
     )
 
     fun refresh(presentedRefreshToken: String): TokenPair {
-        val tokenHash = hashToken(presentedRefreshToken)
+        val tokenHash = TokenHasher.hash(presentedRefreshToken)
         val stored = refreshTokenRepository.findByTokenHash(tokenHash)
             ?: throw InvalidRefreshTokenException()
 
@@ -39,7 +36,7 @@ class RefreshTokenService(
 
         val newAccessToken = tokenService.generateAccessToken(stored.userId)
         val newRefreshToken = tokenService.generateRefreshToken()
-        val newRefreshTokenHash = hashToken(newRefreshToken)
+        val newRefreshTokenHash = TokenHasher.hash(newRefreshToken)
 
         val rotated = RefreshToken(
             userId = stored.userId,
@@ -58,7 +55,7 @@ class RefreshTokenService(
     }
 
     fun logout(refreshToken: String) {
-        val tokenHash = hashToken(refreshToken)
+        val tokenHash = TokenHasher.hash(refreshToken)
         val stored = refreshTokenRepository.findByTokenHash(tokenHash) ?: return
         stored.revokedAt = clock.instant()
         refreshTokenRepository.save(stored)
@@ -87,12 +84,4 @@ class RefreshTokenService(
             child = nextChild
         }
     }
-
-    private fun hashToken(token: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val hash = digest.digest(token.toByteArray(StandardCharsets.UTF_8))
-        return Base64.getEncoder().encodeToString(hash)
-    }
 }
-
-class InvalidRefreshTokenException : RuntimeException("Invalid refresh token")

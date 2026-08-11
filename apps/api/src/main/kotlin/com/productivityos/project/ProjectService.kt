@@ -1,7 +1,6 @@
 package com.productivityos.project
 
 import com.productivityos.task.TaskRepository
-import com.productivityos.user.CurrentUser
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -12,13 +11,12 @@ import java.util.UUID
 class ProjectService(
     private val projectRepository: ProjectRepository,
     private val taskRepository: TaskRepository,
-    private val currentUser: CurrentUser,
     private val clock: Clock
 ) {
-    fun create(request: CreateProjectRequest): ProjectResponse {
+    fun create(userId: UUID, request: CreateProjectRequest): ProjectResponse {
         val now = clock.instant()
         val entity = ProjectEntity.from(
-            userId = currentUser.id(),
+            userId = userId,
             title = request.title,
             description = request.description,
             goalId = request.goalId,
@@ -29,8 +27,8 @@ class ProjectService(
     }
 
     @Transactional(readOnly = true)
-    fun listAll(): List<ProjectResponse> {
-        return projectRepository.findAllByUserId(currentUser.id())
+    fun listAll(userId: UUID): List<ProjectResponse> {
+        return projectRepository.findAllByUserId(userId)
             .map { ProjectResponse.from(it) }
     }
 

@@ -20,14 +20,14 @@ class GoalController(
 ) {
     @PostMapping
     fun create(@Valid @RequestBody request: CreateGoalRequest): ResponseEntity<GoalResponse> {
-        val goal = goalService.create(request)
+        val goal = goalService.create(currentUser.id(), request)
         val location = URI.create("/api/v1/goals/${goal.id}")
         return ResponseEntity.created(location).body(goal)
     }
 
     @GetMapping
     fun list(): List<GoalResponse> {
-        return goalService.listAll()
+        return goalService.listAll(currentUser.id())
     }
 
     @GetMapping("/{id}")

@@ -1,7 +1,6 @@
 package com.productivityos.topthree
 
 import com.productivityos.task.TaskDeletedEvent
-import com.productivityos.task.TaskRestoredEvent
 import com.productivityos.user.UserTimezoneService
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
@@ -31,9 +30,5 @@ class TopThreeSyncService(
             remaining.sortedBy { it.position }
                 .forEachIndexed { index, entity -> entity.position = index + 1 }
         }
-    }
-
-    @EventListener
-    fun onTaskRestored(event: TaskRestoredEvent) {
     }
 }
