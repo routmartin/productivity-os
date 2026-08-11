@@ -8,4 +8,7 @@ interface ProjectRepository : JpaRepository<ProjectEntity, UUID> {
 
     @Query("SELECT p FROM ProjectEntity p WHERE p.userId = :userId ORDER BY p.createdAt DESC")
     fun findAllByUserId(userId: UUID): List<ProjectEntity>
+
+    @Query("SELECT p FROM ProjectEntity p WHERE p.goalId = :goalId AND p.userId = :userId")
+    fun findByGoalIdAndUserId(goalId: UUID, userId: UUID): List<ProjectEntity>
 }
