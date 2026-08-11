@@ -1,0 +1,17 @@
+# Gradle / JVM
+.gradle/
+build/
+out/
+**/build/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# Node (future apps/web)
+node_modules/
+dist/

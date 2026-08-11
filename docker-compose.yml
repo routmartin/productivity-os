@@ -1,0 +1,18 @@
+# Local development PostgreSQL (Plan 001, Step 2; ADR-003).
+# Testcontainers starts its own PostgreSQL for tests; this compose file is
+# only for running the app locally.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: productivity-os-postgres
+    environment:
+      POSTGRES_DB: productivity_os
+      POSTGRES_USER: productivity
+      POSTGRES_PASSWORD: productivity
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:
