@@ -15,6 +15,7 @@ import { useAuthStore } from "@/features/auth/store";
 import ComingSoonPage from "@/pages/ComingSoonPage.vue";
 import InboxPage from "@/pages/InboxPage.vue";
 import LoginPage from "@/pages/LoginPage.vue";
+import ProjectsPage from "@/pages/ProjectsPage.vue";
 import TasksPage from "@/pages/TasksPage.vue";
 import TodayPage from "@/pages/TodayPage.vue";
 
@@ -71,15 +72,8 @@ export const router = createRouter({
         {
           path: "projects",
           name: "projects",
-          component: ComingSoonPage,
-          meta: {
-            title: "Projects",
-            icon: Folder,
-            implemented: false,
-            blurb:
-              "Bodies of work that group tasks toward an outcome, from draft to archived.",
-            milestone: "Milestone 3",
-          },
+          component: ProjectsPage,
+          meta: { title: "Projects", icon: Folder, implemented: true },
         },
         {
           path: "goals",
