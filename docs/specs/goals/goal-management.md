@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Proposed
 
 ## Purpose
 
@@ -88,6 +88,14 @@ Active
 ```
 
 An Archived Goal cannot be reopened.
+
+An Active Goal may return to Draft:
+
+```text
+Active
+    ↓
+Draft
+```
 
 ---
 
@@ -548,32 +556,27 @@ then the Goal becomes Completed and its Projects become Archived.
 
 ---
 
-# Open Questions
+# Resolved Questions
 
-1. What exact priority should a Goal have, if any?
-2. What exact success criteria should a Goal support?
-3. What happens to a Goal deadline when the Goal is reopened?
-4. Can a user add new Projects to a Completed Goal after reopening?
-5. What happens when a Project associated with a Goal is independently
-   archived?
-6. What should happen to a cancelled Project if the user selects it for
-   reactivation?
-7. Can a Goal move directly from Draft to Completed?
-8. Can an Active Goal return to Draft?
-9. Can the Goal's associated Projects be changed after the Goal is Active?
-10. Should Goal completion require explicit user confirmation?
-11. What happens to Projects when an Active Goal is Archived?
+1. **Goal priority?** None for V1. Priority emerges from Daily Top 3 and Daily Planning.
+2. **Success criteria?** None for V1. Success is determined by project completion. Progress spec will define this later.
+3. **Deadline when reopened?** Stays as-is. User updates manually if needed.
+4. **Add projects to reopened goal?** Yes. After reopen, the goal is Active — works like any Active goal.
+5. **Project independently archived while goal Active?** It is resolved and stays archived. Does not block completion.
+6. **Cancelled project during goal reopen?** N/A in V1. Projects do not have a CANCELLED state. Revisit if added later.
+7. **Draft → Completed directly?** No. Must go Draft → Active → Completed.
+8. **Active → Draft?** Yes. Returns a goal to planning. Added to lifecycle.
+9. **Change projects while Active?** Yes. Add/remove freely while Draft or Active.
+10. **Confirmation for goal completion?** UI concern. API performs the action; frontend confirms.
+11. **Projects when Active Goal archived?** Cannot happen. Only Completed goals can be archived. Moot.
+
 
 ---
 
 # Change History
 
-- Initial Goal Management specification created during the SDD domain phase.
-- Lifecycle approved as Draft → Active → Completed → Archived.
-- Completed Goals approved to be reopenable.
-- Goals approved to contain zero or more Projects.
-- Standalone Goals approved.
-- Goal completion requires all associated Projects to be Completed or Cancelled,
-  unless the Goal has no Projects.
-- Completing a Goal automatically archives its Projects.
-- Reopening a Goal requires explicit selection of Projects to reactivate.
+- Resolved all 11 open questions: no V1 priority/success criteria, deadline stays on reopen,
+  projects can be added after reopen, independently archived projects are resolved, no
+  CANCELLED state for projects in V1, no Draft→Completed shortcut, Active→Draft allowed,
+  projects changeable while Active, confirmation is UI concern, Active goal archival not
+  possible. Added Active→Draft to lifecycle. Status changed to Proposed.
