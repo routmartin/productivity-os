@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Proposed
 
 ## Problem
 
@@ -352,20 +352,20 @@ then the transition is rejected until the task is restored.
   and not in an archived project (Rules 13 and 18), and its AC-016/AC-017 rely on
   the deletion and history-preservation rules defined here (Rules 15–18).
 
-## Open Questions
+## Resolved Questions
 
-- "Inbox" names both a lifecycle state and the project-less membership. Are these
-  the same concept? What is the initial lifecycle state of a task created
-  directly inside a project?
-- Can a task move directly from one project to another, or must it pass through
-  Inbox?
-- What are the allowed value sets for priority and energy level, and the units
-  for estimated duration?
-- Are due dates interpreted in the user's configured timezone? May a due date be
-  in the past?
-- Are tasks expected to synchronize across devices, as Top 3 selections are?
+- **"Inbox" as lifecycle state vs project-less membership:** These are distinct but aligned concepts. "Inbox" lifecycle state means "captured, not yet planned." "Inbox membership" means "no project." A task created inside a project starts in the INBOX lifecycle state — project membership does not auto-advance the lifecycle. The user must explicitly plan the task (INBOX → PLANNED).
+- **Direct project-to-project transfer:** A task may move directly from one project to another without passing through unassigned/Inbox. The assign-project endpoint handles this directly.
+- **Priority and energy value domains, estimated duration units:** Priority: `LOW`, `MEDIUM`, `HIGH`. Energy: `LOW`, `MEDIUM`, `HIGH`. Estimated duration: integer minutes.
+- **Due dates and timezone:** Due dates are calendar dates stored as-is (`LocalDate`). No timezone conversion is applied — a due date of "2026-08-15" means August 15th regardless of timezone. Past due dates are allowed and are informational.
+- **Multi-device synchronization:** Tasks are server-persisted via REST API. Multi-device sync works automatically. Concurrent edits resolve with last-write-wins based on server receipt time, consistent with Daily Top 3 Constraint 3.
 
 ## Change History
+
+- Resolved all 5 open questions: Inbox lifecycle vs membership distinction,
+  direct project-to-project transfer, priority/energy value domains (LOW/MEDIUM/HIGH),
+  estimated duration in integer minutes, due dates as plain calendar dates with past
+  allowed, multi-device sync as server-persisted REST. Status changed to Proposed.
 
 - Initial draft created from approved product decisions: single-user ownership,
   zero-or-one project membership with Inbox concept, controlled lifecycle with
