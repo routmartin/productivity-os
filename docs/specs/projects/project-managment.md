@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Proposed
 
 ## Purpose
 
@@ -81,6 +81,7 @@ Archived
 ### Lifecycle rules
 
 - Draft → Active is allowed.
+- Active → Draft is allowed (return to planning).
 - Active → Completed is allowed only when all Project Tasks are completed or otherwise resolved.
 - Completed → Archived is allowed.
 - Completed is final.
@@ -507,22 +508,24 @@ then the system records the completion timestamp.
 
 ---
 
-# Open Questions
+# Resolved Questions
 
-1. Can a Project move directly from Draft to Completed if it has no Tasks?
-2. Can an Active Project return to Draft?
-3. Can a Project's Goal be changed after work has started?
-4. What exactly counts as an "unresolved" Task?
-5. What happens to an incomplete Task when its Project is archived?
-6. Can a completed Project be archived automatically?
-7. What happens if a Project deadline is changed after activation?
-8. What happens to a Project when its Goal is archived or completed?
+1. **Draft → Completed directly if no tasks?** No. Must go Draft → Active → Completed. Consistent lifecycle regardless of task count.
+2. **Active → Draft?** Yes. An Active project may return to Draft for planning.
+3. **Change goal after Active?** Yes. A project's goal may be reassigned while Draft or Active.
+4. **What is an "unresolved" task?** Not Completed and not Cancelled — INBOX, PLANNED, or IN_PROGRESS. Matches Task Management Rule 13.
+5. **Incomplete tasks when project archived?** Remain historically associated. Cannot be newly planned or Top 3'd.
+6. **Auto-archive completed project?** Yes, when its Goal is completed within GoalService. Otherwise manual.
+7. **Deadline changed after activation?** Field updates with no cascading effects. Informational.
+8. **Project when Goal archived/completed?** Goal completion auto-archives projects. Goal archival means projects were already archived.
 
----
 
 # Change History
 
-- Initial Project Management specification created during the SDD domain phase.
+- Resolved all 8 open questions: no Draft→Completed shortcut, Active→Draft allowed,
+  goal reassignable, unresolved = not Completed/Cancelled, incomplete tasks historical
+  on archive, auto-archive via Goal completion, deadline informational, Goal completion
+  cascades to projects. Added Active→Draft to lifecycle rules. Status changed to Proposed.
 - Lifecycle approved as Draft → Active → Completed → Archived.
 - Standalone Projects approved.
 - Project completion defined as final.
