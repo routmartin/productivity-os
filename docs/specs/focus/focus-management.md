@@ -1,248 +1,167 @@
-# Focus Management Specification
+# Focus Management
 
 **Status:** Proposed
 
-## 1. Problem
+## Purpose
 
-Users need a focused working mode that helps them work on a specific task without losing track of what they were doing.
+Provide Focus Session recording that allows a Pomodoro-style timer app to track
+when a user focuses on a task. The backend records sessions; the client app owns
+all timer logic (Pomodoro intervals, breaks), pulls task data, and decides
+whether to complete the task afterward.
 
-The system needs to record focus activity so that completed work can later contribute to productivity history and progress.
+## User Story
 
-## 2. Goal
+As a user, I want to start a focus timer on a task, have the session recorded,
+and when the timer ends decide whether the task is done.
 
-Provide a simple Focus Session experience that allows a user to:
+## Behavior
 
-- Start focusing on a task.
-- Know which task is currently being focused on.
-- End a focus session.
-- Preserve the session as historical activity.
-- Prevent conflicting focus sessions for the same user.
+### Two modes
 
-Focus Management should remain independent from the Task lifecycle. Completing a Focus Session does not automatically complete its associated Task.
+The backend supports two modes, client's choice:
 
-## 3. User Story
+- **Manual mode:** Start/stop a session without a preset timer. The client
+  manages its own timer or no timer at all. `configuredDurationSeconds` is null.
+- **Pomodoro mode:** The client sends a configured focus duration (seconds) when
+  starting. The server stores it. The client uses this for countdown display.
 
-As a user, I want to start a focus session for a task so that I can concentrate on one piece of work and later see how much focused time I spent.
+Both modes record the same session data; only the presence of a configured
+duration distinguishes them.
 
-## 4. Behavior
+### Client app responsibility
+
+The Pomodoro client:
+- Pulls the user's top-priority tasks and Daily Top 3 from the API
+- Lets the user select a task to focus on
+- Runs the Pomodoro timer locally (work intervals, breaks)
+- Calls the backend to start/end focus sessions
+- After a session ends, asks the user "is this task done?" and calls task
+  completion API if yes
+
+### Backend responsibility
+
+The backend:
+- Records Focus Sessions (start time, end time, task reference)
+- Enforces one active session per user
+- Enforces task eligibility (must be IN_PROGRESS, not deleted)
+- Provides task list and Top 3 data for the client to pull
 
 ### Starting a Focus Session
 
-A user may start a Focus Session for one of their tasks.
+A user starts a session for an eligible task. The server records:
+- The task being focused on
+- The server-authoritative start time
+- An optional configured focus duration (seconds) — allows the client to store
+  the intended Pomodoro length per session
 
-The task must:
+### Active Session
 
-- Belong to the authenticated user.
-- Exist.
-- Not be deleted.
-- Be in `IN_PROGRESS` state (not INBOX, PLANNED, COMPLETED, or CANCELLED).
-
-Starting a session records the server-authoritative start time.
-
-### Active Focus Session
-
-A user may have at most one active Focus Session at a time.
-
-The active session identifies:
-
-- The authenticated user.
-- The focused task.
-- The start time.
-
-The system must not allow two active sessions for the same user.
+A user may have at most one active Focus Session. Starting another while one is
+active is rejected. The active session can be queried so the client knows what
+is in progress.
 
 ### Ending a Focus Session
 
-A user may end the active Focus Session.
+Ending records the server-authoritative end time. Actual duration is derived
+from start and end timestamps. The client is responsible for deciding whether
+to then call task completion.
 
-Ending a session records the server-authoritative end time and preserves the session as historical data.
+### Task Independence
 
-The resulting duration is derived from the recorded start and end instants.
+A Focus Session does not automatically complete the task. The client explicitly
+calls the task completion endpoint when the user confirms.
 
-### Task independence
+## Rules
 
-A Focus Session does not change the Task lifecycle automatically.
+1. Every Focus Session belongs to exactly one authenticated User.
+2. A Focus Session is associated with exactly one Task.
+3. A user can have at most one active Focus Session at a time.
+4. A Focus Session can only be started for a task in IN_PROGRESS state.
+5. Session start and end times use server-authoritative UTC instants.
+6. Ended Focus Sessions remain available as historical records.
+7. When a task is deleted or cancelled while a session is active, the session
+   auto-ends with the current server time.
+8. A session may carry an optional configured focus duration (seconds) from the
+   client to record the intended Pomodoro interval length.
 
-For example:
+## Constraints
 
-```text
-Focus Session completed
-        ↓
-Task remains IN_PROGRESS
-```
+1. Persist timestamps as UTC instants per ADR-006.
+2. All queries scoped to the authenticated user per ADR-004.
+3. One-active-session invariant enforced at application layer.
 
-A user must explicitly complete the Task through the Task Management behavior.
+## Acceptance Criteria
 
-### Historical sessions
+### AC-001 — Start Focus Session
 
-Completed Focus Sessions remain available as historical activity.
+Given an IN_PROGRESS task owned by the user, when starting a session, a new
+active session is created with server start time.
 
-Historical sessions are not modified when the associated task later changes lifecycle state.
+### AC-002 — One active session
 
-## 5. Rules
+Starting a second session while one is active is rejected.
 
-**R1. Ownership**
-Every Focus Session belongs to exactly one authenticated User.
+### AC-003 — Ineligible task rejected
 
-**R2. Task relationship**
-A Focus Session is associated with exactly one Task.
+Starting a session for a task not in IN_PROGRESS, deleted, or not owned is
+rejected.
 
-**R3. User isolation**
-A user cannot start, view, modify, or end another user's Focus Session.
+### AC-004 — End session
 
-**R4. One active session**
-A user can have at most one active Focus Session at a time.
+An active session can be ended. Records server-authoritative end time.
 
-**R5. Valid task**
-A Focus Session can only be started for a task that is in `IN_PROGRESS` state and not deleted.
+### AC-005 — Duration derived
 
-**R6. Server time**
-Session start and end times use server-authoritative UTC instants according to ADR-006.
+Session duration is derived from start and end timestamps.
 
-**R7. No client-controlled timestamps**
-The client cannot choose the authoritative session start or end timestamp.
+### AC-006 — Historical records
 
-**R8. Explicit ending**
-Ending a Focus Session is an explicit user action.
+Ended sessions remain queryable as historical data.
 
-**R9. Historical preservation**
-Ended Focus Sessions remain available as historical records.
+### AC-007 — Auto-end on task delete/cancel
 
-**R10. No implicit task completion**
-Ending a Focus Session never automatically completes the associated Task.
+When a task with an active session is deleted or cancelled, the session
+auto-ends.
 
-**R11. No overlapping sessions**
-A user cannot create an overlapping active Focus Session.
+### AC-008 — Cross-user isolation
 
-**R12. Deleted tasks**
-A Focus Session cannot be started for a deleted Task.
+A user cannot view, modify, or end another user's session.
 
-**R13. Auto-end on task lifecycle change**
-When a task with an active Focus Session is deleted or cancelled, the session automatically ends with the current server time.
+### AC-009 — No implicit completion
 
-**R14. Optional note**
-A Focus Session may include an optional user-provided note recorded at session start.
+Ending a session does not change the task lifecycle.
 
-## 6. Constraints
+### AC-010 — Configured duration stored
 
-**C1. Time representation**
+The client's configured focus duration (seconds) is stored with the session.
 
-Persist session timestamps as UTC instants using the time architecture defined by ADR-006.
+## API Endpoints
 
-**C2. Ownership**
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | /api/v1/focus/active | Get current active session (or 404) |
+| POST | /api/v1/focus | Start a session |
+| POST | /api/v1/focus/{id}/end | End the active session |
+| GET | /api/v1/focus?page=&size= | List historical sessions |
 
-All Focus Session queries must be scoped to the authenticated user.
+## Out of Scope
 
-**C3. Concurrency**
+- Pomodoro timer logic (client responsibility).
+- Break tracking (client responsibility).
+- Automatic task completion (client calls existing task API).
+- Pomodoro configuration (client stored).
+- WebSocket/real-time sync (REST polling for V1).
+- Mobile push notifications.
 
-The one-active-session invariant must remain true when multiple requests arrive concurrently.
-
-## 7. Acceptance Criteria
-
-### AC-001 — Start focus session
-
-Given an eligible task owned by the authenticated user, when the user starts a Focus Session, a new active session is created.
-
-### AC-002 — Session identifies task
-
-The created Focus Session references the selected Task.
-
-### AC-003 — Server start time
-
-The session start timestamp is generated by the server and is not accepted from the client.
-
-### AC-004 — One active session
-
-When a user already has an active Focus Session, attempting to start another session is rejected.
-
-### AC-005 — Cross-user isolation
-
-A user cannot start a Focus Session for another user's Task.
-
-### AC-006 — Deleted task rejected
-
-Starting a Focus Session for a deleted Task is rejected.
-
-### AC-007 — Non-IN_PROGRESS task rejected
-
-Starting a Focus Session for a task not in IN_PROGRESS state is rejected.
-
-### AC-009 — End session
-
-An active Focus Session can be ended by its owner.
-
-### AC-010 — Server end time
-
-The end timestamp is generated by the server.
-
-### AC-011 — Historical record
-
-After ending a session, the Focus Session remains available as historical data.
-
-### AC-012 — Duration
-
-The session duration can be derived from its start and end timestamps.
-
-### AC-013 — No automatic task completion
-
-Ending a Focus Session does not change the Task lifecycle.
-
-### AC-014 — Cross-user session isolation
-
-A user cannot view, modify, or end another user's Focus Session.
-
-### AC-015 — Auto-end on task delete/cancel
-
-When a task with an active Focus Session is deleted or cancelled, the session automatically ends with the current server time.
-
-## 8. Edge Cases
-
-- A request attempts to start a second session while another is active.
-- The selected Task is deleted between displaying the task and starting the session.
-- The selected Task is completed between displaying the task and starting the session.
-- Two start requests arrive concurrently.
-- Ending an already-ended session.
-- Ending a session that does not belong to the authenticated user.
-- A client submits timestamps that differ from server time.
-- A session spans a calendar-day boundary.
-
-## 9. Out of Scope
-
-The following are intentionally excluded from this version:
-
-- Pomodoro configuration.
-- Automatic session expiration.
-- Background activity detection.
-- Application/device usage tracking.
-- Calendar integration.
-- Automatic task completion based on focus duration.
-- Productivity scoring.
-- Focus streaks.
-- Break recommendations.
-- AI-generated focus plans.
-
-## 10. Dependencies
+## Dependencies
 
 - User Management
 - Task Management
-- ADR-003 — Database and Persistence Architecture
-- ADR-004 — Authentication and User Isolation
-- ADR-005 — API Architecture
-- ADR-006 — Time and Timezone
+- Daily Top 3 (client pulls priority data)
+- ADR-003, ADR-004, ADR-005, ADR-006
 
-## 11. Resolved Questions
+## Change History
 
-1. **IN_PROGRESS only?** Yes. Focus sessions require the task to be in IN_PROGRESS state. INBOX and PLANNED tasks are not eligible.
-2. **Survive app restart?** Yes. Sessions are server-persisted and survive device restarts.
-3. **Edit completed duration?** No for V1. Start and end times are server-authoritative.
-4. **Auto-end on task delete/cancel?** Yes. When a task with an active session is deleted or cancelled, the session automatically ends with the current server time.
-5. **Maximum session duration?** No max for V1.
-6. **User-provided note?** Yes. An optional note can be recorded at session start.
-7. **Abandon without recording?** No for V1. Ending a session always records it in history.
-
-## 12. Change History
-
-- Resolved all 7 open questions: IN_PROGRESS-only eligibility, server-persisted sessions survive restarts,
-  no duration editing, auto-end on task delete/cancel, no max duration, optional note on start,
-  no abandon-without-record. Added R13 (auto-end), R14 (note). Restricted R5 and AC-007 to
-  IN_PROGRESS-only. Added AC-015. Status changed to Proposed.
+- Revised to server-as-recorder model: backend records sessions, client owns
+  timer logic. Removed pomodoro configuration, break tracking, auto-completion
+  from backend scope. Simplified to 4 endpoints, 8 rules, 10 ACs.
