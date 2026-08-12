@@ -104,7 +104,7 @@ function showPreviewNote(action: string) {
       </div>
       <div v-if="goal" class="meta-row">
         <dt><Target :size="14" :stroke-width="1.75" /> Goal</dt>
-        <dd>{{ goal.name }}</dd>
+        <dd>{{ goal.title }}</dd>
       </div>
       <div v-if="dueLabel" class="meta-row">
         <dt><CalendarDays :size="14" :stroke-width="1.75" /> Due</dt>

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { nextTick, reactive, ref, watch } from 'vue'
-import { X } from 'lucide-vue-next'
 
 import UiButton from '@/components/ui/UiButton.vue'
+import UiDialog from '@/components/ui/UiDialog.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
@@ -37,7 +37,7 @@ const projectOptions = [
 
 const goalOptions = [
   { value: '', label: 'No goal' },
-  ...mockGoals.map((g) => ({ value: g.id, label: g.name })),
+  ...mockGoals.map((g) => ({ value: g.id, label: g.title })),
 ]
 
 const durationOptions = [
@@ -99,29 +99,11 @@ function onSubmit() {
   }, 400)
 }
 
-function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') emit('close')
-}
 </script>
 
 <template>
-  <Transition name="dialog">
-    <div
-      v-if="open"
-      class="overlay"
-      role="presentation"
-      @keydown="onKeydown"
-      @click.self="emit('close')"
-    >
-      <div class="dialog" role="dialog" aria-modal="true" aria-label="New task">
-        <header class="dialog-header">
-          <h2 class="dialog-title">New Task</h2>
-          <button class="close" type="button" aria-label="Close" @click="emit('close')">
-            <X :size="16" :stroke-width="1.75" />
-          </button>
-        </header>
-
-        <form class="form" @submit.prevent="onSubmit">
+  <UiDialog :open="open" title="New Task" @close="emit('close')">
+    <form class="form" @submit.prevent="onSubmit">
           <UiInput
             ref="titleInput"
             v-model="draft.title"
@@ -164,76 +146,23 @@ function onKeydown(event: KeyboardEvent) {
             <UiSelect v-model="durationValue" label="Duration" :options="durationOptions" :disabled="isSubmitting" />
           </div>
 
-          <footer class="footer">
-            <span class="note">Saved locally — preview only</span>
-            <div class="footer-actions">
-              <UiButton variant="ghost" type="button" :disabled="isSubmitting" @click="emit('close')">
-                Cancel
-              </UiButton>
-              <UiButton variant="primary" type="submit" :loading="isSubmitting" :disabled="!draft.title.trim()">
-                Add task
-              </UiButton>
-            </div>
-          </footer>
-        </form>
+    </form>
+
+    <template #footer>
+      <span class="note">Saved locally — preview only</span>
+      <div class="footer-actions">
+        <UiButton variant="ghost" type="button" :disabled="isSubmitting" @click="emit('close')">
+          Cancel
+        </UiButton>
+        <UiButton variant="primary" type="submit" :loading="isSubmitting" :disabled="!draft.title.trim()">
+          Add task
+        </UiButton>
       </div>
-    </div>
-  </Transition>
+    </template>
+  </UiDialog>
 </template>
 
 <style scoped>
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 70;
-  display: grid;
-  place-items: center;
-  padding: var(--space-6);
-  background: var(--surface-overlay);
-  backdrop-filter: blur(4px);
-}
-
-.dialog {
-  width: 100%;
-  max-width: 520px;
-  max-height: calc(100vh - 96px);
-  overflow-y: auto;
-  background: var(--surface-1);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-panel);
-  padding: var(--space-6);
-}
-
-.dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-5);
-}
-
-.dialog-title {
-  font-size: var(--text-xl);
-  letter-spacing: -0.02em;
-}
-
-.close {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md);
-  color: var(--text-tertiary);
-  transition:
-    background-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out);
-}
-
-.close:hover {
-  background: var(--surface-2);
-  color: var(--text-primary);
-}
-
 .form {
   display: flex;
   flex-direction: column;
@@ -289,14 +218,6 @@ function onKeydown(event: KeyboardEvent) {
   font-weight: 500;
 }
 
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-top: var(--space-2);
-}
-
 .note {
   font-size: var(--text-xs);
   color: var(--text-disabled);
@@ -305,28 +226,5 @@ function onKeydown(event: KeyboardEvent) {
 .footer-actions {
   display: flex;
   gap: var(--space-2);
-}
-
-.dialog-enter-active,
-.dialog-leave-active {
-  transition: opacity var(--duration-normal) var(--ease-out);
-}
-
-.dialog-enter-active .dialog,
-.dialog-leave-active .dialog {
-  transition:
-    transform var(--duration-normal) var(--ease-out),
-    opacity var(--duration-normal) var(--ease-out);
-}
-
-.dialog-enter-from,
-.dialog-leave-to {
-  opacity: 0;
-}
-
-.dialog-enter-from .dialog,
-.dialog-leave-to .dialog {
-  transform: translateY(10px) scale(0.99);
-  opacity: 0;
 }
 </style>

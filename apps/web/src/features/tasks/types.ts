@@ -31,20 +31,8 @@ export interface Task {
   updatedAt: string;
 }
 
-/** Display metadata only — Projects and Goals screens ship in later
- * milestones, but tasks already reference them by id on the backend. */
-export interface ProjectRef {
-  id: string;
-  name: string;
-  color: string;
-  goalId: string | null;
-}
-
-export interface GoalRef {
-  id: string;
-  name: string;
-}
-
+/** Canonical Project and Goal types live in their own features; tasks
+ * reference them by id, exactly like the backend. */
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   INBOX: "Inbox",
   PLANNED: "Planned",

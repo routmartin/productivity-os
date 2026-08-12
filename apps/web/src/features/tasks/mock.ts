@@ -6,12 +6,24 @@
  * Timestamps are authored relative to "now" at module load so relative
  * times ("2h ago") always read naturally in the browser.
  */
+import { mockGoals } from "@/features/goals/mock";
+import type { Goal } from "@/features/goals/types";
+import { mockProjects } from "@/features/projects/mock";
+import type { Project } from "@/features/projects/types";
 import { toISODate } from "@/lib/utils/date";
 
-import type { GoalRef, ProjectRef, Task } from "./types";
+import type { Task } from "./types";
+
+// Projects and goals live in their own features (canonical mocks);
+// re-exported here so existing task-side imports keep working.
+export { mockGoals, mockProjects };
 
 function hoursAgo(hours: number): string {
   return new Date(Date.now() - hours * 3_600_000).toISOString();
+}
+
+function daysAgo(days: number): string {
+  return new Date(Date.now() - days * 86_400_000).toISOString();
 }
 
 function daysFromNow(days: number): string {
@@ -19,39 +31,6 @@ function daysFromNow(days: number): string {
   date.setDate(date.getDate() + days);
   return toISODate(date);
 }
-
-export const mockProjects: ProjectRef[] = [
-  {
-    id: "proj-pos",
-    name: "Productivity OS",
-    color: "#8b5cf6",
-    goalId: "goal-mrr",
-  },
-  {
-    id: "proj-mobile",
-    name: "Mobile App",
-    color: "#5b9dff",
-    goalId: "goal-mrr",
-  },
-  {
-    id: "proj-web",
-    name: "Website Redesign",
-    color: "#4cc38a",
-    goalId: "goal-dev",
-  },
-  {
-    id: "proj-personal",
-    name: "Personal",
-    color: "#e88349",
-    goalId: "goal-health",
-  },
-];
-
-export const mockGoals: GoalRef[] = [
-  { id: "goal-dev", name: "Become a better developer" },
-  { id: "goal-mrr", name: "Build $10k MRR" },
-  { id: "goal-health", name: "Health & Fitness" },
-];
 
 export const mockTasks: Task[] = [
   // — Today's Top 3 —
@@ -282,6 +261,388 @@ export const mockTasks: Task[] = [
     updatedAt: hoursAgo(50),
   },
 
+  // — Project history (completed work that gives projects real progress) —
+  {
+    id: "task-20",
+    title: "Set up Spring Boot project skeleton",
+    description: null,
+    status: "COMPLETED",
+    priority: "MEDIUM",
+    energy: "MEDIUM",
+    estimatedMinutes: 60,
+    dueDate: null,
+    projectId: "proj-pos",
+    completedAt: daysAgo(21),
+    createdAt: daysAgo(22),
+    updatedAt: daysAgo(21),
+  },
+  {
+    id: "task-21",
+    title: "Design tasks table migration",
+    description: null,
+    status: "COMPLETED",
+    priority: "MEDIUM",
+    energy: "MEDIUM",
+    estimatedMinutes: 45,
+    dueDate: null,
+    projectId: "proj-pos",
+    completedAt: daysAgo(18),
+    createdAt: daysAgo(19),
+    updatedAt: daysAgo(18),
+  },
+  {
+    id: "task-22",
+    title: "Implement task lifecycle endpoints",
+    description: null,
+    status: "COMPLETED",
+    priority: "HIGH",
+    energy: "HIGH",
+    estimatedMinutes: 120,
+    dueDate: null,
+    projectId: "proj-pos",
+    completedAt: daysAgo(14),
+    createdAt: daysAgo(16),
+    updatedAt: daysAgo(14),
+  },
+  {
+    id: "task-23",
+    title: "Write daily top 3 specification",
+    description: null,
+    status: "COMPLETED",
+    priority: "MEDIUM",
+    energy: "LOW",
+    estimatedMinutes: 50,
+    dueDate: null,
+    projectId: "proj-pos",
+    completedAt: daysAgo(12),
+    createdAt: daysAgo(13),
+    updatedAt: daysAgo(12),
+  },
+  {
+    id: "task-24",
+    title: "Configure Docker PostgreSQL",
+    description: null,
+    status: "COMPLETED",
+    priority: "LOW",
+    energy: "LOW",
+    estimatedMinutes: 25,
+    dueDate: null,
+    projectId: "proj-pos",
+    completedAt: daysAgo(9),
+    createdAt: daysAgo(10),
+    updatedAt: daysAgo(9),
+  },
+  {
+    id: "task-25",
+    title: "Add JWT login endpoint",
+    description: null,
+    status: "COMPLETED",
+    priority: "HIGH",
+    energy: "HIGH",
+    estimatedMinutes: 90,
+    dueDate: null,
+    projectId: "proj-pos",
+    completedAt: daysAgo(6),
+    createdAt: daysAgo(8),
+    updatedAt: daysAgo(6),
+  },
+  {
+    id: "task-26",
+    title: "Audit mobile onboarding flow",
+    description: null,
+    status: "COMPLETED",
+    priority: "MEDIUM",
+    energy: "MEDIUM",
+    estimatedMinutes: 55,
+    dueDate: null,
+    projectId: "proj-mobile",
+    completedAt: daysAgo(8),
+    createdAt: daysAgo(9),
+    updatedAt: daysAgo(8),
+  },
+  {
+    id: "task-27",
+    title: "Fix push notification deep links",
+    description: null,
+    status: "COMPLETED",
+    priority: "HIGH",
+    energy: "MEDIUM",
+    estimatedMinutes: 70,
+    dueDate: null,
+    projectId: "proj-mobile",
+    completedAt: daysAgo(5),
+    createdAt: daysAgo(7),
+    updatedAt: daysAgo(5),
+  },
+  {
+    id: "task-28",
+    title: "Improve offline sync resilience",
+    description: null,
+    status: "COMPLETED",
+    priority: "MEDIUM",
+    energy: "HIGH",
+    estimatedMinutes: 110,
+    dueDate: null,
+    projectId: "proj-mobile",
+    completedAt: daysAgo(3),
+    createdAt: daysAgo(6),
+    updatedAt: daysAgo(3),
+  },
+  {
+    id: "task-29",
+    title: "Consolidate marketing page copy",
+    description: null,
+    status: "COMPLETED",
+    priority: "LOW",
+    energy: "LOW",
+    estimatedMinutes: 40,
+    dueDate: null,
+    projectId: "proj-web",
+    completedAt: daysAgo(7),
+    createdAt: daysAgo(8),
+    updatedAt: daysAgo(7),
+  },
+  {
+    id: "task-30",
+    title: "Migrate images to AVIF",
+    description: null,
+    status: "COMPLETED",
+    priority: "LOW",
+    energy: "MEDIUM",
+    estimatedMinutes: 35,
+    dueDate: null,
+    projectId: "proj-web",
+    completedAt: daysAgo(4),
+    createdAt: daysAgo(5),
+    updatedAt: daysAgo(4),
+  },
+  {
+    id: "task-31",
+    title: "Renew passport",
+    description: null,
+    status: "COMPLETED",
+    priority: "MEDIUM",
+    energy: "LOW",
+    estimatedMinutes: 30,
+    dueDate: null,
+    projectId: "proj-personal",
+    completedAt: daysAgo(11),
+    createdAt: daysAgo(20),
+    updatedAt: daysAgo(11),
+  },
+  {
+    id: "task-32",
+    title: "Quarterly tax paperwork",
+    description: null,
+    status: "COMPLETED",
+    priority: "HIGH",
+    energy: "MEDIUM",
+    estimatedMinutes: 75,
+    dueDate: null,
+    projectId: "proj-personal",
+    completedAt: daysAgo(6),
+    createdAt: daysAgo(12),
+    updatedAt: daysAgo(6),
+  },
+  {
+    id: "task-33",
+    title: "Install NAS drives and RAID",
+    description: null,
+    status: "COMPLETED",
+    priority: "MEDIUM",
+    energy: "MEDIUM",
+    estimatedMinutes: 90,
+    dueDate: null,
+    projectId: "proj-home",
+    completedAt: daysAgo(20),
+    createdAt: daysAgo(24),
+    updatedAt: daysAgo(20),
+  },
+  {
+    id: "task-34",
+    title: "Configure automated backups",
+    description: null,
+    status: "COMPLETED",
+    priority: "HIGH",
+    energy: "MEDIUM",
+    estimatedMinutes: 60,
+    dueDate: null,
+    projectId: "proj-home",
+    completedAt: daysAgo(15),
+    createdAt: daysAgo(17),
+    updatedAt: daysAgo(15),
+  },
+  {
+    id: "task-35",
+    title: "Set up media streaming",
+    description: null,
+    status: "COMPLETED",
+    priority: "LOW",
+    energy: "LOW",
+    estimatedMinutes: 45,
+    dueDate: null,
+    projectId: "proj-home",
+    completedAt: daysAgo(12),
+    createdAt: daysAgo(13),
+    updatedAt: daysAgo(12),
+  },
+  {
+    id: "task-36",
+    title: "Design portfolio v1",
+    description: null,
+    status: "COMPLETED",
+    priority: "MEDIUM",
+    energy: "MEDIUM",
+    estimatedMinutes: 180,
+    dueDate: null,
+    projectId: "proj-portfolio",
+    completedAt: daysAgo(100),
+    createdAt: daysAgo(105),
+    updatedAt: daysAgo(100),
+  },
+  {
+    id: "task-37",
+    title: "Deploy portfolio to Vercel",
+    description: null,
+    status: "COMPLETED",
+    priority: "LOW",
+    energy: "LOW",
+    estimatedMinutes: 30,
+    dueDate: null,
+    projectId: "proj-portfolio",
+    completedAt: daysAgo(95),
+    createdAt: daysAgo(97),
+    updatedAt: daysAgo(95),
+  },
+  {
+    id: "task-38",
+    title: "Add blog to portfolio",
+    description: null,
+    status: "CANCELLED",
+    priority: "LOW",
+    energy: "LOW",
+    estimatedMinutes: 240,
+    dueDate: null,
+    projectId: "proj-portfolio",
+    completedAt: null,
+    createdAt: daysAgo(94),
+    updatedAt: daysAgo(90),
+  },
+
+  // — Goal-linked project work (research, health, blog archive) —
+  {
+    id: "task-39",
+    title: "Synthesize user interview notes",
+    description: null,
+    status: "INBOX",
+    priority: "MEDIUM",
+    energy: "MEDIUM",
+    estimatedMinutes: 40,
+    dueDate: null,
+    projectId: "proj-research",
+    completedAt: null,
+    createdAt: hoursAgo(12),
+    updatedAt: hoursAgo(12),
+  },
+  {
+    id: "task-40",
+    title: "Draft interview script",
+    description: null,
+    status: "COMPLETED",
+    priority: "MEDIUM",
+    energy: "MEDIUM",
+    estimatedMinutes: 45,
+    dueDate: null,
+    projectId: "proj-research",
+    completedAt: daysAgo(5),
+    createdAt: daysAgo(6),
+    updatedAt: daysAgo(5),
+  },
+  {
+    id: "task-41",
+    title: "Book three gym sessions",
+    description: null,
+    status: "INBOX",
+    priority: "LOW",
+    energy: "LOW",
+    estimatedMinutes: 10,
+    dueDate: null,
+    projectId: "proj-fitness",
+    completedAt: null,
+    createdAt: hoursAgo(20),
+    updatedAt: hoursAgo(20),
+  },
+  {
+    id: "task-42",
+    title: "Buy adjustable dumbbells",
+    description: null,
+    status: "COMPLETED",
+    priority: "LOW",
+    energy: "LOW",
+    estimatedMinutes: 25,
+    dueDate: null,
+    projectId: "proj-fitness",
+    completedAt: daysAgo(10),
+    createdAt: daysAgo(12),
+    updatedAt: daysAgo(10),
+  },
+  {
+    id: "task-43",
+    title: "Two weeks of consistent workouts",
+    description: null,
+    status: "COMPLETED",
+    priority: "MEDIUM",
+    energy: "HIGH",
+    estimatedMinutes: 60,
+    dueDate: null,
+    projectId: "proj-fitness",
+    completedAt: daysAgo(4),
+    createdAt: daysAgo(18),
+    updatedAt: daysAgo(4),
+  },
+  {
+    id: "task-44",
+    title: "Set screens-off alarm for 22:30",
+    description: null,
+    status: "INBOX",
+    priority: "LOW",
+    energy: "LOW",
+    estimatedMinutes: 5,
+    dueDate: null,
+    projectId: "proj-sleep",
+    completedAt: null,
+    createdAt: hoursAgo(30),
+    updatedAt: hoursAgo(30),
+  },
+  {
+    id: "task-45",
+    title: "Track sleep for one week",
+    description: null,
+    status: "COMPLETED",
+    priority: "LOW",
+    energy: "LOW",
+    estimatedMinutes: 15,
+    dueDate: null,
+    projectId: "proj-sleep",
+    completedAt: daysAgo(8),
+    createdAt: daysAgo(15),
+    updatedAt: daysAgo(8),
+  },
+  {
+    id: "task-46",
+    title: "Migrate blog posts to Markdown",
+    description: null,
+    status: "COMPLETED",
+    priority: "LOW",
+    energy: "MEDIUM",
+    estimatedMinutes: 90,
+    dueDate: null,
+    projectId: "proj-blog",
+    completedAt: daysAgo(100),
+    createdAt: daysAgo(102),
+    updatedAt: daysAgo(100),
+  },
+
   // — Recently completed —
   {
     id: "task-11",
@@ -345,16 +706,16 @@ export function findTaskById(id: string): Task | undefined {
   return mockTasks.find((task) => task.id === id);
 }
 
-export function findProjectById(id: string | null): ProjectRef | undefined {
+export function findProjectById(id: string | null): Project | undefined {
   return mockProjects.find((project) => project.id === id);
 }
 
-export function findGoalById(id: string | null): GoalRef | undefined {
+export function findGoalById(id: string | null): Goal | undefined {
   return mockGoals.find((goal) => goal.id === id);
 }
 
 /** Goal a task rolls up to, via its project. */
-export function goalForTask(task: Task): GoalRef | undefined {
+export function goalForTask(task: Task): Goal | undefined {
   const project = findProjectById(task.projectId);
   return findGoalById(project?.goalId ?? null);
 }
