@@ -23,9 +23,10 @@ class SecurityConfig(
                 auth.requestMatchers(
                     "/api/v1/auth/**",
                     "/api/v1/health",
-                    "/v3/api-docs/**",
+                    "/docs",
                     "/swagger-ui/**",
-                    "/swagger-ui.html"
+                    "/swagger-ui.html",
+                    "/v3/api-docs/**"
                 ).permitAll()
                 auth.anyRequest().authenticated()
             }
