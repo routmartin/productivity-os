@@ -1,4 +1,10 @@
-.PHONY: run db-up db-down build test clean docs
+.PHONY: dev run db-up db-down build test clean docs
+
+dev: db-up
+	./gradlew :apps:api:bootRun &
+	sleep 8
+	open http://localhost:8080/docs
+	wait
 
 run: db-up
 	./gradlew :apps:api:bootRun
