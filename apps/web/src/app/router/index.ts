@@ -13,6 +13,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import AppShell from "@/app/layouts/AppShell.vue";
 import { useAuthStore } from "@/features/auth/store";
 import ComingSoonPage from "@/pages/ComingSoonPage.vue";
+import FocusPage from "@/pages/FocusPage.vue";
 import GoalsPage from "@/pages/GoalsPage.vue";
 import InboxPage from "@/pages/InboxPage.vue";
 import LoginPage from "@/pages/LoginPage.vue";
@@ -85,15 +86,8 @@ export const router = createRouter({
         {
           path: "focus",
           name: "focus",
-          component: ComingSoonPage,
-          meta: {
-            title: "Focus",
-            icon: Timer,
-            implemented: false,
-            blurb:
-              "Distraction-free focus sessions tied to the task at hand, with a calm session timeline.",
-            milestone: "Milestone 2",
-          },
+          component: FocusPage,
+          meta: { title: "Focus", icon: Timer, implemented: true },
         },
         {
           path: "settings",
