@@ -84,8 +84,8 @@ const dateLabel = formatLongDate(new Date())
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  width: 230px;
-  height: 32px;
+  width: 240px;
+  height: 34px;
   padding: 0 var(--space-3);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -124,8 +124,8 @@ const dateLabel = formatLongDate(new Date())
   position: relative;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-md);
   color: var(--text-tertiary);
   transition:

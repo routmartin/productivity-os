@@ -53,7 +53,7 @@ function onKeydown(event: KeyboardEvent) {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  height: 38px;
+  height: 42px;
   /* Negative margins keep the checkbox and duration exactly on the card's
      content grid while the hover background bleeds slightly past it. */
   margin: 0 calc(-1 * var(--space-2));

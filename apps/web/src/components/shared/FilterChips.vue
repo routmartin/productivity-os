@@ -43,7 +43,7 @@ const emit = defineEmits<{ change: [key: T] }>()
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  height: 28px;
+  height: 30px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-full);
   font-size: var(--text-sm);

@@ -67,19 +67,19 @@ withDefaults(
 
 /* Sizes */
 .size-sm {
-  height: 30px;
+  height: 32px;
   padding: 0 var(--space-3);
   font-size: var(--text-sm);
 }
 
 .size-md {
-  height: 36px;
+  height: 38px;
   padding: 0 var(--space-4);
   font-size: var(--text-md);
 }
 
 .size-lg {
-  height: 44px;
+  height: 46px;
   padding: 0 var(--space-6);
   font-size: var(--text-lg);
 }

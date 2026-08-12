@@ -76,7 +76,7 @@ function onStart() {
 }
 
 .timer {
-  font-size: 36px;
+  font-size: 40px;
   font-weight: 300;
   letter-spacing: 0.02em;
   line-height: 1.15;

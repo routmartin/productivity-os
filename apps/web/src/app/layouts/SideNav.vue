@@ -200,7 +200,7 @@ async function onLogout() {
 .section-label {
   display: block;
   padding: var(--space-4) var(--space-3) var(--space-2);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -219,7 +219,7 @@ async function onLogout() {
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  height: 34px;
+  height: 36px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
@@ -266,17 +266,17 @@ async function onLogout() {
   display: inline-grid;
   place-items: center;
   min-width: 20px;
-  height: 18px;
+  height: 19px;
   padding: 0 6px;
   border-radius: var(--radius-full);
   background: var(--surface-3);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
 }
 
 .sub-item {
-  height: 30px;
+  height: 32px;
   font-size: var(--text-sm);
   color: var(--text-tertiary);
 }

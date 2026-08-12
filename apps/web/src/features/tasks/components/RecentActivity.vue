@@ -120,7 +120,7 @@ function projectName(task: Task): string | null {
 .status-pill {
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
 }
 

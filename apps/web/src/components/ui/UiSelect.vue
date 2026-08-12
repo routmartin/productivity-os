@@ -63,7 +63,7 @@ function onChange(event: Event) {
 
 .field {
   width: 100%;
-  height: 40px;
+  height: 42px;
   padding: 0 var(--space-8) 0 var(--space-3);
   background: var(--surface-2);
   border: 1px solid var(--border-subtle);

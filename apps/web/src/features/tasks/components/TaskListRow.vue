@@ -105,7 +105,7 @@ function onKeydown(event: KeyboardEvent) {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-3);
+  padding: 14px var(--space-3);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-out);
@@ -165,7 +165,7 @@ function onKeydown(event: KeyboardEvent) {
 .status-pill {
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
 }
 
