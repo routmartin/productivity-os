@@ -63,7 +63,9 @@ class TaskService(
         entity.status = TaskStatus.COMPLETED
         entity.completedAt = completed.completedAt
         entity.updatedAt = clock.instant()
-        return TaskResponse.from(taskRepository.save(entity))
+        taskRepository.save(entity)
+        eventPublisher.publishEvent(TaskCompletedEvent(taskId, userId))
+        return TaskResponse.from(entity)
     }
 
     fun cancel(taskId: UUID, userId: UUID): TaskResponse {
@@ -71,7 +73,9 @@ class TaskService(
         entity.toDomain().cancel()
         entity.status = TaskStatus.CANCELLED
         entity.updatedAt = clock.instant()
-        return TaskResponse.from(taskRepository.save(entity))
+        taskRepository.save(entity)
+        eventPublisher.publishEvent(TaskCancelledEvent(taskId, userId))
+        return TaskResponse.from(entity)
     }
 
     fun reopen(taskId: UUID, userId: UUID): TaskResponse {
