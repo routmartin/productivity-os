@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Proposed
 
 ## Problem
 
@@ -239,20 +239,30 @@ then further attempts are temporarily rejected regardless of correctness.
 - Roles, permissions, teams, or any sharing between users.
 - Display name, avatar, and other profile attributes.
 
-## Open Questions
+## Resolved Questions
 
-- Confirm the proposed password policy: minimum 12 characters, no composition
-  rules, no forced rotation.
-- Confirm that duplicate registration returns "email unavailable" feedback,
-  accepting the account-enumeration trade-off (ADR-004 prefers non-disclosure
-  for authentication failures).
-- What are the rate-limit thresholds and lockout duration for failed logins?
-- Does registration immediately sign the user in, or is an explicit login
-  required afterward?
-- When are email verification and password reset needed? Both require email
-  sending, which does not exist yet.
+- **Password policy:** Minimum 12 characters. No composition rules (required
+  character classes). No forced password rotation. Confirmed as specified.
+- **Duplicate registration feedback:** Returns 409 EMAIL_TAKEN with "email
+  unavailable" feedback. Accepts the enumeration trade-off — distinct from
+  login which never reveals whether an email is registered.
+- **Rate-limit thresholds:** 5 failed login attempts per email within a
+  15-minute window triggers a 15-minute lockout for that email. Application-level
+  in-memory tracking; no dedicated infrastructure required for V1.
+- **Registration auto-login:** Registration does not sign the user in. An
+  explicit login is required afterward. Registration returns 201 with user
+  info only.
+- **Email verification and password reset:** Deferred beyond V1. Both require
+  email sending infrastructure which does not exist. Revisit when operational
+  complexity is justified (Phase 3+).
 
 ## Change History
+
+- Resolved all 5 open questions: confirmed 12-char minimum password policy,
+  409 EMAIL_TAKEN for duplicate registration (accepting enumeration trade-off),
+  5-attempts/15-min rate limit with 15-min lockout, no auto-login after
+  registration, email verification and password reset deferred beyond V1.
+  Status changed to Proposed.
 
 - Initial draft created to close Gap G0 / decision D2 of implementation plan
   `docs/plans/001-auth-task-vertical-slice.md`, using ADR-004 and ADR-006 as
