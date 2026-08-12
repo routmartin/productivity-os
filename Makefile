@@ -1,4 +1,10 @@
-.PHONY: dev run db-up db-down build test clean docs
+.PHONY: dev run db-up db-down build test clean docs web web-install
+
+web-install:
+	cd apps/web && pnpm install
+
+web:
+	cd apps/web && pnpm dev
 
 dev: db-up
 	./gradlew :apps:api:bootRun &

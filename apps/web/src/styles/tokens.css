@@ -1,0 +1,93 @@
+/**
+ * Design tokens — "Calm Command Center"
+ *
+ * Dark-first, neutral surfaces, restrained indigo accent, purple reserved
+ * primarily for AI. Strong typography, generous spacing, subtle borders,
+ * minimal shadows and motion. Aligned to the approved visual reference.
+ */
+:root {
+  /* Surfaces — neutral dark with a cool undertone */
+  --surface-0: #0a0c12; /* app background */
+  --surface-1: #10131c; /* sidebar, cards, panels */
+  --surface-2: #161a26; /* inputs, hover rows */
+  --surface-3: #1d2232; /* raised elements */
+  --surface-overlay: rgba(7, 8, 12, 0.66);
+
+  /* Borders — subtle, never heavy */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.11);
+
+  /* Text */
+  --text-primary: #e8eaf1;
+  --text-secondary: #a4aab9;
+  --text-tertiary: #6a7180;
+  --text-disabled: #484d5c;
+
+  /* Accent — restrained indigo (primary actions, highlights) */
+  --accent: #6d63f6;
+  --accent-strong: #8a80ff;
+  --accent-deep: #5750d6; /* darker indigo for the focus CTA */
+  --accent-soft: rgba(109, 99, 246, 0.15);
+  --accent-border: rgba(109, 99, 246, 0.38);
+
+  /* AI — purple, reserved primarily for intelligence surfaces */
+  --ai: #8b5cf6;
+  --ai-strong: #a78bfa;
+  --ai-soft: rgba(139, 92, 246, 0.14);
+  --ai-border: rgba(139, 92, 246, 0.34);
+
+  /* Semantic + status hues */
+  --blue: #5b9dff; /* in-progress status, info tiles */
+  --blue-soft: rgba(91, 157, 255, 0.14);
+  --success: #4cc38a;
+  --success-soft: rgba(76, 195, 138, 0.13);
+  --warning: #e0ad60;
+  --warning-soft: rgba(224, 173, 96, 0.13);
+  --orange: #e88349;
+  --orange-soft: rgba(232, 131, 73, 0.13);
+  --danger: #f2707a;
+  --danger-soft: rgba(242, 112, 122, 0.12);
+
+  /* Typography */
+  --font-sans:
+    'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.8125rem; /* 13px */
+  --text-md: 0.875rem; /* 14px */
+  --text-lg: 1rem; /* 16px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-3xl: 1.875rem; /* 30px */
+
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+
+  /* Shadows — minimal, only for floating layers */
+  --shadow-panel: 0 12px 40px rgba(0, 0, 0, 0.42);
+
+  /* Motion — subtle and quick */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 140ms;
+  --duration-normal: 220ms;
+
+  /* Layout */
+  --sidebar-width: 248px;
+  --sidebar-collapsed-width: 68px;
+  --panel-width: 380px;
+  --content-max: 1240px;
+}
