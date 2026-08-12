@@ -1,6 +1,6 @@
 # Focus Management Specification
 
-**Status:** Draft
+**Status:** Proposed
 
 ## 1. Problem
 
@@ -35,7 +35,7 @@ The task must:
 - Belong to the authenticated user.
 - Exist.
 - Not be deleted.
-- Not be Completed or Cancelled.
+- Be in `IN_PROGRESS` state (not INBOX, PLANNED, COMPLETED, or CANCELLED).
 
 Starting a session records the server-authoritative start time.
 
@@ -94,7 +94,7 @@ A user cannot start, view, modify, or end another user's Focus Session.
 A user can have at most one active Focus Session at a time.
 
 **R5. Valid task**
-A Focus Session can only be started for a task that is not deleted and is not Completed or Cancelled.
+A Focus Session can only be started for a task that is in `IN_PROGRESS` state and not deleted.
 
 **R6. Server time**
 Session start and end times use server-authoritative UTC instants according to ADR-006.
@@ -116,6 +116,12 @@ A user cannot create an overlapping active Focus Session.
 
 **R12. Deleted tasks**
 A Focus Session cannot be started for a deleted Task.
+
+**R13. Auto-end on task lifecycle change**
+When a task with an active Focus Session is deleted or cancelled, the session automatically ends with the current server time.
+
+**R14. Optional note**
+A Focus Session may include an optional user-provided note recorded at session start.
 
 ## 6. Constraints
 
@@ -157,13 +163,9 @@ A user cannot start a Focus Session for another user's Task.
 
 Starting a Focus Session for a deleted Task is rejected.
 
-### AC-007 — Completed task rejected
+### AC-007 — Non-IN_PROGRESS task rejected
 
-Starting a Focus Session for a Completed Task is rejected.
-
-### AC-008 — Cancelled task rejected
-
-Starting a Focus Session for a Cancelled Task is rejected.
+Starting a Focus Session for a task not in IN_PROGRESS state is rejected.
 
 ### AC-009 — End session
 
@@ -189,6 +191,10 @@ Ending a Focus Session does not change the Task lifecycle.
 
 A user cannot view, modify, or end another user's Focus Session.
 
+### AC-015 — Auto-end on task delete/cancel
+
+When a task with an active Focus Session is deleted or cancelled, the session automatically ends with the current server time.
+
 ## 8. Edge Cases
 
 - A request attempts to start a second session while another is active.
@@ -202,7 +208,7 @@ A user cannot view, modify, or end another user's Focus Session.
 
 ## 9. Out of Scope
 
-The following are intentionally excluded from this Draft:
+The following are intentionally excluded from this version:
 
 - Pomodoro configuration.
 - Automatic session expiration.
@@ -224,18 +230,19 @@ The following are intentionally excluded from this Draft:
 - ADR-005 — API Architecture
 - ADR-006 — Time and Timezone
 
-## 11. Open Questions
+## 11. Resolved Questions
 
-1. Should a Focus Session be allowed only for `IN_PROGRESS` tasks, or also for `INBOX` and `PLANNED` tasks?
-2. Should an active session survive application/device restart?
-   **Proposed:** yes, because the session is server-persisted.
-3. Should users be able to manually edit a completed session's duration?
-   **Proposed:** no for V1.
-4. Should a session automatically end when its task is deleted or cancelled?
-5. Should there be a maximum session duration?
-6. Should Focus Sessions support a user-provided note?
-7. Should a user be able to abandon a session without recording it as completed?
+1. **IN_PROGRESS only?** Yes. Focus sessions require the task to be in IN_PROGRESS state. INBOX and PLANNED tasks are not eligible.
+2. **Survive app restart?** Yes. Sessions are server-persisted and survive device restarts.
+3. **Edit completed duration?** No for V1. Start and end times are server-authoritative.
+4. **Auto-end on task delete/cancel?** Yes. When a task with an active session is deleted or cancelled, the session automatically ends with the current server time.
+5. **Maximum session duration?** No max for V1.
+6. **User-provided note?** Yes. An optional note can be recorded at session start.
+7. **Abandon without recording?** No for V1. Ending a session always records it in history.
 
 ## 12. Change History
 
-- Initial Draft created as the first Focus Management behavioral specification.
+- Resolved all 7 open questions: IN_PROGRESS-only eligibility, server-persisted sessions survive restarts,
+  no duration editing, auto-end on task delete/cancel, no max duration, optional note on start,
+  no abandon-without-record. Added R13 (auto-end), R14 (note). Restricted R5 and AC-007 to
+  IN_PROGRESS-only. Added AC-015. Status changed to Proposed.
