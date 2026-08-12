@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Proposed
 
 ## Purpose
 
@@ -711,23 +711,21 @@ then the relevant planning history remains available.
 
 ---
 
-# Open Questions
+# Resolved Questions
 
-1. What exactly constitutes the end-of-day trigger for automatic rollover in
-   the backend?
-2. What happens if a Task is completed/cancelled at exactly the calendar-day
-   boundary?
-3. How should multiple manual reschedules be represented in history?
-4. Can users manually remove a Task from a future Daily Plan without
-   rescheduling it?
-5. Can a user manually disable automatic rollover for a specific Task?
-6. Should capacity be measured only in hours, or eventually support minutes?
-7. Should weekends have a default capacity of zero or inherit the default?
-8. Should estimated duration be required for Tasks intended for Top 3?
-9. What happens when an archived Project contains a future planned Task?
-10. How should timezone changes affect existing Daily Plan dates?
+1. **End-of-day rollover trigger?** Lazy rollover on first view of today's plan. No cron job. Unfinished yesterday tasks auto-rollover when the user first accesses today's plan.
+2. **Complete/cancel at day boundary?** Server clock instant comparison decides. Microsecond edge at 23:59:59.999 is acceptable.
+3. **Multiple manual reschedules in history?** Each reschedule soft-deletes the old entry and creates a new one. Both preserved in history.
+4. **Remove from future plan without rescheduling?** Yes. DELETE endpoint already supports this.
+5. **Disable auto-rollover per task?** No for V1. Auto-rollover applies to all planned tasks. Remove manually if unwanted.
+6. **Hours only or minutes?** Capacity in hours (Int). Task minutes summed then divided by 60.
+7. **Weekend default capacity?** Same default for all days. Per-day overrides handle weekends.
+8. **Estimated duration required for Top 3?** No. Top 3 is about priority, not duration. Tasks without duration are not counted in capacity.
+9. **Archived project with future planned task?** Future plans are soft-deleted. History preserved.
+10. **Timezone change and existing plan dates?** Dates stay as-is. Provenance is the calendar date at planning time. Same rule as Daily Top 3 AC-023.
 
 ---
+
 
 # Change History
 
@@ -742,3 +740,4 @@ then the relevant planning history remains available.
 - One active planning occurrence per Task per calendar date approved.
 - Daily capacity approved with default capacity and per-day overrides.
 - Capacity warnings approved as informational only.
+- Resolved all 10 open questions: lazy rollover on first view (no cron), server clock for day boundary, soft-delete for reschedules, DELETE for removal without reschedule, no per-task auto-rollover disable, capacity in hours, same default for weekends, duration not required for Top 3, future plans removed on project archival, timezone change preserves plan dates. Status changed to Proposed.
