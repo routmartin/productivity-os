@@ -13,6 +13,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import AppShell from "@/app/layouts/AppShell.vue";
 import { useAuthStore } from "@/features/auth/store";
 import ComingSoonPage from "@/pages/ComingSoonPage.vue";
+import GoalsPage from "@/pages/GoalsPage.vue";
 import InboxPage from "@/pages/InboxPage.vue";
 import LoginPage from "@/pages/LoginPage.vue";
 import ProjectsPage from "@/pages/ProjectsPage.vue";
@@ -78,15 +79,8 @@ export const router = createRouter({
         {
           path: "goals",
           name: "goals",
-          component: ComingSoonPage,
-          meta: {
-            title: "Goals",
-            icon: Target,
-            implemented: false,
-            blurb:
-              "Meaningful outcomes that give projects and daily priorities a direction.",
-            milestone: "Milestone 3",
-          },
+          component: GoalsPage,
+          meta: { title: "Goals", icon: Target, implemented: true },
         },
         {
           path: "focus",
