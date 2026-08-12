@@ -1,14 +1,22 @@
 <script setup lang="ts">
-import { onBeforeUnmount, watch } from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { X } from 'lucide-vue-next'
 
+import GoalDetailPanel from '@/features/goals/components/GoalDetailPanel.vue'
+import ProjectDetailPanel from '@/features/projects/components/ProjectDetailPanel.vue'
 import TaskDetailPanel from '@/features/tasks/components/TaskDetailPanel.vue'
 
 import { useContextPanelStore } from './contextPanelStore'
 
 const panel = useContextPanelStore()
 const route = useRoute()
+
+const panelTitle = computed(() => {
+  if (panel.content?.kind === 'project') return 'Project'
+  if (panel.content?.kind === 'goal') return 'Goal'
+  return 'Task'
+})
 
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && panel.isOpen) {
@@ -49,19 +57,33 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
   <Transition name="panel">
     <aside
-      v-if="panel.isOpen && panel.activeTaskId"
+      v-if="panel.isOpen && panel.content"
       class="context-panel"
       role="complementary"
-      aria-label="Task details"
+      :aria-label="`${panelTitle} details`"
     >
       <div class="panel-header">
-        <span class="panel-title">Task</span>
+        <span class="panel-title">{{ panelTitle }}</span>
         <button class="close" type="button" aria-label="Close panel" @click="panel.close()">
           <X :size="16" :stroke-width="1.75" />
         </button>
       </div>
       <div class="panel-body">
-        <TaskDetailPanel :task-id="panel.activeTaskId" />
+        <TaskDetailPanel
+          v-if="panel.content.kind === 'task'"
+          :key="`task-${panel.content.taskId}`"
+          :task-id="panel.content.taskId"
+        />
+        <ProjectDetailPanel
+          v-else-if="panel.content.kind === 'project'"
+          :key="`project-${panel.content.projectId}`"
+          :project-id="panel.content.projectId"
+        />
+        <GoalDetailPanel
+          v-else
+          :key="`goal-${panel.content.goalId}`"
+          :goal-id="panel.content.goalId"
+        />
       </div>
     </aside>
   </Transition>

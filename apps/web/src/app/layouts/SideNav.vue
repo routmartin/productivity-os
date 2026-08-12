@@ -15,7 +15,8 @@ import {
 } from 'lucide-vue-next'
 
 import { useAuthStore } from '@/features/auth/store'
-import { mockGoals, mockProjects } from '@/features/tasks/mock'
+import { useGoalsStore } from '@/features/goals/store'
+import { useProjectsStore } from '@/features/projects/store'
 import { useTasksStore } from '@/features/tasks/store'
 import { firstNameFromEmail } from '@/lib/utils/date'
 
@@ -23,6 +24,15 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const tasksStore = useTasksStore()
+const projectsStore = useProjectsStore()
+const goalsStore = useGoalsStore()
+
+/** Sidebar lists active projects only — completed/archived stay out of the
+ * way (Projects UI spec §14). */
+const activeProjects = computed(() => projectsStore.activeProjects)
+
+/** Sidebar lists pursued goals; drafts stay out until activated. */
+const activeGoals = computed(() => goalsStore.activeGoals)
 
 const mainNav = [
   { name: 'today', title: 'Today', icon: CalendarCheck2 },
@@ -81,8 +91,8 @@ async function onLogout() {
 
       <span class="section-label">Projects</span>
       <ul class="nav-list">
-        <li v-for="project in mockProjects" :key="project.id">
-          <RouterLink :to="{ name: 'projects' }" class="nav-item sub-item" title="Projects arrive in a later milestone">
+        <li v-for="project in activeProjects" :key="project.id">
+          <RouterLink :to="{ name: 'projects' }" class="nav-item sub-item">
             <span class="dot" :style="{ background: project.color }" />
             <span class="nav-label">{{ project.name }}</span>
           </RouterLink>
@@ -97,10 +107,10 @@ async function onLogout() {
 
       <span class="section-label">Goals</span>
       <ul class="nav-list">
-        <li v-for="goal in mockGoals" :key="goal.id">
-          <RouterLink :to="{ name: 'goals' }" class="nav-item sub-item" title="Goals arrive in a later milestone">
+        <li v-for="goal in activeGoals" :key="goal.id">
+          <RouterLink :to="{ name: 'goals' }" class="nav-item sub-item">
             <Target :size="15" :stroke-width="1.75" class="nav-icon goal-icon" />
-            <span class="nav-label">{{ goal.name }}</span>
+            <span class="nav-label">{{ goal.title }}</span>
           </RouterLink>
         </li>
         <li>
