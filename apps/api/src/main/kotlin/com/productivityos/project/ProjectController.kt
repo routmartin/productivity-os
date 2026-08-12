@@ -40,6 +40,11 @@ class ProjectController(
         return projectService.activate(id, currentUser.id())
     }
 
+    @PostMapping("/{id}/return-to-draft")
+    fun returnToDraft(@PathVariable id: UUID): ProjectResponse {
+        return projectService.returnToDraft(id, currentUser.id())
+    }
+
     @PostMapping("/{id}/completion")
     fun complete(@PathVariable id: UUID): ProjectResponse {
         return projectService.complete(id, currentUser.id())

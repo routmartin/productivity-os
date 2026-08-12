@@ -18,6 +18,11 @@ data class Goal(
         return copy(status = GoalStatus.ACTIVE)
     }
 
+    fun returnToDraft(): Goal {
+        require(status == GoalStatus.ACTIVE) { "Only Active goals can return to Draft" }
+        return copy(status = GoalStatus.DRAFT)
+    }
+
     fun complete(now: Instant): Goal {
         require(status == GoalStatus.ACTIVE) { "Only Active goals can be completed" }
         return copy(status = GoalStatus.COMPLETED, completedAt = now)

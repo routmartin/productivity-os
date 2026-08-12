@@ -3,6 +3,7 @@ package com.productivityos.user
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
+import java.util.UUID
 
 @Service
 @Transactional
@@ -59,6 +60,13 @@ class RefreshTokenService(
         val stored = refreshTokenRepository.findByTokenHash(tokenHash) ?: return
         stored.revokedAt = clock.instant()
         refreshTokenRepository.save(stored)
+    }
+
+    fun revokeAllUserTokens(userId: UUID) {
+        val activeTokens = refreshTokenRepository.findActiveByUserId(userId)
+        val now = clock.instant()
+        activeTokens.forEach { it.revokedAt = now }
+        refreshTokenRepository.saveAll(activeTokens)
     }
 
     private fun revokeFamily(token: RefreshToken) {

@@ -9,6 +9,9 @@ interface RefreshTokenRepository : JpaRepository<RefreshToken, UUID> {
 
     fun findByTokenHash(tokenHash: String): RefreshToken?
 
+    @Query("SELECT rt FROM RefreshToken rt WHERE rt.userId = :userId AND rt.revokedAt IS NULL")
+    fun findActiveByUserId(userId: UUID): List<RefreshToken>
+
     @Query("SELECT rt FROM RefreshToken rt WHERE rt.userId = :userId AND rt.rotatedFrom = :rotatedFrom")
     fun findByUserIdAndRotatedFrom(userId: UUID, rotatedFrom: UUID): RefreshToken?
 }

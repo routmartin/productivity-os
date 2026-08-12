@@ -36,6 +36,14 @@ class GoalService(
         return GoalResponse.from(goalRepository.save(entity))
     }
 
+    fun returnToDraft(goalId: UUID, userId: UUID): GoalResponse {
+        val entity = loadOwned(goalId, userId)
+        entity.toDomain().returnToDraft()
+        entity.status = GoalStatus.DRAFT
+        entity.updatedAt = clock.instant()
+        return GoalResponse.from(goalRepository.save(entity))
+    }
+
     fun complete(goalId: UUID, userId: UUID): GoalResponse {
         val entity = loadOwned(goalId, userId)
         val domain = entity.toDomain()

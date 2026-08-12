@@ -19,6 +19,11 @@ data class Project(
         return copy(status = ProjectStatus.ACTIVE)
     }
 
+    fun returnToDraft(): Project {
+        require(status == ProjectStatus.ACTIVE) { "Only Active projects can return to Draft" }
+        return copy(status = ProjectStatus.DRAFT)
+    }
+
     fun complete(now: Instant): Project {
         require(status == ProjectStatus.ACTIVE) { "Only Active projects can be completed" }
         return copy(status = ProjectStatus.COMPLETED, completedAt = now)

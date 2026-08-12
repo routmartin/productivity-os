@@ -13,6 +13,7 @@ class LoginService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val passwordEncoder: PasswordEncoder,
     private val tokenService: TokenService,
+    private val loginRateLimiter: LoginRateLimiter,
     private val clock: Clock
 ) {
     companion object {
@@ -27,15 +28,23 @@ class LoginService(
     )
 
     fun login(request: LoginRequest): LoginResult {
+        if (loginRateLimiter.isLocked(request.email)) {
+            throw AuthenticationException("rate_limited")
+        }
+
         val user = userRepository.findByEmailIgnoreCase(request.email)
         if (user == null) {
+            loginRateLimiter.recordFailure(request.email)
             passwordEncoder.matches(request.password, DUMMY_HASH)
             throw AuthenticationException("invalid_credentials")
         }
 
         if (!passwordEncoder.matches(request.password, user.passwordHash)) {
+            loginRateLimiter.recordFailure(request.email)
             throw AuthenticationException("invalid_credentials")
         }
+
+        loginRateLimiter.clear(request.email)
 
         val accessToken = tokenService.generateAccessToken(user.id!!)
         val refreshToken = tokenService.generateRefreshToken()

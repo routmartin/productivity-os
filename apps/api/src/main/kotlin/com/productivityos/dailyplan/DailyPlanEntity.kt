@@ -29,6 +29,9 @@ class DailyPlanEntity(
     @Column
     val remark: String? = null,
 
+    @Column(name = "rollover_from_date")
+    val rolloverFromDate: LocalDate? = null,
+
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,
 

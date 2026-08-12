@@ -45,6 +45,14 @@ class ProjectService(
         return ProjectResponse.from(projectRepository.save(entity))
     }
 
+    fun returnToDraft(projectId: UUID, userId: UUID): ProjectResponse {
+        val entity = loadOwned(projectId, userId)
+        entity.toDomain().returnToDraft()
+        entity.status = ProjectStatus.DRAFT
+        entity.updatedAt = clock.instant()
+        return ProjectResponse.from(projectRepository.save(entity))
+    }
+
     fun complete(projectId: UUID, userId: UUID): ProjectResponse {
         val entity = loadOwned(projectId, userId)
         val unresolvedCount = taskRepository.countByProjectIdAndUserIdAndStatusNotCompleted(

@@ -21,10 +21,10 @@ class User(
     val email: String,
 
     @Column(name = "password_hash", nullable = false)
-    val passwordHash: String,
+    var passwordHash: String,
 
     @Column(nullable = false)
-    val timezone: String = "UTC",
+    var timezone: String = "UTC",
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant,

@@ -40,6 +40,11 @@ class GoalController(
         return goalService.activate(id, currentUser.id())
     }
 
+    @PostMapping("/{id}/return-to-draft")
+    fun returnToDraft(@PathVariable id: UUID): GoalResponse {
+        return goalService.returnToDraft(id, currentUser.id())
+    }
+
     @PostMapping("/{id}/completion")
     fun complete(@PathVariable id: UUID): GoalResponse {
         return goalService.complete(id, currentUser.id())
