@@ -2,12 +2,14 @@ package com.productivityos.user
 
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
+@Tag(name = "Users", description = "Password change, timezone change")
 @RequestMapping("/api/v1/users")
 class UserController(
     private val userService: UserService,

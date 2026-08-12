@@ -21,6 +21,14 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+springdoc:
+  swagger-ui:
+    path: /docs
+    tags-sorter: alpha
+    operations-sorter: method
+  api-docs:
+    path: /v3/api-docs
+
 app:
   jwt:
     secret: ${JWT_SECRET:this-is-a-dev-secret-at-least-256-bits-long-for-hmac-sha256}

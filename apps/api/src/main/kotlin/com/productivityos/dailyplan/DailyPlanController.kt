@@ -3,6 +3,7 @@ package com.productivityos.dailyplan
 import com.productivityos.user.CurrentUser
 import jakarta.validation.Valid
 import org.springframework.format.annotation.DateTimeFormat
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -17,6 +18,7 @@ import java.time.LocalDate
 import java.util.UUID
 
 @RestController
+@Tag(name = "Daily Planning", description = "Daily task planning with capacity and auto-rollover")
 @RequestMapping("/api/v1/daily-plan")
 class DailyPlanController(
     private val dailyPlanService: DailyPlanService,

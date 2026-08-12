@@ -3,6 +3,7 @@ package com.productivityos.focus
 import com.productivityos.user.CurrentUser
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -14,6 +15,7 @@ import java.net.URI
 import java.util.UUID
 
 @RestController
+@Tag(name = "Focus Sessions", description = "Start/end focus sessions with manual or Pomodoro mode")
 @RequestMapping("/api/v1/focus")
 class FocusController(
     private val focusSessionService: FocusSessionService,

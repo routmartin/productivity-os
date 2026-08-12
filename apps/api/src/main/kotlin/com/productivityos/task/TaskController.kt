@@ -3,6 +3,7 @@ package com.productivityos.task
 import com.productivityos.user.CurrentUser
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -16,6 +17,7 @@ import java.net.URI
 import java.util.UUID
 
 @RestController
+@Tag(name = "Tasks", description = "Task lifecycle: create, plan, start, complete, cancel, reopen, delete, restore, assign to project")
 @RequestMapping("/api/v1/tasks")
 class TaskController(
     private val taskService: TaskService,

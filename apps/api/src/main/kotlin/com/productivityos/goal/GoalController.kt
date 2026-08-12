@@ -3,6 +3,7 @@ package com.productivityos.goal
 import com.productivityos.user.CurrentUser
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -13,6 +14,7 @@ import java.net.URI
 import java.util.UUID
 
 @RestController
+@Tag(name = "Goals", description = "Goal lifecycle: create, activate, return-to-draft, complete, reopen, archive")
 @RequestMapping("/api/v1/goals")
 class GoalController(
     private val goalService: GoalService,

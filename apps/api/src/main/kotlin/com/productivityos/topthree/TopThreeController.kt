@@ -3,6 +3,7 @@ package com.productivityos.topthree
 import com.productivityos.user.CurrentUser
 import jakarta.validation.Valid
 import org.springframework.format.annotation.DateTimeFormat
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -16,6 +17,7 @@ import java.time.LocalDate
 import java.util.UUID
 
 @RestController
+@Tag(name = "Daily Top 3", description = "Daily priorities: view, select, reorder, remove")
 @RequestMapping("/api/v1/daily-top-three")
 class TopThreeController(
     private val topThreeService: TopThreeService,
