@@ -109,7 +109,7 @@ function onRetry() {
 
     <!-- Loading -->
     <div v-if="isLoading" class="grid" aria-busy="true" aria-label="Loading projects">
-      <SkeletonBlock v-for="i in 4" :key="i" height="168px" rounded="lg" />
+      <SkeletonBlock v-for="i in 4" :key="i" height="220px" rounded="lg" />
     </div>
 
     <!-- Error -->
@@ -157,12 +157,12 @@ function onRetry() {
 
 <style scoped>
 .projects-page {
-  max-width: 1100px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: var(--space-8) var(--space-8) var(--space-12);
+  padding: var(--space-8) var(--space-10) var(--space-16);
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
 
 .page-header {
@@ -174,21 +174,21 @@ function onRetry() {
 }
 
 .title {
-  font-size: var(--text-2xl);
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .subtitle {
-  margin-top: var(--space-1);
-  font-size: var(--text-md);
+  margin-top: var(--space-2);
+  font-size: var(--text-lg);
   color: var(--text-tertiary);
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: var(--space-6);
 }
 
 .empty-action {

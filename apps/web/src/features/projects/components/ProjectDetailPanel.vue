@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Archive, CheckCircle2, CheckSquare, SearchX, Target } from 'lucide-vue-next'
 
 import EmptyState from '@/components/shared/EmptyState.vue'
+import SegmentedProgress from '@/components/shared/SegmentedProgress.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiPill from '@/components/ui/UiPill.vue'
 import { useContextPanelStore } from '@/app/layouts/contextPanelStore'
@@ -70,15 +71,11 @@ function onAction(label: string) {
         <span class="progress-label">Progress</span>
         <span class="pct tnum">{{ stats.progress }}%</span>
       </div>
-      <div
-        class="progress"
-        role="progressbar"
-        :aria-valuenow="stats.progress"
-        aria-valuemin="0"
-        aria-valuemax="100"
-      >
-        <div class="progress-fill" :style="{ width: `${stats.progress}%`, background: project.color }" />
-      </div>
+      <SegmentedProgress
+        :value="stats.progress"
+        :color="project.color"
+        :label="`${project.name} progress`"
+      />
       <p class="counts tnum">
         {{ stats.total }} tasks · {{ stats.completed }} completed · {{ stats.remaining }} remaining
       </p>
@@ -237,18 +234,6 @@ function onAction(label: string) {
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-primary);
-}
-
-.progress {
-  height: 5px;
-  border-radius: var(--radius-full);
-  background: var(--surface-3);
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: inherit;
 }
 
 .counts {
