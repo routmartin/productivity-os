@@ -2,6 +2,7 @@
 import { RouterView } from 'vue-router'
 
 import PreviewToast from '@/components/shared/PreviewToast.vue'
+import FocusDock from '@/features/focus/components/FocusDock.vue'
 
 import ContextPanel from './ContextPanel.vue'
 import SideNav from './SideNav.vue'
@@ -23,6 +24,7 @@ import TopBar from './TopBar.vue'
     </main>
     <ContextPanel />
     <PreviewToast />
+    <FocusDock />
   </div>
 </template>
 
@@ -39,6 +41,10 @@ import TopBar from './TopBar.vue'
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
+  /* Pages respond to the real workspace width (sidebar and context panel
+     already deducted) via @container queries. */
+  container-type: inline-size;
+  container-name: workspace;
 }
 
 .scroll {

@@ -104,15 +104,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-5) var(--space-6);
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
 .panel-title {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-tertiary);
 }
@@ -120,8 +120,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 .close {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-md);
   color: var(--text-tertiary);
   transition:
@@ -137,7 +137,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 .panel-body {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-5);
+  padding: var(--space-6);
 }
 
 .backdrop {

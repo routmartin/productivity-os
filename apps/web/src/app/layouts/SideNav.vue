@@ -8,14 +8,13 @@ import {
   Inbox,
   ListChecks,
   LogOut,
-  Plus,
   Settings,
+  Sparkles,
   Target,
   Timer,
 } from 'lucide-vue-next'
 
 import { useAuthStore } from '@/features/auth/store'
-import { useGoalsStore } from '@/features/goals/store'
 import { useProjectsStore } from '@/features/projects/store'
 import { useTasksStore } from '@/features/tasks/store'
 import { firstNameFromEmail } from '@/lib/utils/date'
@@ -25,14 +24,19 @@ const router = useRouter()
 const auth = useAuthStore()
 const tasksStore = useTasksStore()
 const projectsStore = useProjectsStore()
-const goalsStore = useGoalsStore()
 
-/** Sidebar lists active projects only — completed/archived stay out of the
- * way (Projects UI spec §14). */
-const activeProjects = computed(() => projectsStore.activeProjects)
+/** Favorites mirror the reference sidebar: the user's flagship projects with
+ * their accent dots. Falls back to the first active projects. */
+const FAVORITE_IDS = ['proj-pos', 'proj-mobile', 'proj-web', 'proj-personal']
 
-/** Sidebar lists pursued goals; drafts stay out until activated. */
-const activeGoals = computed(() => goalsStore.activeGoals)
+const favorites = computed(() => {
+  const active = projectsStore.activeProjects
+  const pinned = FAVORITE_IDS.flatMap((id) => {
+    const project = active.find((p) => p.id === id)
+    return project ? [project] : []
+  })
+  return pinned.length > 0 ? pinned : active.slice(0, 4)
+})
 
 const mainNav = [
   { name: 'today', title: 'Today', icon: CalendarCheck2 },
@@ -41,7 +45,9 @@ const mainNav = [
   { name: 'projects', title: 'Projects', icon: Folder },
   { name: 'goals', title: 'Goals', icon: Target },
   { name: 'focus', title: 'Focus', icon: Timer },
+  { name: 'ai', title: 'AI', icon: Sparkles },
 ] as const
+
 
 /** Inbox badge tracks the live (mock) inbox count — quick captures and New
  * Task creations update it immediately. */
@@ -64,10 +70,7 @@ async function onLogout() {
   <nav class="side-nav" aria-label="Primary">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">
-        <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-          <path d="M5 11.5h8" stroke="#fff" stroke-width="1.6" stroke-linecap="round" />
-          <circle cx="9" cy="7" r="1.7" fill="#fff" />
-        </svg>
+        <Sparkles :size="16" :stroke-width="2" />
       </span>
       <span class="brand-name">Productivity OS</span>
     </div>
@@ -82,44 +85,26 @@ async function onLogout() {
             :class="{ active: isActive(item.name) }"
             :aria-current="isActive(item.name) ? 'page' : undefined"
           >
-            <component :is="item.icon" :size="17" :stroke-width="1.75" class="nav-icon" />
+            <component :is="item.icon" :size="18" :stroke-width="1.75" class="nav-icon" />
             <span class="nav-label">{{ item.title }}</span>
             <span v-if="'badge' in item && item.badge" class="badge tnum">{{ inboxCount }}</span>
           </RouterLink>
         </li>
       </ul>
 
-      <span class="section-label">Projects</span>
+      <span class="section-label">Favorites</span>
       <ul class="nav-list">
-        <li v-for="project in activeProjects" :key="project.id">
-          <RouterLink :to="{ name: 'projects' }" class="nav-item sub-item">
-            <span class="dot" :style="{ background: project.color }" />
+        <li v-for="project in favorites" :key="project.id">
+          <RouterLink
+            :to="{ name: 'projects' }"
+            class="nav-item sub-item"
+          >
+            <span class="dot" :style="{ background: project.color }" aria-hidden="true" />
             <span class="nav-label">{{ project.name }}</span>
-          </RouterLink>
-        </li>
-        <li>
-          <RouterLink :to="{ name: 'projects' }" class="nav-item sub-item ghost-item">
-            <Plus :size="15" :stroke-width="1.75" class="nav-icon" />
-            <span class="nav-label">New Project</span>
           </RouterLink>
         </li>
       </ul>
 
-      <span class="section-label">Goals</span>
-      <ul class="nav-list">
-        <li v-for="goal in activeGoals" :key="goal.id">
-          <RouterLink :to="{ name: 'goals' }" class="nav-item sub-item">
-            <Target :size="15" :stroke-width="1.75" class="nav-icon goal-icon" />
-            <span class="nav-label">{{ goal.title }}</span>
-          </RouterLink>
-        </li>
-        <li>
-          <RouterLink :to="{ name: 'goals' }" class="nav-item sub-item ghost-item">
-            <Plus :size="15" :stroke-width="1.75" class="nav-icon" />
-            <span class="nav-label">New Goal</span>
-          </RouterLink>
-        </li>
-      </ul>
     </div>
 
     <div class="bottom">
@@ -130,13 +115,13 @@ async function onLogout() {
             class="nav-item"
             :class="{ active: isActive('settings') }"
           >
-            <Settings :size="17" :stroke-width="1.75" class="nav-icon" />
+            <Settings :size="18" :stroke-width="1.75" class="nav-icon" />
             <span class="nav-label">Settings</span>
           </RouterLink>
         </li>
         <li>
           <button class="nav-item as-button" type="button" @click="onLogout">
-            <LogOut :size="17" :stroke-width="1.75" class="nav-icon" />
+            <LogOut :size="18" :stroke-width="1.75" class="nav-icon" />
             <span class="nav-label">Log out</span>
           </button>
         </li>
@@ -148,7 +133,7 @@ async function onLogout() {
           <span class="user-name">{{ displayName }}</span>
           <span class="user-email">{{ auth.user?.email }}</span>
         </span>
-        <ChevronDown :size="14" :stroke-width="1.75" class="user-chevron" />
+        <ChevronDown :size="15" :stroke-width="1.75" class="user-chevron" />
       </RouterLink>
     </div>
   </nav>
@@ -162,8 +147,9 @@ async function onLogout() {
   height: 100%;
   background: var(--surface-1);
   border-right: 1px solid var(--border-subtle);
-  padding: var(--space-4) var(--space-3) var(--space-3);
+  padding: var(--space-5) var(--space-3) var(--space-4);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .scroll {
@@ -177,32 +163,34 @@ async function onLogout() {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3) var(--space-4);
+  padding: var(--space-1) var(--space-3) var(--space-5);
   white-space: nowrap;
 }
 
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
-  border-radius: 9px;
-  background: linear-gradient(135deg, var(--ai) 0%, var(--accent) 100%);
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--ai) 0%, var(--accent-deep) 100%);
+  color: #fff;
+  box-shadow: 0 4px 18px var(--accent-glow);
 }
 
 .brand-name {
-  font-size: var(--text-md);
+  font-size: var(--text-lg);
   font-weight: 650;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
 .section-label {
   display: block;
-  padding: var(--space-4) var(--space-3) var(--space-2);
-  font-size: 11px;
+  padding: var(--space-5) var(--space-3) var(--space-2);
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--text-disabled);
   white-space: nowrap;
@@ -211,7 +199,7 @@ async function onLogout() {
 .nav-list {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .nav-item {
@@ -219,7 +207,7 @@ async function onLogout() {
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  height: 36px;
+  height: 42px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
@@ -238,7 +226,12 @@ async function onLogout() {
 .nav-item.active {
   background: var(--surface-2);
   color: var(--text-primary);
-  font-weight: 500;
+  font-weight: 550;
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+}
+
+.nav-item.active .nav-icon {
+  color: var(--accent-strong);
 }
 
 .as-button {
@@ -250,8 +243,7 @@ async function onLogout() {
   color: var(--text-tertiary);
 }
 
-.nav-item:hover .nav-icon,
-.nav-item.active .nav-icon {
+.nav-item:hover .nav-icon {
   color: var(--text-secondary);
 }
 
@@ -265,36 +257,37 @@ async function onLogout() {
 .badge {
   display: inline-grid;
   place-items: center;
-  min-width: 20px;
-  height: 19px;
-  padding: 0 6px;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
   border-radius: var(--radius-full);
   background: var(--surface-3);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--text-secondary);
 }
 
+.nav-item.active .badge {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
 .sub-item {
-  height: 32px;
+  height: 38px;
   font-size: var(--text-sm);
   color: var(--text-tertiary);
 }
 
+.sub-item:hover {
+  color: var(--text-primary);
+}
+
 .dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   margin: 0 5px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
-}
-
-.goal-icon {
-  color: var(--text-tertiary);
-}
-
-.ghost-item {
-  color: var(--text-disabled);
 }
 
 .bottom {
@@ -319,11 +312,11 @@ async function onLogout() {
 .avatar {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--ai) 0%, var(--accent) 100%);
+  background: linear-gradient(135deg, var(--ai) 0%, var(--accent-deep) 100%);
   color: #fff;
   font-size: var(--text-sm);
   font-weight: 600;
@@ -334,12 +327,12 @@ async function onLogout() {
   flex-direction: column;
   min-width: 0;
   flex: 1;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 .user-name {
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: 550;
   color: var(--text-primary);
 }
 
@@ -354,36 +347,5 @@ async function onLogout() {
 .user-chevron {
   color: var(--text-disabled);
   flex-shrink: 0;
-}
-
-/* Collapsed rail on narrower desktops */
-@media (max-width: 1200px) {
-  .side-nav {
-    width: var(--sidebar-collapsed-width);
-    padding: var(--space-4) var(--space-2) var(--space-2);
-  }
-
-  .brand {
-    justify-content: center;
-    padding: 0 0 var(--space-4);
-  }
-
-  .brand-name,
-  .nav-label,
-  .badge,
-  .section-label,
-  .user-meta,
-  .user-chevron {
-    display: none;
-  }
-
-  .nav-item {
-    justify-content: center;
-    padding: 0;
-  }
-
-  .user-card {
-    justify-content: center;
-  }
 }
 </style>

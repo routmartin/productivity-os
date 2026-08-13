@@ -1,9 +1,12 @@
 import {
+  Calendar,
   CalendarCheck2,
   Folder,
+  History,
   Inbox,
   ListChecks,
   Settings,
+  Sparkles,
   Target,
   Timer,
   type LucideIcon,
@@ -88,6 +91,45 @@ export const router = createRouter({
           name: "focus",
           component: FocusPage,
           meta: { title: "Focus", icon: Timer, implemented: true },
+        },
+        {
+          path: "ai",
+          name: "ai",
+          component: ComingSoonPage,
+          meta: {
+            title: "AI",
+            icon: Sparkles,
+            implemented: false,
+            blurb:
+              "Your planning intelligence — briefings, suggestions, and day planning built on your real behavior.",
+            milestone: "a later milestone",
+          },
+        },
+        {
+          path: "calendar",
+          name: "calendar",
+          component: ComingSoonPage,
+          meta: {
+            title: "Calendar",
+            icon: Calendar,
+            implemented: false,
+            blurb:
+              "A full calendar view of your planned work, connected to your daily plans.",
+            milestone: "a later milestone",
+          },
+        },
+        {
+          path: "timeline",
+          name: "timeline",
+          component: ComingSoonPage,
+          meta: {
+            title: "Timeline",
+            icon: History,
+            implemented: false,
+            blurb:
+              "The full timeline of your day — planned blocks, focus sessions, and completed work.",
+            milestone: "a later milestone",
+          },
         },
         {
           path: "settings",
