@@ -45,8 +45,23 @@ export const useTodayStore = defineStore("today", () => {
     ),
   );
 
+  const UNPLANNED_DISPLAY_LIMIT = 5;
+
+  /** Today shows the freshest captures only — the full list lives in Inbox. */
   const unplannedTasks = computed(() =>
-    tasks.value.filter((t) => t.status === "INBOX"),
+    tasks.value
+      .filter((t) => t.status === "INBOX")
+      .slice()
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, UNPLANNED_DISPLAY_LIMIT),
+  );
+
+  const unplannedExtraCount = computed(() =>
+    Math.max(
+      tasks.value.filter((t) => t.status === "INBOX").length -
+        UNPLANNED_DISPLAY_LIMIT,
+      0,
+    ),
   );
 
   const recentTasks = computed(() =>
@@ -99,6 +114,7 @@ export const useTodayStore = defineStore("today", () => {
     plan,
     plannedTasks,
     unplannedTasks,
+    unplannedExtraCount,
     recentTasks,
     taskById,
     load,

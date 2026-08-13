@@ -20,3 +20,46 @@ export interface DailyPlanSummary {
 }
 
 export type PreviewState = "loading" | "error" | "empty" | null;
+
+/**
+ * Today's Schedule — a visual timeline entry. UI-milestone mock shape; the
+ * real schedule is derived from the daily plan in a later milestone.
+ */
+export type ScheduleTone =
+  | "accent"
+  | "blue"
+  | "success"
+  | "warning"
+  | "neutral";
+
+export interface ScheduleEntry {
+  id: string;
+  /** Wall-clock start time label, e.g. "09:00". */
+  time: string;
+  title: string;
+  /** Secondary line, e.g. "Productivity OS · High Priority". */
+  meta: string;
+  durationMinutes: number;
+  tone: ScheduleTone;
+  /** Linked task — clicking the row opens its detail panel (null for breaks). */
+  taskId: string | null;
+}
+
+/** Event context shown under the week rail in the Calendar panel. */
+export interface CalendarEventAttendee {
+  initials: string;
+  color: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  /** e.g. "9:00 AM". */
+  timeLabel: string;
+  title: string;
+  /** e.g. "Tomorrow 9:00 – 9:30 AM". */
+  detail: string;
+  /** e.g. "Microsoft Teams". */
+  provider: string;
+  attendees: CalendarEventAttendee[];
+  extraAttendees: number;
+}

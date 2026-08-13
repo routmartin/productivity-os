@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CalendarCheck2, Check } from 'lucide-vue-next'
+import { ArrowRight, CalendarCheck2, Check, Flag } from 'lucide-vue-next'
 
 import EmptyState from '@/components/shared/EmptyState.vue'
-import SurfaceCard from '@/components/shared/SurfaceCard.vue'
-import UiPill from '@/components/ui/UiPill.vue'
+import SectionHeader from '@/components/shared/SectionHeader.vue'
 import { findProjectById, findTaskById } from '@/features/tasks/mock'
-import type { Task } from '@/features/tasks/types'
+import type { Priority, Task } from '@/features/tasks/types'
 
 import type { TopThreeEntry } from '../types'
 
@@ -17,13 +16,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{ select: [taskId: string] }>()
 
-interface TopThreeRow {
+interface PriorityRow {
   position: number
   task: Task
   projectName: string | null
+  priority: Priority | null
 }
 
-const rows = computed<TopThreeRow[]>(() =>
+const rows = computed<PriorityRow[]>(() =>
   props.entries
     .slice()
     .sort((a, b) => a.position - b.position)
@@ -35,23 +35,11 @@ const rows = computed<TopThreeRow[]>(() =>
           position: entry.position,
           task,
           projectName: findProjectById(task.projectId)?.name ?? null,
+          priority: task.priority,
         },
       ]
     }),
 )
-
-function statusPill(task: Task): { label: string; tone: 'info' | 'warning' | 'success' | 'neutral' } {
-  switch (task.status) {
-    case 'IN_PROGRESS':
-      return { label: 'In progress', tone: 'info' }
-    case 'COMPLETED':
-      return { label: 'Completed', tone: 'success' }
-    case 'PLANNED':
-      return { label: 'Planned', tone: 'warning' }
-    default:
-      return { label: 'Planned', tone: 'neutral' }
-  }
-}
 
 function onKeydown(event: KeyboardEvent, taskId: string) {
   if (event.key === 'Enter' || event.key === ' ') {
@@ -62,12 +50,15 @@ function onKeydown(event: KeyboardEvent, taskId: string) {
 </script>
 
 <template>
-  <SurfaceCard title="Today's Top 3">
-    <template #actions>
-      <button class="header-action" type="button" title="Editing priorities arrives in Milestone 2">
-        Edit
-      </button>
-    </template>
+  <section class="priorities panel">
+    <SectionHeader title="Top Priorities">
+      <template #actions>
+        <RouterLink :to="{ name: 'tasks' }" class="header-link">
+          View all tasks
+          <ArrowRight :size="14" :stroke-width="2" />
+        </RouterLink>
+      </template>
+    </SectionHeader>
 
     <ol v-if="rows.length > 0" class="rows">
       <li
@@ -80,27 +71,28 @@ function onKeydown(event: KeyboardEvent, taskId: string) {
         @click="emit('select', row.task.id)"
         @keydown="onKeydown($event, row.task.id)"
       >
-        <span class="position tnum" :class="`position-${row.position}`">{{ row.position }}</span>
+        <span class="rank tnum" :class="`rank-${row.position}`">{{ row.position }}</span>
 
         <span class="body">
           <span class="title">{{ row.task.title }}</span>
           <span v-if="row.projectName" class="project">{{ row.projectName }}</span>
         </span>
 
-        <UiPill :tone="statusPill(row.task).tone" class="status-pill">
-          {{ statusPill(row.task).label }}
-        </UiPill>
+        <span v-if="row.priority" class="priority" :class="`priority-${row.priority.toLowerCase()}`">
+          <Flag :size="13" :stroke-width="2" />
+          {{ row.priority === 'HIGH' ? 'High' : row.priority === 'MEDIUM' ? 'Medium' : 'Low' }}
+        </span>
 
         <span
           class="complete-circle"
           :class="{ checked: row.task.status === 'COMPLETED' }"
           role="button"
           tabindex="-1"
-          aria-label="Mark complete (arrives in Milestone 2)"
-          title="Completing tasks arrives in Milestone 2"
+          aria-label="Mark complete (arrives in a later milestone)"
+          title="Completing tasks arrives in a later milestone"
           @click.stop
         >
-          <Check v-if="row.task.status === 'COMPLETED'" :size="12" :stroke-width="2.5" />
+          <Check v-if="row.task.status === 'COMPLETED'" :size="13" :stroke-width="2.5" />
         </span>
       </li>
     </ol>
@@ -112,24 +104,32 @@ function onKeydown(event: KeyboardEvent, taskId: string) {
       description="Pick up to three tasks that would make today a win."
       compact
     />
-  </SurfaceCard>
+  </section>
 </template>
 
 <style scoped>
-.header-action {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--text-tertiary);
-  padding: 4px var(--space-3);
-  border-radius: var(--radius-md);
-  transition:
-    background-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out);
+.panel {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  min-width: 0;
 }
 
-.header-action:hover {
-  background: var(--surface-2);
-  color: var(--text-primary);
+.header-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 550;
+  color: var(--accent-strong);
+  border-radius: var(--radius-sm);
+}
+
+.header-link:hover {
+  opacity: 0.82;
 }
 
 .rows {
@@ -141,68 +141,63 @@ function onKeydown(event: KeyboardEvent, taskId: string) {
 .row {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--surface-2);
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition:
-    border-color var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out);
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
 }
 
 .row:hover {
-  border-color: var(--border-strong);
+  background: var(--surface-2);
 }
 
 .row.active {
+  background: var(--surface-2);
   border-color: var(--accent-border);
 }
 
-/* Position rings: indigo, amber, orange — as in the approved reference. */
-.position {
+/* Rank badges: purple, blue, green — as in the approved reference. */
+.rank {
   display: grid;
   place-items: center;
   width: 28px;
   height: 28px;
   flex-shrink: 0;
   border-radius: var(--radius-full);
-  border: 1.5px solid var(--text-disabled);
-  color: var(--text-secondary);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 650;
+  color: #fff;
 }
 
-.position-1 {
-  border-color: var(--accent);
-  color: var(--accent-strong);
-  background: var(--accent-soft);
+.rank-1 {
+  background: var(--accent);
+  box-shadow: 0 3px 14px var(--accent-glow);
 }
 
-.position-2 {
-  border-color: var(--warning);
-  color: var(--warning);
-  background: var(--warning-soft);
+.rank-2 {
+  background: var(--blue);
 }
 
-.position-3 {
-  border-color: var(--orange);
-  color: var(--orange);
-  background: var(--orange-soft);
+.rank-3 {
+  background: var(--success);
 }
 
 .body {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
   min-width: 0;
   flex: 1;
 }
 
 .title {
-  font-size: var(--text-md);
-  font-weight: 500;
+  font-size: var(--text-lg);
+  font-weight: 550;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -216,22 +211,36 @@ function onKeydown(event: KeyboardEvent, taskId: string) {
 }
 
 .project {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
 }
 
-.status-pill {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 10.5px;
-  font-weight: 600;
+.priority {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+
+.priority-high {
+  color: var(--danger);
+}
+
+.priority-medium {
+  color: var(--blue-strong);
+}
+
+.priority-low {
+  color: var(--text-tertiary);
 }
 
 .complete-circle {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
   border-radius: var(--radius-full);
   border: 1.5px solid var(--text-disabled);
