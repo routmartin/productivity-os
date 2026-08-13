@@ -31,7 +31,7 @@ function onSubmit() {
     <span class="hint">
       <kbd class="kbd tnum"><CornerDownLeft :size="11" /></kbd>
     </span>
-    <UiButton type="submit" variant="primary" size="sm" :disabled="!title.trim()">Add</UiButton>
+    <UiButton type="submit" variant="primary" :disabled="!title.trim()">Add</UiButton>
   </form>
 </template>
 
@@ -39,19 +39,22 @@ function onSubmit() {
 .quick-capture {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  gap: var(--space-4);
+  min-height: 62px;
+  padding: var(--space-3) var(--space-5);
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   transition:
     border-color var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out);
+    background-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .quick-capture:focus-within {
   border-color: var(--accent-border);
-  background: var(--surface-2);
+  background: var(--surface-1);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .prompt {
@@ -67,7 +70,9 @@ function onSubmit() {
   background: transparent;
   border: none;
   outline: none;
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
 }
 

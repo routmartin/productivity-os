@@ -166,8 +166,53 @@ export const useTasksStore = defineStore("tasks", () => {
       completedAt: null,
       createdAt: now,
       updatedAt: now,
+      scheduledTime: draft.scheduledTime,
+      recurrence: draft.recurrence,
     };
     tasks.value.unshift(task);
+    return task;
+  }
+
+  /** Snapshot of the last destructive change, so the UI can offer Undo. */
+  const lastUndoable = ref<{
+    kind: "complete" | "reopen" | "create";
+    taskId: string;
+    task: Task;
+  } | null>(null);
+
+  function toggleTaskComplete(taskId: string): void {
+    const task = taskById(taskId);
+    if (!task) return;
+
+    const now = new Date().toISOString();
+    lastUndoable.value = { kind: task.status === "COMPLETED" ? "reopen" : "complete", taskId, task: { ...task } };
+
+    if (task.status === "COMPLETED") {
+      task.status = "PLANNED";
+      task.completedAt = null;
+    } else {
+      task.status = "COMPLETED";
+      task.completedAt = now;
+    }
+    task.updatedAt = now;
+  }
+
+  function undoLast(): Task | null {
+    const last = lastUndoable.value;
+    if (!last) return null;
+    const task = taskById(last.taskId);
+    if (!task) return null;
+
+    Object.assign(task, last.task);
+    task.updatedAt = new Date().toISOString();
+
+    if (last.kind === "create") {
+      tasks.value = tasks.value.filter((t) => t.id !== last.taskId);
+      lastUndoable.value = null;
+      return null;
+    }
+
+    lastUndoable.value = null;
     return task;
   }
 
@@ -187,5 +232,8 @@ export const useTasksStore = defineStore("tasks", () => {
     setFilter,
     addInboxTask,
     addTask,
+    toggleTaskComplete,
+    undoLast,
+    lastUndoable,
   };
 });

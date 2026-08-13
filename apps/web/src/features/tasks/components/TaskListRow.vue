@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CalendarDays, Clock, Flag } from 'lucide-vue-next'
+import { CalendarDays, Check, Clock, Repeat } from 'lucide-vue-next'
 
 import UiPill from '@/components/ui/UiPill.vue'
-import { formatShortDate, relativeTime } from '@/lib/utils/date'
+import { formatShortDate, formatClockTime, relativeTime } from '@/lib/utils/date'
 import { formatMinutes } from '@/lib/utils/duration'
 
 import { findProjectById } from '../mock'
+import { useTasksStore } from '../store'
 import type { Task, TaskStatus } from '../types'
 import TaskActionMenu from './TaskActionMenu.vue'
-import TaskStatusIcon from './TaskStatusIcon.vue'
+import TaskPrioritySegments from './TaskPrioritySegments.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -17,11 +18,15 @@ const props = withDefaults(
     active?: boolean
     /** Inbox presentation: "Captured 2h ago" instead of project metadata. */
     capturedStyle?: boolean
+    /** Grouped lists show the project in the group header — skip the repeat. */
+    hideProject?: boolean
   }>(),
-  { active: false, capturedStyle: false },
+  { active: false, capturedStyle: false, hideProject: false },
 )
 
 const emit = defineEmits<{ select: [taskId: string] }>()
+
+const store = useTasksStore()
 
 const project = computed(() => findProjectById(props.task.projectId))
 
@@ -29,6 +34,7 @@ const subtitle = computed(() => {
   if (props.capturedStyle) {
     return `Captured ${relativeTime(props.task.createdAt)}`
   }
+  if (props.hideProject) return null
   return project.value?.name ?? null
 })
 
@@ -62,6 +68,11 @@ function onKeydown(event: KeyboardEvent) {
     emit('select', props.task.id)
   }
 }
+
+function onToggle(event: MouseEvent) {
+  event.stopPropagation()
+  store.toggleTaskComplete(props.task.id)
+}
 </script>
 
 <template>
@@ -74,7 +85,18 @@ function onKeydown(event: KeyboardEvent) {
     @click="emit('select', task.id)"
     @keydown="onKeydown"
   >
-    <TaskStatusIcon :status="task.status" class="status" />
+    <button
+      class="check"
+      :class="{ checked: isCompleted }"
+      type="button"
+      role="checkbox"
+      :aria-checked="isCompleted"
+      :aria-label="isCompleted ? `Reopen ${task.title}` : `Complete ${task.title}`"
+      :title="isCompleted ? 'Reopen task' : 'Mark complete'"
+      @click="onToggle"
+    >
+      <Check v-if="isCompleted" :size="11" :stroke-width="3" />
+    </button>
 
     <span class="body">
       <span class="title">{{ task.title }}</span>
@@ -82,17 +104,22 @@ function onKeydown(event: KeyboardEvent) {
     </span>
 
     <span class="meta">
-      <UiPill v-if="pill" :tone="pill.tone" class="status-pill">{{ pill.label }}</UiPill>
-      <span v-if="task.priority === 'HIGH'" class="meta-item priority-high" title="High priority">
-        <Flag :size="12" :stroke-width="1.75" />
-        <span class="priority-label">High</span>
+      <span v-if="task.recurrence" class="meta-item">
+        <Repeat :size="13" :stroke-width="1.75" />
+        {{ task.recurrence }}
       </span>
+      <span v-if="task.scheduledTime" class="meta-item tnum">
+        <Clock :size="13" :stroke-width="1.75" />
+        {{ formatClockTime(task.scheduledTime) }}
+      </span>
+      <UiPill v-if="pill" :tone="pill.tone" class="status-pill">{{ pill.label }}</UiPill>
+      <TaskPrioritySegments v-if="task.priority" :priority="task.priority" />
       <span v-if="dueLabel" class="meta-item tnum">
-        <CalendarDays :size="12" :stroke-width="1.75" />
+        <CalendarDays :size="13" :stroke-width="1.75" />
         {{ dueLabel }}
       </span>
       <span v-if="task.estimatedMinutes" class="meta-item tnum">
-        <Clock :size="12" :stroke-width="1.75" />
+        <Clock :size="13" :stroke-width="1.75" />
         {{ formatMinutes(task.estimatedMinutes) }}
       </span>
       <TaskActionMenu :task="task" />
@@ -104,8 +131,8 @@ function onKeydown(event: KeyboardEvent) {
 .task-list-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: 14px var(--space-3);
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-out);
@@ -118,6 +145,43 @@ function onKeydown(event: KeyboardEvent) {
 .task-list-row.active {
   background: var(--surface-2);
   box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.check {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--text-disabled);
+  background: transparent;
+  color: var(--surface-1);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.check:hover {
+  border-color: var(--accent-strong);
+  transform: scale(1.08);
+}
+
+.check.checked {
+  border-color: var(--success);
+  background: var(--success);
+  color: #07140e;
+}
+
+.task-list-row:hover .check {
+  border-color: var(--text-tertiary);
+}
+
+.task-list-row:hover .check.checked {
+  border-color: var(--success);
 }
 
 .status {
@@ -136,8 +200,9 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 .title {
-  font-size: var(--text-md);
-  font-weight: 500;
+  font-size: var(--text-lg);
+  font-weight: 550;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -151,44 +216,27 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 .subtitle {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
 }
 
 .meta {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-5);
   flex-shrink: 0;
-}
-
-.status-pill {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 10.5px;
-  font-weight: 600;
 }
 
 .meta-item {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-xs);
+  gap: var(--space-2);
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   white-space: nowrap;
 }
 
-.priority-high {
-  color: var(--warning);
-}
-
 /* Fold secondary metadata away as the workspace narrows */
-@media (max-width: 1400px) {
-  .priority-label {
-    display: none;
-  }
-}
-
 @media (max-width: 1250px) {
   .meta-item {
     display: none;

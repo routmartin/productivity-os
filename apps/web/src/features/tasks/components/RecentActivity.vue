@@ -1,53 +1,64 @@
 <script setup lang="ts">
-import { CheckSquare, History, MoreHorizontal } from 'lucide-vue-next'
+import { ArrowRight, CheckCircle2, FilePlus2, History } from 'lucide-vue-next'
 
 import EmptyState from '@/components/shared/EmptyState.vue'
 import SectionHeader from '@/components/shared/SectionHeader.vue'
-import UiPill from '@/components/ui/UiPill.vue'
 import { relativeTime } from '@/lib/utils/date'
 
-import { findProjectById } from '../mock'
-import type { Task } from '../types'
+/** One activity row: an action applied to a task at a point in time. */
+export interface ActivityItem {
+  id: string
+  taskId: string
+  kind: 'completed' | 'created'
+  title: string
+  /** ISO instant used for the relative time label. */
+  at: string
+}
 
-defineProps<{ tasks: Task[] }>()
+defineProps<{ items: ActivityItem[] }>()
 
 const emit = defineEmits<{ select: [taskId: string] }>()
 
-function projectName(task: Task): string | null {
-  return findProjectById(task.projectId)?.name ?? null
+function onKeydown(event: KeyboardEvent, taskId: string) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    emit('select', taskId)
+  }
 }
 </script>
 
 <template>
-  <section class="recent-activity">
-    <SectionHeader title="Recent Tasks" />
+  <section class="activity panel">
+    <SectionHeader title="Recent Activity">
+      <template #actions>
+        <RouterLink :to="{ name: 'tasks' }" class="header-link">
+          View all activity
+          <ArrowRight :size="14" :stroke-width="2" />
+        </RouterLink>
+      </template>
+    </SectionHeader>
 
-    <ul v-if="tasks.length > 0" class="items">
+    <ul v-if="items.length > 0" class="items">
       <li
-        v-for="task in tasks"
-        :key="task.id"
+        v-for="item in items"
+        :key="item.id"
         class="item"
         role="button"
         tabindex="0"
-        @click="emit('select', task.id)"
-        @keydown.enter="emit('select', task.id)"
+        @click="emit('select', item.taskId)"
+        @keydown="onKeydown($event, item.taskId)"
       >
-        <CheckSquare :size="16" :stroke-width="1.75" class="check" />
-        <span class="body">
-          <span class="title">{{ task.title }}</span>
-          <span v-if="projectName(task)" class="project">{{ projectName(task) }}</span>
+        <span class="icon" :class="`kind-${item.kind}`" aria-hidden="true">
+          <CheckCircle2 v-if="item.kind === 'completed'" :size="16" :stroke-width="2" />
+          <FilePlus2 v-else :size="15" :stroke-width="1.75" />
         </span>
-        <UiPill tone="success" class="status-pill">Completed</UiPill>
-        <span class="when tnum">{{ relativeTime(task.completedAt ?? task.updatedAt) }}</span>
-        <button
-          class="more"
-          type="button"
-          aria-label="More actions"
-          title="Task actions arrive in Milestone 2"
-          @click.stop
-        >
-          <MoreHorizontal :size="15" :stroke-width="1.75" />
-        </button>
+        <span class="body">
+          <span class="text">
+            {{ item.kind === 'completed' ? 'Completed' : 'Created new task' }}
+            <span class="object">“{{ item.title }}”</span>
+          </span>
+          <span class="when tnum">{{ relativeTime(item.at) }}</span>
+        </span>
       </li>
     </ul>
 
@@ -55,95 +66,100 @@ function projectName(task: Task): string | null {
       v-else
       :icon="History"
       title="No recent activity"
-      description="Completed tasks will show up here."
+      description="Completed and captured work will show up here."
       compact
     />
   </section>
 </template>
 
 <style scoped>
+.panel {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  min-width: 0;
+}
+
+.header-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 550;
+  color: var(--accent-strong);
+  border-radius: var(--radius-sm);
+}
+
+.header-link:hover {
+  opacity: 0.82;
+}
+
 .items {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition:
-    border-color var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out);
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 .item:hover {
   background: var(--surface-2);
-  border-color: var(--border-strong);
 }
 
-.check {
-  color: var(--success);
+.icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
+  border-radius: var(--radius-full);
+}
+
+.icon.kind-completed {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.icon.kind-created {
+  background: var(--blue-soft);
+  color: var(--blue-strong);
 }
 
 .body {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
   min-width: 0;
   flex: 1;
 }
 
-.title {
+.text {
   font-size: var(--text-md);
+  line-height: 1.45;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.item:hover .title {
+.object {
   color: var(--text-primary);
-}
-
-.project {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-}
-
-.status-pill {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 10.5px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .when {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
-  flex-shrink: 0;
-}
-
-.more {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-sm);
-  color: var(--text-disabled);
-  transition:
-    background-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out);
-}
-
-.more:hover {
-  background: var(--surface-3);
-  color: var(--text-secondary);
 }
 </style>

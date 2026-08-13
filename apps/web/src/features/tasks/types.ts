@@ -29,6 +29,8 @@ export interface Task {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  scheduledTime?: string | null;
+  recurrence?: string | null;
 }
 
 /** Canonical Project and Goal types live in their own features; tasks
@@ -62,4 +64,6 @@ export interface NewTaskDraft {
   priority: Priority | null;
   dueDate: string | null;
   estimatedMinutes: number | null;
+  scheduledTime?: string | null;
+  recurrence?: string | null;
 }

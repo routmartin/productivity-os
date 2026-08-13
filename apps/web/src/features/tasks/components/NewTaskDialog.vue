@@ -24,6 +24,8 @@ const emptyDraft = (): NewTaskDraft => ({
   priority: null,
   dueDate: null,
   estimatedMinutes: null,
+  scheduledTime: null,
+  recurrence: null,
 })
 
 const draft = reactive<NewTaskDraft>(emptyDraft())
@@ -50,6 +52,34 @@ const durationOptions = [
   { value: '120', label: '2h' },
 ]
 
+const timeOptions = [
+  { value: '', label: 'No time' },
+  { value: '07:00', label: '7:00 AM' },
+  { value: '08:00', label: '8:00 AM' },
+  { value: '09:00', label: '9:00 AM' },
+  { value: '10:00', label: '10:00 AM' },
+  { value: '11:00', label: '11:00 AM' },
+  { value: '12:00', label: '12:00 PM' },
+  { value: '13:00', label: '1:00 PM' },
+  { value: '14:00', label: '2:00 PM' },
+  { value: '15:00', label: '3:00 PM' },
+  { value: '16:00', label: '4:00 PM' },
+  { value: '17:00', label: '5:00 PM' },
+  { value: '18:00', label: '6:00 PM' },
+  { value: '19:00', label: '7:00 PM' },
+  { value: '20:00', label: '8:00 PM' },
+]
+
+const recurrenceOptions = [
+  { value: '', label: 'Does not repeat' },
+  { value: 'Mon, Tue, Wed', label: 'Mon · Tue · Wed' },
+  { value: 'Mon, Wed, Fri', label: 'Mon · Wed · Fri' },
+  { value: 'Tue, Thu', label: 'Tue · Thu' },
+  { value: 'Weekdays', label: 'Weekdays' },
+  { value: 'Every day', label: 'Every day' },
+  { value: 'Weekly', label: 'Weekly' },
+]
+
 const PRIORITIES: { value: Priority; label: string }[] = [
   { value: 'LOW', label: 'Low' },
   { value: 'MEDIUM', label: 'Medium' },
@@ -63,6 +93,8 @@ const projectValue = ref('')
 const goalValue = ref('')
 const dueValue = ref('')
 const durationValue = ref('')
+const timeValue = ref('')
+const recurrenceValue = ref('')
 
 watch(
   () => props.open,
@@ -73,6 +105,8 @@ watch(
       goalValue.value = ''
       dueValue.value = ''
       durationValue.value = ''
+      timeValue.value = ''
+      recurrenceValue.value = ''
       isSubmitting.value = false
       await nextTick()
       titleInput.value?.$el.querySelector('input')?.focus()
@@ -94,6 +128,8 @@ function onSubmit() {
       priority: draft.priority,
       dueDate: dueValue.value || null,
       estimatedMinutes: durationValue.value ? Number(durationValue.value) : null,
+      scheduledTime: timeValue.value || null,
+      recurrence: recurrenceValue.value || null,
     })
     emit('close')
   }, 400)
@@ -143,7 +179,12 @@ function onSubmit() {
 
           <div class="field-row">
             <UiInput v-model="dueValue" label="Due date" type="date" :disabled="isSubmitting" />
+            <UiSelect v-model="timeValue" label="Time" :options="timeOptions" :disabled="isSubmitting" />
+          </div>
+
+          <div class="field-row">
             <UiSelect v-model="durationValue" label="Duration" :options="durationOptions" :disabled="isSubmitting" />
+            <UiSelect v-model="recurrenceValue" label="Repeat" :options="recurrenceOptions" :disabled="isSubmitting" />
           </div>
 
     </form>
