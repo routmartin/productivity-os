@@ -109,7 +109,7 @@ function onRetry() {
 
     <!-- Loading -->
     <div v-if="isLoading" class="list" aria-busy="true" aria-label="Loading goals">
-      <SkeletonBlock v-for="i in 3" :key="i" height="120px" rounded="lg" />
+      <SkeletonBlock v-for="i in 3" :key="i" height="148px" rounded="lg" />
     </div>
 
     <!-- Error -->
@@ -159,12 +159,12 @@ function onRetry() {
 
 <style scoped>
 .goals-page {
-  max-width: 860px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: var(--space-8) var(--space-8) var(--space-12);
+  padding: var(--space-8) var(--space-10) var(--space-16);
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
 
 .page-header {
@@ -176,21 +176,21 @@ function onRetry() {
 }
 
 .title {
-  font-size: var(--text-2xl);
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .subtitle {
-  margin-top: var(--space-1);
-  font-size: var(--text-md);
+  margin-top: var(--space-2);
+  font-size: var(--text-lg);
   color: var(--text-tertiary);
 }
 
 .list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
 }
 
 .empty-action {

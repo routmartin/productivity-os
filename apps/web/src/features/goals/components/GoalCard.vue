@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { CheckCircle2 } from 'lucide-vue-next'
 
+import SegmentedProgress from '@/components/shared/SegmentedProgress.vue'
 import UiPill from '@/components/ui/UiPill.vue'
 import { useProjectsStore } from '@/features/projects/store'
 import type { Project } from '@/features/projects/types'
@@ -76,16 +77,7 @@ function onKeydown(event: KeyboardEvent) {
     <div class="side">
       <template v-if="progress !== null">
         <span class="pct tnum">{{ progress }}%</span>
-        <div
-          class="progress"
-          role="progressbar"
-          :aria-valuenow="progress"
-          aria-valuemin="0"
-          aria-valuemax="100"
-          :aria-label="`${goal.title} progress`"
-        >
-          <div class="progress-fill" :style="{ width: `${progress}%` }" />
-        </div>
+        <SegmentedProgress :value="progress" :label="`${goal.title} progress`" />
         <span class="counts tnum">
           {{ projectCounts.active }} active · {{ projectCounts.completed }} completed
         </span>
@@ -100,8 +92,8 @@ function onKeydown(event: KeyboardEvent) {
 <style scoped>
 .goal-card {
   display: flex;
-  gap: var(--space-6);
-  padding: var(--space-5) var(--space-6);
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-7);
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -147,9 +139,9 @@ function onKeydown(event: KeyboardEvent) {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-lg);
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  font-size: var(--text-2xl);
+  font-weight: 650;
+  letter-spacing: -0.02em;
 }
 
 .done-icon {
@@ -158,8 +150,8 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 .description {
-  font-size: var(--text-sm);
-  line-height: 1.5;
+  font-size: var(--text-md);
+  line-height: 1.55;
   color: var(--text-secondary);
 }
 
@@ -174,18 +166,18 @@ function onKeydown(event: KeyboardEvent) {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  height: 26px;
+  height: 30px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-full);
   background: var(--surface-2);
   border: 1px solid var(--border-subtle);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
 .chip-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: var(--radius-full);
 }
 
@@ -196,7 +188,7 @@ function onKeydown(event: KeyboardEvent) {
 
 .projectless {
   margin-top: var(--space-1);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
 }
 
@@ -210,40 +202,25 @@ function onKeydown(event: KeyboardEvent) {
   align-items: flex-end;
   justify-content: center;
   gap: var(--space-2);
-  width: 150px;
+  width: 170px;
   flex-shrink: 0;
 }
 
 .pct {
-  font-size: var(--text-xl);
-  font-weight: 600;
+  font-size: var(--text-2xl);
+  font-weight: 650;
   letter-spacing: -0.02em;
   color: var(--text-primary);
 }
 
-.progress {
-  width: 100%;
-  height: 4px;
-  border-radius: var(--radius-full);
-  background: var(--surface-3);
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-  transition: width var(--duration-normal) var(--ease-out);
-}
-
 .counts {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
   white-space: nowrap;
 }
 
 .no-progress {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text-disabled);
 }
 

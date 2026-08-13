@@ -4,6 +4,7 @@ import { Archive, CalendarDays, CheckSquare, RotateCcw, SearchX } from 'lucide-v
 
 import { useContextPanelStore } from '@/app/layouts/contextPanelStore'
 import EmptyState from '@/components/shared/EmptyState.vue'
+import SegmentedProgress from '@/components/shared/SegmentedProgress.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiPill from '@/components/ui/UiPill.vue'
 import { useProjectsStore } from '@/features/projects/store'
@@ -77,15 +78,7 @@ function onSimpleAction(label: string) {
         <span class="progress-label">Progress</span>
         <span class="pct tnum">{{ progress }}%</span>
       </div>
-      <div
-        class="progress"
-        role="progressbar"
-        :aria-valuenow="progress"
-        aria-valuemin="0"
-        aria-valuemax="100"
-      >
-        <div class="progress-fill" :style="{ width: `${progress}%` }" />
-      </div>
+      <SegmentedProgress :value="progress" :label="`${goal.title} progress`" />
     </div>
 
     <section class="section">
@@ -236,19 +229,6 @@ function onSimpleAction(label: string) {
 .pct {
   font-size: var(--text-sm);
   font-weight: 600;
-}
-
-.progress {
-  height: 5px;
-  border-radius: var(--radius-full);
-  background: var(--surface-3);
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
 }
 
 .section-label {
