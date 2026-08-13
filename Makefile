@@ -1,4 +1,4 @@
-.PHONY: dev run db-up db-down build test clean docs web web-install
+.PHONY: dev run db-up db-down build test clean docs web web-install kill
 
 web-install:
 	cd apps/web && pnpm install
@@ -13,6 +13,7 @@ dev: db-up
 	wait
 
 run: db-up
+	( sleep 8 && open http://localhost:8080/docs ) &
 	./gradlew :apps:api:bootRun
 
 db-up:
@@ -20,6 +21,11 @@ db-up:
 
 db-down:
 	docker compose down
+
+kill:
+	-lsof -ti :8080 | xargs kill
+	-lsof -ti :8081 | xargs kill
+	-lsof -ti :5173 | xargs kill
 
 build:
 	./gradlew :apps:api:compileKotlin :apps:api:compileTestKotlin

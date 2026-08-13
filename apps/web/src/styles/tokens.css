@@ -1,84 +1,97 @@
 /**
- * Design tokens — "Calm Command Center"
+ * Design tokens — "Calm Command Center", spacious dark edition.
  *
- * Dark-first, neutral surfaces, restrained indigo accent, purple reserved
- * primarily for AI. Strong typography, generous spacing, subtle borders,
- * minimal shadows and motion. Aligned to the approved visual reference.
+ * Dark is the primary theme (see the approved visual reference
+ * docs/design/references/productivity-os-today-v2.png and
+ * docs/specs/ui/productivity-os-visual-system.md). Light Calm is kept as an
+ * alternate. Colors are semantic — components never hardcode, so themes swap
+ * via [data-theme] only.
  */
-:root {
-  /* Surfaces — neutral dark with a cool undertone */
-  --surface-0: #0a0c12; /* app background */
-  --surface-1: #10131c; /* sidebar, cards, panels */
-  --surface-2: #161a26; /* inputs, hover rows */
-  --surface-3: #1d2232; /* raised elements */
-  --surface-overlay: rgba(7, 8, 12, 0.66);
 
-  /* Borders — subtle, never heavy */
-  --border-subtle: rgba(255, 255, 255, 0.06);
+:root {
+  color-scheme: dark;
+
+  /* Surfaces — deep dark canvas, quietly elevated panels (spec §7–8) */
+  --surface-0: #0b0d12; /* app background */
+  --surface-1: #11141b; /* sidebar, cards, panels */
+  --surface-2: #151925; /* inputs, hover rows, elevated surfaces */
+  --surface-3: #1b2030; /* raised elements */
+  --surface-overlay: rgba(5, 6, 10, 0.62);
+
+  /* Borders — subtle separation instead of shadows */
+  --border-subtle: rgba(255, 255, 255, 0.07);
   --border-strong: rgba(255, 255, 255, 0.11);
 
-  /* Text */
-  --text-primary: #e8eaf1;
-  --text-secondary: #a4aab9;
-  --text-tertiary: #6a7180;
-  --text-disabled: #484d5c;
+  /* Text — calm light grays */
+  --text-primary: #edeef4;
+  --text-secondary: #a7acbd;
+  --text-tertiary: #70768a;
+  --text-disabled: #4b5060;
 
-  /* Accent — restrained indigo (primary actions, highlights) */
-  --accent: #6d63f6;
-  --accent-strong: #8a80ff;
-  --accent-deep: #5750d6; /* darker indigo for the focus CTA */
-  --accent-soft: rgba(109, 99, 246, 0.15);
-  --accent-border: rgba(109, 99, 246, 0.38);
+  /* Accent — primary purple (spec §9) */
+  --accent: #6c5ce7;
+  --accent-strong: #8b6cff; /* text/link variant on dark */
+  --accent-deep: #5849d1; /* focus CTA */
+  --accent-soft: rgba(108, 92, 231, 0.14);
+  --accent-border: rgba(108, 92, 231, 0.4);
+  --accent-glow: rgba(108, 92, 231, 0.32);
+  --on-accent: #ffffff;
 
-  /* AI — purple, reserved primarily for intelligence surfaces */
-  --ai: #8b5cf6;
+  /* AI — secondary purple, reserved primarily for intelligence surfaces */
+  --ai: #8b6cff;
   --ai-strong: #a78bfa;
-  --ai-soft: rgba(139, 92, 246, 0.14);
-  --ai-border: rgba(139, 92, 246, 0.34);
+  --ai-soft: rgba(139, 108, 255, 0.14);
+  --ai-border: rgba(139, 108, 255, 0.34);
 
-  /* Semantic + status hues */
-  --blue: #5b9dff; /* in-progress status, info tiles */
-  --blue-soft: rgba(91, 157, 255, 0.14);
-  --success: #4cc38a;
-  --success-soft: rgba(76, 195, 138, 0.13);
-  --warning: #e0ad60;
-  --warning-soft: rgba(224, 173, 96, 0.13);
+  /* Semantic + status hues (spec §9) */
+  --blue: #3b82f6;
+  --blue-strong: #60a5fa;
+  --blue-soft: rgba(59, 130, 246, 0.14);
+  --success: #39c58a;
+  --success-soft: rgba(57, 197, 138, 0.13);
+  --warning: #f4b740;
+  --warning-soft: rgba(244, 183, 64, 0.13);
   --orange: #e88349;
   --orange-soft: rgba(232, 131, 73, 0.13);
-  --danger: #f2707a;
-  --danger-soft: rgba(242, 112, 122, 0.12);
+  --danger: #f05a5a;
+  --danger-soft: rgba(240, 90, 90, 0.12);
 
-  /* Typography — comfortable reading scale */
+  /* Typography — generous reading scale (spec §10).
+   * Body minimum is 15px; metadata stays at 13–14px. */
   --font-sans:
     'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text',
     'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --text-xs: 0.8125rem; /* 13px */
-  --text-sm: 0.875rem; /* 14px */
-  --text-md: 0.9375rem; /* 15px */
-  --text-lg: 1.0625rem; /* 17px */
-  --text-xl: 1.3125rem; /* 21px */
-  --text-2xl: 1.625rem; /* 26px */
-  --text-3xl: 2rem; /* 32px */
+  --text-xs: 0.8125rem; /* 13px — metadata */
+  --text-sm: 0.875rem; /* 14px — metadata */
+  --text-md: 0.9375rem; /* 15px — body */
+  --text-lg: 1rem; /* 16px — emphasized body / row titles */
+  --text-xl: 1.125rem; /* 18px — panel titles */
+  --text-2xl: 1.25rem; /* 20px — standard headings */
+  --text-3xl: 1.625rem; /* 26px — page titles */
+  --text-hero: 2.75rem; /* 44px — Today hero */
 
-  /* Spacing */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-10: 2.5rem;
-  --space-12: 3rem;
+  /* Spacing — the layout should breathe (spec §12) */
+  --space-1: 0.25rem; /* 4 */
+  --space-2: 0.5rem; /* 8 */
+  --space-3: 0.75rem; /* 12 */
+  --space-4: 1rem; /* 16 */
+  --space-5: 1.25rem; /* 20 */
+  --space-6: 1.5rem; /* 24 */
+  --space-7: 1.75rem; /* 28 */
+  --space-8: 2rem; /* 32 */
+  --space-10: 2.5rem; /* 40 */
+  --space-12: 3rem; /* 48 */
+  --space-16: 4rem; /* 64 */
 
-  /* Radii */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  /* Radii — large but controlled (spec §13) */
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
   --radius-full: 999px;
 
-  /* Shadows — minimal, only for floating layers */
-  --shadow-panel: 0 12px 40px rgba(0, 0, 0, 0.42);
+  /* Shadows — restrained, panels separate via borders */
+  --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.45);
 
   /* Motion — subtle and quick */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -86,8 +99,55 @@
   --duration-normal: 220ms;
 
   /* Layout */
-  --sidebar-width: 256px;
-  --sidebar-collapsed-width: 72px;
-  --panel-width: 392px;
-  --content-max: 1240px;
+  --sidebar-width: 236px;
+  --header-height: 72px;
+  --panel-width: 400px;
+  --rail-width: 340px;
+  --content-max: 1560px;
+}
+
+/* ——— Light Calm (alternate theme) ——— */
+[data-theme='light'] {
+  color-scheme: light;
+
+  --surface-0: #f5f4f1;
+  --surface-1: #ffffff;
+  --surface-2: #efeeea;
+  --surface-3: #e5e3dd;
+  --surface-overlay: rgba(40, 38, 32, 0.32);
+
+  --border-subtle: rgba(28, 26, 32, 0.08);
+  --border-strong: rgba(28, 26, 32, 0.14);
+
+  --text-primary: #1d1e26;
+  --text-secondary: #4e5260;
+  --text-tertiary: #7a7f8d;
+  --text-disabled: #a9adb8;
+
+  --accent: #6157f0;
+  --accent-strong: #4c44d8;
+  --accent-deep: #4c44d8;
+  --accent-soft: rgba(97, 87, 240, 0.1);
+  --accent-border: rgba(97, 87, 240, 0.35);
+  --accent-glow: rgba(97, 87, 240, 0.22);
+  --on-accent: #ffffff;
+
+  --ai: #7c5cf0;
+  --ai-strong: #6a48e0;
+  --ai-soft: rgba(124, 92, 240, 0.1);
+  --ai-border: rgba(124, 92, 240, 0.32);
+
+  --blue: #2f7fe0;
+  --blue-strong: #2f7fe0;
+  --blue-soft: rgba(47, 127, 224, 0.1);
+  --success: #1e9e6a;
+  --success-soft: rgba(30, 158, 106, 0.12);
+  --warning: #b07d28;
+  --warning-soft: rgba(176, 125, 40, 0.13);
+  --orange: #d2692f;
+  --orange-soft: rgba(210, 105, 47, 0.12);
+  --danger: #d24852;
+  --danger-soft: rgba(210, 72, 82, 0.1);
+
+  --shadow-panel: 0 12px 40px rgba(40, 36, 48, 0.14);
 }

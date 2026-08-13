@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
+    <script>
+      // Apply the saved theme before first paint (default: dark).
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("productivity-os.theme") || "dark";
+      } catch {
+        document.documentElement.dataset.theme = "dark";
+      }
+    </script>
     <meta
       name="description"
       content="Productivity OS — a calm command center for meaningful work."
