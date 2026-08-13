@@ -1,27 +1,25 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Sparkles } from 'lucide-vue-next'
 
 import { useContextPanelStore } from '@/app/layouts/contextPanelStore'
 import ErrorState from '@/components/shared/ErrorState.vue'
 import SkeletonBlock from '@/components/shared/SkeletonBlock.vue'
-import UiButton from '@/components/ui/UiButton.vue'
 import AiBriefing from '@/features/ai/components/AiBriefing.vue'
-import AiInsights from '@/features/ai/components/AiInsights.vue'
-import { mockBriefing, mockInsights } from '@/features/ai/mock'
-import { useAuthStore } from '@/features/auth/store'
-import FocusPanel from '@/features/focus/components/FocusPanel.vue'
-import CalendarContext from '@/features/planning/components/CalendarContext.vue'
+import FocusTipCard from '@/features/ai/components/FocusTipCard.vue'
+import { mockBriefing } from '@/features/ai/mock'
+import DailySummaryCard from '@/features/focus/components/DailySummaryCard.vue'
+import FocusTodayCard from '@/features/focus/components/FocusTodayCard.vue'
+import CalendarRail from '@/features/planning/components/CalendarRail.vue'
+import ScheduleTimeline from '@/features/planning/components/ScheduleTimeline.vue'
 import TopThreeSection from '@/features/planning/components/TopThreeSection.vue'
+import { mockSchedule } from '@/features/planning/mock'
 import { useTodayStore } from '@/features/planning/todayStore'
 import type { PreviewState } from '@/features/planning/types'
-import RecentActivity from '@/features/tasks/components/RecentActivity.vue'
-import TaskListSection from '@/features/tasks/components/TaskListSection.vue'
-import { firstNameFromEmail, greetingFor } from '@/lib/utils/date'
+import RecentActivity, { type ActivityItem } from '@/features/tasks/components/RecentActivity.vue'
+import { showPreviewNote } from '@/lib/preview'
 
 const route = useRoute()
-const auth = useAuthStore()
 const today = useTodayStore()
 const panel = useContextPanelStore()
 
@@ -37,12 +35,33 @@ watch(
   () => today.load(previewFromQuery()),
 )
 
-const greeting = computed(() => {
-  const name = firstNameFromEmail(auth.user?.email ?? '')
-  return `${greetingFor(new Date(), auth.user?.timezone)}, ${name}`
-})
-
 const isLoading = computed(() => today.status === 'loading' || today.status === 'idle')
+
+const isEmpty = computed(() => today.topThree.length === 0)
+
+const scheduleEntries = computed(() => (isEmpty.value ? [] : mockSchedule))
+
+/** Recent work mixed with fresh captures, newest first — mirrors the
+ *  reference's Completed / Created activity feed. */
+const activityItems = computed<ActivityItem[]>(() => {
+  const completed = today.recentTasks.map((task) => ({
+    id: `completed-${task.id}`,
+    taskId: task.id,
+    kind: 'completed' as const,
+    title: task.title,
+    at: task.completedAt ?? task.updatedAt,
+  }))
+  const created = today.unplannedTasks.slice(0, 2).map((task) => ({
+    id: `created-${task.id}`,
+    taskId: task.id,
+    kind: 'created' as const,
+    title: task.title,
+    at: task.createdAt,
+  }))
+  return [...completed, ...created]
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, 4)
+})
 
 function onSelectTask(taskId: string) {
   panel.toggleTask(taskId)
@@ -53,34 +72,33 @@ function onRetry() {
 }
 
 /** "Plan My Day" is AI-assisted planning — visual-only this milestone. */
-const planNoteVisible = ref(false)
-let planNoteTimer: ReturnType<typeof setTimeout> | undefined
-
 function onPlanMyDay() {
-  planNoteVisible.value = true
-  clearTimeout(planNoteTimer)
-  planNoteTimer = setTimeout(() => (planNoteVisible.value = false), 3200)
+  showPreviewNote('AI day planning arrives in a later milestone.')
 }
 </script>
 
 <template>
   <div class="today-page">
     <!-- Loading -->
-    <div v-if="isLoading" class="content" aria-busy="true" aria-label="Loading today">
-      <header class="page-header">
-        <SkeletonBlock width="300px" height="28px" rounded="md" />
-        <SkeletonBlock width="220px" height="14px" class="skeleton-gap" />
-      </header>
-      <SkeletonBlock height="96px" rounded="lg" />
-      <div class="two-col">
-        <SkeletonBlock height="220px" rounded="lg" />
-        <SkeletonBlock height="220px" rounded="lg" />
+    <div v-if="isLoading" class="layout" aria-busy="true" aria-label="Loading today">
+      <div class="main">
+        <SkeletonBlock height="34px" width="420px" rounded="md" />
+        <SkeletonBlock height="218px" rounded="lg" />
+        <div class="main-cols">
+          <SkeletonBlock height="480px" rounded="lg" />
+          <SkeletonBlock height="480px" rounded="lg" />
+        </div>
       </div>
-      <SkeletonBlock height="140px" rounded="lg" />
+      <div class="rail">
+        <SkeletonBlock height="300px" rounded="lg" />
+        <SkeletonBlock height="210px" rounded="lg" />
+        <SkeletonBlock height="150px" rounded="lg" />
+        <SkeletonBlock height="168px" rounded="lg" />
+      </div>
     </div>
 
     <!-- Error -->
-    <div v-else-if="today.status === 'error'" class="content">
+    <div v-else-if="today.status === 'error'" class="content-narrow">
       <ErrorState
         title="Today didn't load"
         description="Your plan for today could not be reached. Your data is safe — try loading it again."
@@ -88,63 +106,37 @@ function onPlanMyDay() {
       />
     </div>
 
-    <!-- Ready -->
+    <!-- Ready — composition follows the approved visual reference -->
     <template v-else>
-      <header class="page-header">
-        <div class="heading">
-          <h1 class="greeting">{{ greeting }} <span aria-hidden="true">👋</span></h1>
-          <p class="subtitle">Here's what matters today.</p>
-        </div>
-        <div class="header-actions">
-          <UiButton variant="outline-ai" @click="onPlanMyDay">
-            <Sparkles :size="14" :stroke-width="1.75" />
-            Plan My Day
-          </UiButton>
-          <Transition name="fade">
-            <p v-if="planNoteVisible" class="plan-note" role="status">
-              AI day planning arrives in a later milestone.
-            </p>
-          </Transition>
-        </div>
+      <header class="hero">
+        <h1 class="hero-title">Let's make today count.</h1>
+        <p class="hero-sub">Focus on your priorities and progress will follow.</p>
       </header>
 
-      <div class="grid">
-        <div class="main-col">
-          <AiBriefing v-if="today.plan && today.plan.plannedMinutes > 0" :briefing="mockBriefing" />
+      <div class="layout">
+        <div class="main">
+          <AiBriefing :briefing="mockBriefing" @plan="onPlanMyDay" />
 
-          <div class="two-col">
-            <TopThreeSection
-              :entries="today.topThree"
-              :active-task-id="panel.activeTaskId"
-              @select="onSelectTask"
-            />
-            <TaskListSection
-              title="Planned"
-              :tasks="today.plannedTasks"
-              :active-task-id="panel.activeTaskId"
-              empty-title="Nothing planned"
-              empty-description="Plan tasks from your inbox when you're ready."
-              @select="onSelectTask"
-            />
+          <div class="main-cols">
+            <ScheduleTimeline :entries="scheduleEntries" @select="onSelectTask" />
+
+            <div class="main-stack">
+              <TopThreeSection
+                :entries="today.topThree"
+                :active-task-id="panel.activeTaskId"
+                @select="onSelectTask"
+              />
+              <RecentActivity :items="activityItems" @select="onSelectTask" />
+            </div>
           </div>
-
-          <TaskListSection
-            title="Unplanned"
-            :tasks="today.unplannedTasks"
-            :active-task-id="panel.activeTaskId"
-            empty-title="Inbox is clear"
-            empty-description="New captures will land here, waiting to be planned."
-            @select="onSelectTask"
-          />
-
-          <RecentActivity :tasks="today.recentTasks" @select="onSelectTask" />
         </div>
 
-        <aside class="rail" aria-label="Context">
-          <FocusPanel />
-          <AiInsights :insights="mockInsights" />
-          <CalendarContext />
-        </aside>
+        <div class="rail">
+          <CalendarRail />
+          <FocusTodayCard />
+          <DailySummaryCard />
+          <FocusTipCard />
+        </div>
       </div>
     </template>
   </div>
@@ -152,113 +144,104 @@ function onPlanMyDay() {
 
 <style scoped>
 .today-page {
-  padding: var(--space-8) var(--space-8) var(--space-12);
-}
-
-.content {
   max-width: var(--content-max);
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
+  padding: var(--space-6) var(--space-10) var(--space-16);
 }
 
-.skeleton-gap {
-  margin-top: var(--space-2);
+.content-narrow {
+  max-width: 760px;
+  margin: 0 auto;
+  padding-top: var(--space-10);
 }
 
-.page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-6);
-  max-width: var(--content-max);
-  margin: 0 auto var(--space-6);
+/* Hero — the largest type on the page (spec §16) */
+.hero {
+  margin-bottom: var(--space-8);
 }
 
-.greeting {
-  font-size: var(--text-3xl);
-  font-weight: 650;
-  letter-spacing: -0.025em;
+.hero-title {
+  font-size: var(--text-hero);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: var(--text-primary);
 }
 
-.subtitle {
-  margin-top: var(--space-1);
-  font-size: var(--text-md);
+.hero-sub {
+  margin-top: var(--space-3);
+  font-size: var(--text-lg);
   color: var(--text-tertiary);
 }
 
-.header-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-2);
-  flex-shrink: 0;
-}
-
-.plan-note {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-}
-
-.grid {
+/* Main workspace + narrower right context column (spec §17) */
+.layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) var(--rail-width);
   gap: var(--space-6);
-  max-width: var(--content-max);
-  margin: 0 auto;
   align-items: start;
 }
 
-.main-col {
+.main {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
   min-width: 0;
 }
 
-.two-col {
+.main-cols {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
   gap: var(--space-6);
-  /* Stretch so Today's Top 3 and Planned share a bottom edge. */
-  align-items: stretch;
+  align-items: start;
+}
+
+.main-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
 }
 
 .rail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-  position: sticky;
-  top: var(--space-6);
+  gap: var(--space-6);
+  min-width: 0;
 }
 
-/* The rail folds under the main column as width shrinks — the workspace
-   keeps priority. */
-@media (max-width: 1280px) {
-  .grid {
+/* Container queries keyed off the workspace, so opening the context panel
+   also collapses columns instead of squeezing them (spec §32: reduce
+   secondary content first — typography stays readable throughout). */
+
+/* Fold the schedule + priorities into one column when the main area can no
+   longer give both columns comfortable reading width (~460px each). */
+@container workspace (max-width: 1260px) {
+  .main-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Then collapse the right rail under the main workspace. */
+@container workspace (max-width: 980px) {
+  .layout {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .rail {
-    position: static;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
   }
 }
 
-@media (max-width: 900px) {
-  .two-col {
+@container workspace (max-width: 640px) {
+  .rail {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .page-header {
-    flex-direction: column;
-  }
-
-  .header-actions {
-    align-items: flex-start;
+  .hero-title {
+    font-size: var(--text-3xl);
   }
 }
 </style>

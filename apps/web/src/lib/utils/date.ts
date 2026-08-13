@@ -58,6 +58,17 @@ export function greetingFor(date: Date, timeZone?: string): string {
   return "Good evening";
 }
 
+/** "09:00" (24h HH:mm) → "9:00 AM" — renders a scheduled wall-clock time. */
+export function formatClockTime(hhmm: string): string {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+  if (!match) return hhmm.trim();
+  const hours = Number(match[1]);
+  const minutes = match[2];
+  const period = hours >= 12 ? "PM" : "AM";
+  const display = hours % 12 === 0 ? 12 : hours % 12;
+  return `${display}:${minutes} ${period}`;
+}
+
 /** Compact relative time: "just now", "12m ago", "3h ago", "Yesterday", "4d ago". */
 export function relativeTime(
   isoInstant: string,
