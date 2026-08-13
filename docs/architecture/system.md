@@ -195,19 +195,19 @@ Carried forward, and extended by the ADRs:
 
 ## References
 
-### Architecture Decision Records
+- [ ] Architecture Decision Records
 
-- `docs/decisions/ADR-001-sdd-workflow.md` — specification-first workflow
+* `docs/decisions/ADR-001-sdd-workflow.md` — specification-first workflow
   (Accepted)
-- `docs/decisions/ADR-002-technology-stack.md` — Spring Boot/Kotlin, Vue 3/TS,
+* `docs/decisions/ADR-002-technology-stack.md` — Spring Boot/Kotlin, Vue 3/TS,
   PostgreSQL, modular monolith, REST
-- `docs/decisions/ADR-003-database-persistence.md` — persistence, migrations,
+* `docs/decisions/ADR-003-database-persistence.md` — persistence, migrations,
   soft delete, concurrency
-- `docs/decisions/ADR-004-authentication-user-isolation.md` — authentication
+* `docs/decisions/ADR-004-authentication-user-isolation.md` — authentication
   and user isolation
-- `docs/decisions/ADR-005-api-architecture.md` — REST conventions, error
+* `docs/decisions/ADR-005-api-architecture.md` — REST conventions, error
   model, versioning
-- `docs/decisions/ADR-006-time-and-timezone.md` — time and timezone handling
+* `docs/decisions/ADR-006-time-and-timezone.md` — time and timezone handling
 
 ### Architecture
 
