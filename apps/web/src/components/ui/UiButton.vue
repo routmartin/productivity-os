@@ -65,21 +65,21 @@ withDefaults(
   opacity: 0.55;
 }
 
-/* Sizes */
+/* Sizes — comfortable desktop targets (spec §14: never tiny) */
 .size-sm {
-  height: 32px;
-  padding: 0 var(--space-3);
+  height: 36px;
+  padding: 0 var(--space-4);
   font-size: var(--text-sm);
 }
 
 .size-md {
-  height: 38px;
-  padding: 0 var(--space-4);
+  height: 44px;
+  padding: 0 var(--space-5);
   font-size: var(--text-md);
 }
 
 .size-lg {
-  height: 46px;
+  height: 48px;
   padding: 0 var(--space-6);
   font-size: var(--text-lg);
 }
@@ -87,12 +87,13 @@ withDefaults(
 /* Variants */
 .variant-primary {
   background: var(--accent);
-  color: #0b0e18;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
 .variant-primary:hover:not(:disabled) {
-  background: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 88%, white);
+  box-shadow: 0 6px 28px var(--accent-glow);
 }
 
 .variant-ghost {

@@ -43,25 +43,27 @@ const emit = defineEmits<{ retry: [] }>()
 .icon-wrap {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: var(--radius-md);
   background: var(--danger-soft);
   color: var(--danger);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .title {
-  font-size: var(--text-md);
-  font-weight: 500;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
 }
 
 .description {
-  margin-top: var(--space-1);
-  font-size: var(--text-sm);
+  margin-top: var(--space-2);
+  font-size: var(--text-md);
+  line-height: 1.55;
   color: var(--text-tertiary);
-  max-width: 340px;
+  max-width: 400px;
 }
 
 .retry {

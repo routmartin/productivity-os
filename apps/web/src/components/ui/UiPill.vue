@@ -18,8 +18,8 @@ withDefaults(
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  height: 22px;
-  padding: 0 var(--space-2);
+  height: 24px;
+  padding: 0 10px;
   border-radius: var(--radius-full);
   font-size: var(--text-xs);
   font-weight: 500;

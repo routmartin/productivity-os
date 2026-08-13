@@ -25,10 +25,10 @@ defineProps<{
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   min-width: 0;
-  padding: var(--space-4);
+  padding: var(--space-5);
 }
 
 .padded {
-  padding: var(--space-5);
+  padding: var(--space-6);
 }
 </style>

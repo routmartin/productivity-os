@@ -42,9 +42,9 @@ const emit = defineEmits<{ change: [key: T] }>()
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  height: 30px;
-  padding: 0 var(--space-3);
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 var(--space-4);
   border-radius: var(--radius-full);
   font-size: var(--text-sm);
   color: var(--text-tertiary);

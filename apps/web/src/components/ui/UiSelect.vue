@@ -75,7 +75,7 @@ function onChange(event: Event) {
   transition:
     border-color var(--duration-fast) var(--ease-out),
     background-color var(--duration-fast) var(--ease-out);
-  color-scheme: dark;
+  color-scheme: inherit;
 }
 
 .field:hover:not(:disabled) {
