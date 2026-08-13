@@ -4,6 +4,11 @@ function minutesAgo(minutes: number): string {
   return new Date(Date.now() - minutes * 60_000).toISOString();
 }
 
+/**
+ * Three sessions today total 2h 47m (the "Focus Today" figures in the
+ * approved visual reference); the fourth record is yesterday's, so it shows
+ * in history without affecting today's summary.
+ */
 export const mockFocusHistory: FocusSessionRecord[] = [
   {
     id: "fs-01",
@@ -13,8 +18,8 @@ export const mockFocusHistory: FocusSessionRecord[] = [
     goalName: "Become a better developer",
     priority: "HIGH",
     startedAt: minutesAgo(230),
-    endedAt: minutesAgo(188),
-    durationSeconds: 42 * 60,
+    endedAt: minutesAgo(168),
+    durationSeconds: 62 * 60,
   },
   {
     id: "fs-02",
@@ -23,9 +28,9 @@ export const mockFocusHistory: FocusSessionRecord[] = [
     projectName: "Productivity OS",
     goalName: "Become a better developer",
     priority: "HIGH",
-    startedAt: minutesAgo(310),
-    endedAt: minutesAgo(279),
-    durationSeconds: 31 * 60,
+    startedAt: minutesAgo(320),
+    endedAt: minutesAgo(265),
+    durationSeconds: 55 * 60,
   },
   {
     id: "fs-03",
@@ -34,9 +39,9 @@ export const mockFocusHistory: FocusSessionRecord[] = [
     projectName: "Productivity OS",
     goalName: "Become a better developer",
     priority: "MEDIUM",
-    startedAt: minutesAgo(400),
-    endedAt: minutesAgo(346),
-    durationSeconds: 54 * 60,
+    startedAt: minutesAgo(420),
+    endedAt: minutesAgo(370),
+    durationSeconds: 50 * 60,
   },
   {
     id: "fs-04",
@@ -45,8 +50,13 @@ export const mockFocusHistory: FocusSessionRecord[] = [
     projectName: "Productivity OS",
     goalName: "Become a better developer",
     priority: "LOW",
-    startedAt: minutesAgo(510),
-    endedAt: minutesAgo(483),
+    startedAt: minutesAgo(60 * 26),
+    endedAt: minutesAgo(60 * 26 - 27),
     durationSeconds: 27 * 60,
   },
 ];
+
+/** Day-over-day focus trend shown on the Today rail (mock). */
+export const mockFocusTrend = {
+  deltaPercent: 22,
+};

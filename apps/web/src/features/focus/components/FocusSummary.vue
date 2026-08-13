@@ -41,21 +41,22 @@ const store = useFocusStore();
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--space-3) var(--space-2);
+  padding: var(--space-4) var(--space-2);
   border-radius: var(--radius-md);
-  background: var(--surface-1);
+  background: var(--surface-2);
   border: 1px solid var(--border-subtle);
 }
 
 .stat-value {
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   font-weight: 650;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
 }
 
 .stat-label {
-  margin-top: 2px;
-  font-size: var(--text-xs);
+  margin-top: 3px;
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
 }
 </style>

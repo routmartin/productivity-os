@@ -51,15 +51,15 @@ const store = useFocusStore();
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3);
   border-radius: var(--radius-md);
 }
 
 .session-icon {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   border-radius: var(--radius-sm);
   background: var(--surface-2);
@@ -75,8 +75,8 @@ const store = useFocusStore();
 }
 
 .session-title {
-  font-size: var(--text-sm);
-  font-weight: 500;
+  font-size: var(--text-md);
+  font-weight: 550;
   color: var(--text-primary);
 }
 
@@ -84,20 +84,20 @@ const store = useFocusStore();
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
 }
 
 .session-duration {
-  font-size: var(--text-sm);
-  font-weight: 500;
+  font-size: var(--text-md);
+  font-weight: 550;
   color: var(--text-secondary);
   flex-shrink: 0;
 }
 
 .empty {
   padding: var(--space-4) var(--space-3);
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   color: var(--text-tertiary);
 }
 </style>

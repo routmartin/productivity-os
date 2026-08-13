@@ -1,32 +1,36 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import {
+  Check,
+  CheckCircle2,
+  Folder,
   ListChecks,
-  Pause,
   Play,
-  Square,
+  Search,
+  Timer,
 } from "lucide-vue-next";
 
 import EmptyState from "@/components/shared/EmptyState.vue";
 import ErrorState from "@/components/shared/ErrorState.vue";
-import SectionHeader from "@/components/shared/SectionHeader.vue";
 import SkeletonBlock from "@/components/shared/SkeletonBlock.vue";
 import SurfaceCard from "@/components/shared/SurfaceCard.vue";
 import UiButton from "@/components/ui/UiButton.vue";
+import UiPill from "@/components/ui/UiPill.vue";
 import FocusHistory from "@/features/focus/components/FocusHistory.vue";
 import FocusSummary from "@/features/focus/components/FocusSummary.vue";
-import TaskSelector from "@/features/focus/components/TaskSelector.vue";
 import { useFocusStore } from "@/features/focus/store";
 import { useTasksStore } from "@/features/tasks/store";
 import { findProjectById } from "@/features/tasks/mock";
 import { PRIORITY_LABELS } from "@/features/tasks/types";
-import type { Priority } from "@/features/tasks/types";
+import type { Priority, Task } from "@/features/tasks/types";
 import type { PreviewState } from "@/features/planning/types";
 
 const route = useRoute();
 const focusStore = useFocusStore();
 const tasksStore = useTasksStore();
+
+const search = ref("");
 
 function previewFromQuery(): PreviewState {
   const value = route.query.preview;
@@ -53,46 +57,57 @@ const isLoading = computed(
   () => tasksStore.status === "loading" || tasksStore.status === "idle",
 );
 
+const filteredTasks = computed<Task[]>(() => {
+  const query = search.value.trim().toLowerCase();
+  if (!query) return focusStore.eligibleTasks;
+  return focusStore.eligibleTasks.filter((t) =>
+    t.title.toLowerCase().includes(query),
+  );
+});
+
 const hasNoTasks = computed(
-  () =>
-    tasksStore.status === "ready" &&
-    focusStore.eligibleTasks.length === 0,
+  () => tasksStore.status === "ready" && focusStore.eligibleTasks.length === 0,
 );
 
-const project = computed(() => {
-  const task = focusStore.selectedTask;
+const selectedTask = computed(() => focusStore.selectedTask);
+
+const selectedProject = computed(() => {
+  const task = selectedTask.value;
   if (!task?.projectId) return null;
   return findProjectById(task.projectId) ?? null;
 });
 
-function onRetry() {
-  tasksStore.load(null);
+function projectName(task: Task): string | null {
+  if (!task.projectId) return null;
+  return findProjectById(task.projectId)?.name ?? null;
 }
 
-function formattedCompletionDuration(): string {
-  const mins = Math.floor(focusStore.elapsedSeconds / 60);
-  const secs = focusStore.elapsedSeconds % 60;
-  if (mins >= 60) {
-    const hrs = Math.floor(mins / 60);
-    const rem = mins % 60;
-    return `${hrs}h ${rem}m ${secs}s`;
-  }
-  return `${mins}m ${secs}s`;
+function priorityTone(priority: Priority): "danger" | "warning" | "neutral" {
+  if (priority === "HIGH") return "danger";
+  if (priority === "MEDIUM") return "warning";
+  return "neutral";
+}
+
+function onSelect(taskId: string) {
+  focusStore.selectTask(focusStore.selectedTaskId === taskId ? null : taskId);
+}
+
+function onRetry() {
+  tasksStore.load(null);
 }
 </script>
 
 <template>
-  <div
-    class="focus-page"
-    :class="{
-      'is-immersive': focusStore.state === 'active' || focusStore.state === 'paused',
-    }"
-  >
+  <div class="focus-page">
     <!-- Loading -->
     <div v-if="isLoading" class="loading" aria-busy="true" aria-label="Loading tasks">
-      <SkeletonBlock height="120px" rounded="lg" />
-      <SkeletonBlock height="48px" rounded="md" />
-      <SkeletonBlock height="200px" rounded="lg" />
+      <div class="loading-head">
+        <SkeletonBlock height="34px" width="180px" rounded="md" />
+        <SkeletonBlock height="20px" width="280px" rounded="md" />
+      </div>
+      <div class="card-grid">
+        <SkeletonBlock v-for="n in 6" :key="n" height="150px" rounded="lg" />
+      </div>
     </div>
 
     <!-- Error -->
@@ -103,86 +118,131 @@ function formattedCompletionDuration(): string {
       @retry="onRetry"
     />
 
-    <!-- IDLE STATE -->
-    <template v-else-if="focusStore.state === 'idle'">
-      <header class="idle-header">
-        <h1 class="title">Focus</h1>
-        <p class="subtitle">What do you want to work on?</p>
+    <!-- IDLE -->
+    <template v-else>
+      <header class="page-header">
+        <div class="page-heading">
+          <h1 class="page-title">Focus</h1>
+          <p class="page-subtitle">Pick one thing. Give it your full attention.</p>
+        </div>
+        <div v-if="!hasNoTasks" class="page-stats">
+          <div class="page-stat">
+            <span class="page-stat-value tnum">{{ focusStore.todaySummary.formatted }}</span>
+            <span class="page-stat-label">focused today</span>
+          </div>
+          <span class="page-stat-divider" aria-hidden="true"></span>
+          <div class="page-stat">
+            <span class="page-stat-value tnum">{{ focusStore.todaySummary.sessions }}</span>
+            <span class="page-stat-label">sessions</span>
+          </div>
+        </div>
       </header>
 
-      <div class="idle-grid">
-        <div class="idle-main">
-          <!-- Empty state: no eligible tasks -->
-          <template v-if="hasNoTasks">
-            <SurfaceCard>
-              <EmptyState
-                :icon="ListChecks"
-                title="Nothing to focus on yet."
-                description="Create or plan a task first."
-                compact
-              >
-                <RouterLink :to="{ name: 'tasks' }" class="empty-link">
-                  <UiButton variant="ghost" size="sm">
-                    Go to Tasks
-                  </UiButton>
-                </RouterLink>
-              </EmptyState>
-            </SurfaceCard>
-          </template>
+      <!-- Empty state -->
+      <SurfaceCard v-if="hasNoTasks">
+        <EmptyState
+          :icon="ListChecks"
+          title="Nothing to focus on yet."
+          description="Create or plan a task first."
+          compact
+        >
+          <RouterLink :to="{ name: 'tasks' }" class="empty-link">
+            <UiButton variant="ghost" size="sm">Go to Tasks</UiButton>
+          </RouterLink>
+        </EmptyState>
+      </SurfaceCard>
 
-          <!-- Task Selector -->
-          <template v-else>
-            <SurfaceCard>
-              <SectionHeader title="Select a task" />
-              <TaskSelector />
-            </SurfaceCard>
+      <template v-else>
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <label class="search-box">
+            <Search :size="15" :stroke-width="2" class="search-icon" aria-hidden="true" />
+            <input
+              v-model="search"
+              type="search"
+              class="search-input"
+              placeholder="Filter tasks..."
+              aria-label="Filter focus tasks"
+            />
+          </label>
+          <span class="toolbar-meta tnum">{{ filteredTasks.length }} eligible</span>
+        </div>
 
-            <!-- Selected task context -->
-            <Transition name="fade">
-              <SurfaceCard
-                v-if="focusStore.selectedTask"
-                class="task-context"
-              >
-                <SectionHeader title="Selected" />
-                <div class="context-body">
-                  <p class="context-title">{{ focusStore.selectedTask.title }}</p>
-                  <div class="context-meta">
-                    <span v-if="project" class="context-tag project">
-                      {{ project.name }}
-                    </span>
-                    <span
-                      v-if="focusStore.selectedTask.priority"
-                      class="context-tag priority"
-                    >
-                      {{ PRIORITY_LABELS[focusStore.selectedTask.priority as Priority] }}
-                    </span>
-                    <span
-                      v-if="focusStore.selectedTask.estimatedMinutes"
-                      class="context-tag duration"
-                    >
-                      {{ focusStore.selectedTask.estimatedMinutes }}m
-                    </span>
-                  </div>
-                </div>
-              </SurfaceCard>
-            </Transition>
+        <!-- Task card grid -->
+        <div v-if="filteredTasks.length === 0" class="no-results">
+          <p class="no-title">No matching tasks</p>
+          <p class="no-desc">Try a different search.</p>
+        </div>
 
-            <!-- Start Focus -->
+        <div v-else class="card-grid" role="listbox" aria-label="Eligible tasks">
+          <button
+            v-for="task in filteredTasks"
+            :key="task.id"
+            class="task-card"
+            :class="{ selected: focusStore.selectedTaskId === task.id }"
+            role="option"
+            :aria-selected="focusStore.selectedTaskId === task.id"
+            @click="onSelect(task.id)"
+          >
+            <span class="card-check" aria-hidden="true">
+              <Check
+                v-if="focusStore.selectedTaskId === task.id"
+                :size="13"
+                :stroke-width="2.5"
+              />
+            </span>
+
+            <span class="card-title">{{ task.title }}</span>
+
+            <span class="card-meta">
+              <UiPill v-if="projectName(task)" tone="accent">
+                <Folder :size="11" :stroke-width="2" aria-hidden="true" />
+                {{ projectName(task) }}
+              </UiPill>
+              <UiPill v-if="task.priority" :tone="priorityTone(task.priority)">
+                {{ PRIORITY_LABELS[task.priority] }}
+              </UiPill>
+            </span>
+
+            <span v-if="task.estimatedMinutes" class="card-estimate tnum">
+              <Timer :size="13" :stroke-width="1.75" aria-hidden="true" />
+              ~{{ task.estimatedMinutes }}m
+            </span>
+          </button>
+        </div>
+
+        <!-- Start bar -->
+        <Transition name="rise">
+          <div v-if="selectedTask" class="start-bar">
+            <span class="start-bar-icon" aria-hidden="true">
+              <CheckCircle2 :size="20" :stroke-width="2" />
+            </span>
+            <span class="start-bar-info">
+              <span class="start-bar-title">{{ selectedTask.title }}</span>
+              <span class="start-bar-meta">
+                <UiPill v-if="selectedProject" tone="accent">{{ selectedProject.name }}</UiPill>
+                <UiPill v-if="selectedTask.priority" tone="neutral">
+                  {{ PRIORITY_LABELS[selectedTask.priority] }}
+                </UiPill>
+                <UiPill v-if="selectedTask.estimatedMinutes" tone="neutral">
+                  ~{{ selectedTask.estimatedMinutes }}m
+                </UiPill>
+              </span>
+            </span>
             <UiButton
               variant="primary"
               size="lg"
-              full-width
-              :disabled="!focusStore.selectedTaskId"
               class="start-btn"
               @click="focusStore.startFocus()"
             >
               <Play :size="15" :stroke-width="2" />
               Start Focus
             </UiButton>
-          </template>
-        </div>
+          </div>
+        </Transition>
 
-        <div v-if="!hasNoTasks" class="idle-rail">
+        <!-- Insights -->
+        <div class="insights-grid">
           <SurfaceCard>
             <FocusSummary />
           </SurfaceCard>
@@ -190,132 +250,86 @@ function formattedCompletionDuration(): string {
             <FocusHistory />
           </SurfaceCard>
         </div>
-      </div>
+      </template>
     </template>
-
-    <!-- ACTIVE STATE -->
-    <div
-      v-else-if="focusStore.state === 'active'"
-      class="focus-active"
-    >
-      <span class="focus-label">FOCUS</span>
-      <h2 class="focus-task-title">{{ focusStore.selectedTask?.title }}</h2>
-      <p v-if="project" class="focus-project">{{ project.name }}</p>
-      <p class="focus-timer tnum" aria-live="polite" aria-label="Focus time">
-        {{ focusStore.formattedTime }}
-      </p>
-      <div class="focus-actions">
-        <UiButton variant="subtle" size="lg" @click="focusStore.pauseFocus()">
-          <Pause :size="15" :stroke-width="2" />
-          Pause
-        </UiButton>
-        <UiButton variant="ghost" size="lg" @click="focusStore.stopFocus()">
-          <Square :size="14" :stroke-width="2" />
-          Stop
-        </UiButton>
-      </div>
-    </div>
-
-    <!-- PAUSED STATE -->
-    <div
-      v-else-if="focusStore.state === 'paused'"
-      class="focus-active is-paused"
-    >
-      <span class="focus-label paused-label">PAUSED</span>
-      <h2 class="focus-task-title">{{ focusStore.selectedTask?.title }}</h2>
-      <p v-if="project" class="focus-project">{{ project.name }}</p>
-      <p class="focus-timer tnum" aria-live="polite" aria-label="Paused time">
-        {{ focusStore.formattedTime }}
-      </p>
-      <div class="focus-actions">
-        <UiButton variant="primary" size="lg" @click="focusStore.resumeFocus()">
-          <Play :size="15" :stroke-width="2" />
-          Resume
-        </UiButton>
-        <UiButton variant="ghost" size="lg" @click="focusStore.stopFocus()">
-          <Square :size="14" :stroke-width="2" />
-          Stop
-        </UiButton>
-      </div>
-    </div>
-
-    <!-- COMPLETED STATE -->
-    <div
-      v-else-if="focusStore.state === 'completed'"
-      class="focus-complete"
-    >
-      <span class="complete-label">Focus complete</span>
-      <h2 class="complete-title">{{ focusStore.selectedTask?.title }}</h2>
-      <p class="complete-duration tnum">{{ formattedCompletionDuration() }}</p>
-      <p class="complete-message">Nice work.</p>
-      <UiButton variant="primary" size="lg" @click="focusStore.doneFocus()">
-        Done
-      </UiButton>
-    </div>
   </div>
 </template>
 
 <style scoped>
 .focus-page {
-  max-width: 720px;
+  max-width: var(--content-max);
   margin: 0 auto;
-  padding: var(--space-8) var(--space-8) var(--space-12);
+  padding: var(--space-8) var(--space-10) var(--space-16);
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
 }
 
 /* Loading */
 .loading {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-6);
 }
 
-/* Idle */
-.idle-header {
-  margin-bottom: var(--space-1);
+.loading-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.title {
-  font-size: var(--text-2xl);
-  font-weight: 650;
-  letter-spacing: -0.02em;
+/* Page header — same pattern as other pages */
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  flex-wrap: wrap;
 }
 
-.subtitle {
-  margin-top: var(--space-1);
-  font-size: var(--text-md);
+.page-title {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+}
+
+.page-subtitle {
+  margin-top: var(--space-2);
+  font-size: var(--text-lg);
   color: var(--text-tertiary);
 }
 
-.idle-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: var(--space-5);
-  align-items: start;
+.page-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-bottom: 2px;
 }
 
-@media (max-width: 900px) {
-  .idle-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .idle-rail {
-    display: none;
-  }
-}
-
-.idle-main {
+.page-stat {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  align-items: flex-end;
+  gap: 1px;
 }
 
-.idle-rail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+.page-stat-value {
+  font-size: var(--text-xl);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.page-stat-label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.page-stat-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border-subtle);
 }
 
 .empty-link {
@@ -323,153 +337,243 @@ function formattedCompletionDuration(): string {
   display: inline-block;
 }
 
-/* Task context */
-.task-context .context-body {
-  padding: var(--space-3);
-}
-
-.context-title {
-  font-size: var(--text-md);
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.context-meta {
+/* Toolbar */
+.toolbar {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.context-tag {
-  font-size: var(--text-xs);
-  font-weight: 500;
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
-  background: var(--surface-2);
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.context-tag.project {
-  background: var(--accent-soft);
-  color: var(--accent-strong);
-}
-
-/* Start button uses deeper indigo */
-.start-btn {
-  background: var(--accent-deep);
-}
-
-.start-btn:hover:not(:disabled) {
-  background: var(--accent);
-}
-
-/* Active / Paused — immersive, minimal */
-.focus-active {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: calc(100vh - 200px);
-  text-align: center;
   gap: var(--space-4);
 }
 
-.focus-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--accent-strong);
-  background: var(--accent-soft);
-  padding: 4px var(--space-3);
-  border-radius: var(--radius-full);
+.search-box {
+  position: relative;
+  flex: 1;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
 }
 
-.paused-label {
-  color: var(--warning);
-  background: var(--warning-soft);
+.search-icon {
+  position: absolute;
+  left: var(--space-4);
+  color: var(--text-tertiary);
+  pointer-events: none;
 }
 
-.focus-task-title {
-  font-size: var(--text-2xl);
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  max-width: 480px;
-}
-
-.focus-project {
+.search-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-4) 0 var(--space-10);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
   font-size: var(--text-md);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.search-input::placeholder {
   color: var(--text-tertiary);
 }
 
-.focus-timer {
-  font-size: 96px;
-  font-weight: 200;
-  letter-spacing: 0.02em;
-  line-height: 1.1;
-  color: var(--text-primary);
+.search-input:hover {
+  background: var(--surface-2);
 }
 
-.is-paused .focus-timer {
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-border);
+  background: var(--surface-1);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.toolbar-meta {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+/* Task card grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--space-4);
+}
+
+.task-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 148px;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  text-align: left;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.task-card:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+.task-card.selected {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  box-shadow: 0 8px 28px var(--accent-glow);
+}
+
+.card-check {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border-strong);
+  color: transparent;
+}
+
+.task-card.selected .card-check {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.card-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  color: var(--text-primary);
+  padding-right: var(--space-8);
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.card-estimate {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.no-results {
+  text-align: center;
+  padding: var(--space-10) var(--space-4);
+}
+
+.no-title {
+  font-size: var(--text-md);
+  font-weight: 500;
   color: var(--text-secondary);
 }
 
-@media (max-width: 600px) {
-  .focus-timer {
-    font-size: 64px;
+.no-desc {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* Start bar — sticky, spans full width */
+.start-bar {
+  position: sticky;
+  bottom: var(--space-6);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  border: 1px solid var(--accent-border);
+  box-shadow:
+    0 0 0 1px var(--accent-soft),
+    0 16px 48px rgba(0, 0, 0, 0.45),
+    0 8px 32px var(--accent-glow);
+}
+
+.start-bar-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.start-bar-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+
+.start-bar-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.start-bar-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.start-btn {
+  flex-shrink: 0;
+}
+
+/* Insights */
+.insights-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@container workspace (max-width: 900px) {
+  .insights-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-.focus-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  margin-top: var(--space-6);
+/* Start bar entrance */
+.rise-enter-active {
+  transition:
+    opacity var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out);
 }
 
-/* Completed */
-.focus-complete {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: calc(100vh - 200px);
-  text-align: center;
-  gap: var(--space-4);
-}
-
-.complete-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--success);
-  background: var(--success-soft);
-  padding: 4px var(--space-3);
-  border-radius: var(--radius-full);
-}
-
-.complete-title {
-  font-size: var(--text-2xl);
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  max-width: 480px;
-}
-
-.complete-duration {
-  font-size: 64px;
-  font-weight: 200;
-  letter-spacing: 0.02em;
-  line-height: 1.15;
-  color: var(--text-primary);
-}
-
-.complete-message {
-  font-size: var(--text-lg);
-  color: var(--text-secondary);
+.rise-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
 }
 </style>

@@ -109,7 +109,7 @@ function onSelect(taskId: string) {
   align-items: flex-start;
   gap: var(--space-3);
   width: 100%;
-  padding: var(--space-3) var(--space-3);
+  padding: var(--space-4);
   border-radius: var(--radius-md);
   text-align: left;
   transition:
@@ -151,8 +151,9 @@ function onSelect(taskId: string) {
 }
 
 .task-title {
-  font-size: var(--text-md);
-  font-weight: 500;
+  font-size: var(--text-lg);
+  font-weight: 550;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
 }
 
@@ -160,7 +161,7 @@ function onSelect(taskId: string) {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text-tertiary);
 }
 
