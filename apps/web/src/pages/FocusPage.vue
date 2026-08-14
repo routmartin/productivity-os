@@ -36,10 +36,12 @@ function previewFromQuery(): PreviewState {
   return value === "loading" || value === "error" || value === "empty" ? value : null;
 }
 
-onMounted(() => {
+onMounted(async () => {
   const preview = previewFromQuery();
-  tasksStore.load(preview);
-  // Default-select the first eligible task so the start bar is ready to go.
+  await tasksStore.load(preview);
+  await focusStore.load();
+  // Default-select the first eligible task so the start bar is ready to go
+  // (an active session restored by load() already owns the selection).
   if (!preview && !focusStore.selectedTaskId) {
     focusStore.selectTask(focusStore.eligibleTasks[0]?.id ?? null);
   }
