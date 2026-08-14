@@ -1,10 +1,13 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
+import { errorMessage } from "@/lib/api/errorMessages";
 import type { PreviewState } from "@/features/planning/types";
 import { useTasksStore } from "@/features/tasks/store";
 import type { Task } from "@/features/tasks/types";
 
+import { projectsApi } from "./api";
+import { projectResponseToProject } from "./api-types";
 import { mockProjects } from "./mock";
 import type { NewProjectDraft, Project, ProjectStatus } from "./types";
 
@@ -48,14 +51,25 @@ function statsFor(projectId: string, tasks: Task[]): ProjectTaskStats {
 
 /**
  * Projects collection for the Projects workspace (and the sidebar list).
- * Mock-backed this milestone; this store is the seam where the real
- * Project API plugs in later.
+ *
+ * Mock mode (`VITE_USE_MOCK_PROJECTS=true`) keeps the milestone behavior
+ * for design review. Real mode (default) talks to the Project API: new
+ * projects are created as DRAFT then immediately activated, matching the
+ * UI's expectation that new projects are Active.
  */
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_PROJECTS === "true";
+
 export const useProjectsStore = defineStore("projects", () => {
   const projects = ref<Project[]>([...mockProjects]);
   const status = ref<LoadStatus>("idle");
   const statusFilter = ref<ProjectFilter>("ACTIVE");
   const previewEmpty = ref(false);
+  /** Last failed mutation message (null when none). */
+  const lastError = ref<string | null>(null);
+
+  function clearError(): void {
+    lastError.value = null;
+  }
 
   const tasksStore = useTasksStore();
 
@@ -106,43 +120,77 @@ export const useProjectsStore = defineStore("projects", () => {
 
   /**
    * @param preview forces a UI state for design verification
-   * (`?preview=loading|error|empty`); null performs a normal mock load.
+   * (`?preview=loading|error|empty`) — mock mode only.
    */
   async function load(preview: PreviewState = null): Promise<void> {
     status.value = "loading";
+    lastError.value = null;
 
     if (preview === "loading") return;
 
-    await delay(MOCK_LATENCY_MS);
+    if (USE_MOCK) {
+      await delay(MOCK_LATENCY_MS);
 
-    if (preview === "error") {
-      status.value = "error";
+      if (preview === "error") {
+        status.value = "error";
+        return;
+      }
+
+      previewEmpty.value = preview === "empty";
+      status.value = "ready";
       return;
     }
 
-    previewEmpty.value = preview === "empty";
-    status.value = "ready";
+    try {
+      const list = await projectsApi.list();
+      projects.value = list.map(projectResponseToProject);
+      status.value = "ready";
+    } catch (error) {
+      status.value = "error";
+      lastError.value = errorMessage(error);
+    }
   }
 
   function setFilter(filter: ProjectFilter): void {
     statusFilter.value = filter;
   }
 
-  /** Mock creation: new projects become ACTIVE immediately. The real flow
-   * (create as DRAFT, then activation) arrives with the Project API. */
-  function addProject(draft: NewProjectDraft): Project {
-    const project: Project = {
-      id: `proj-local-${Date.now()}`,
-      name: draft.name,
-      description: draft.description || null,
-      goalId: draft.goalId,
-      color: draft.color,
-      status: "ACTIVE",
-      createdAt: new Date().toISOString(),
-      completedAt: null,
-    };
-    projects.value.unshift(project);
-    return project;
+  /** Create a project. Mock mode creates it Active immediately; real mode
+   *  creates as DRAFT then activates it, so the UI sees an Active project. */
+  function addProject(draft: NewProjectDraft): Project | null {
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      const project: Project = {
+        id: `proj-local-${Date.now()}`,
+        name: draft.name,
+        description: draft.description || null,
+        goalId: draft.goalId,
+        color: draft.color,
+        status: "ACTIVE",
+        createdAt: new Date().toISOString(),
+        completedAt: null,
+      };
+      projects.value.unshift(project);
+      return project;
+    }
+
+    projectsApi
+      .create({
+        title: draft.name,
+        description: draft.description || null,
+        goalId: draft.goalId,
+      })
+      .then((created) => projectsApi.activate(created.id))
+      .then((activated) => {
+        const project = projectResponseToProject(activated);
+        project.color = draft.color;
+        projects.value.unshift(project);
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+    return null;
   }
 
   return {
@@ -152,12 +200,14 @@ export const useProjectsStore = defineStore("projects", () => {
     visibleProjects,
     activeProjects,
     filterCounts,
+    lastError,
     projectById,
     statsForProject,
     tasksForProject,
     load,
     setFilter,
     addProject,
+    clearError,
   };
 });
 

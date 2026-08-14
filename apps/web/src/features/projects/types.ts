@@ -13,6 +13,8 @@ export interface Project {
   /** Small identifying accent color. */
   color: string;
   status: ProjectStatus;
+  /** ISO calendar date (YYYY-MM-DD) or null — backend-only, shown later. */
+  deadline?: string | null;
   createdAt: string;
   completedAt: string | null;
 }
