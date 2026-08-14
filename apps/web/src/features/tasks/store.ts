@@ -1,8 +1,11 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
+import { errorMessage } from "@/lib/api/errorMessages";
 import type { PreviewState } from "@/features/planning/types";
 
+import { tasksApi } from "./api";
+import { taskResponseToTask } from "./api-types";
 import { mockTasks } from "./mock";
 import type { NewTaskDraft, Task, TaskStatus } from "./types";
 
@@ -39,17 +42,26 @@ function nextLocalId(): string {
 /**
  * Tasks collection for the Tasks and Inbox workspaces.
  *
- * Milestone 2 (UI): the master list starts from mock data and mutations
- * are in-memory only. The store is the single seam where the real Task
- * API (GET/POST /api/v1/tasks, lifecycle action endpoints) plugs in
- * later without touching components.
+ * Mock mode (`VITE_USE_MOCK_TASKS=true`) keeps the milestone behavior:
+ * seed data, local ids, immediate optimistic flips with Undo — for design
+ * review. Real mode (default) talks to the Task API: server-confirmed
+ * writes, no optimistic flips, and completion is one-way (the backend has
+ * no un-complete transition; plan 002 records this decision).
  */
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_TASKS === "true";
+
 export const useTasksStore = defineStore("tasks", () => {
   const tasks = ref<Task[]>([...mockTasks]);
   const status = ref<LoadStatus>("idle");
   const searchQuery = ref("");
   const statusFilter = ref<TaskStatusFilter>("ALL");
   const previewEmpty = ref(false);
+  /** Last failed mutation message (null when none). */
+  const lastError = ref<string | null>(null);
+
+  function clearError(): void {
+    lastError.value = null;
+  }
 
   function taskById(id: string): Task | undefined {
     return tasks.value.find((task) => task.id === id);
@@ -105,22 +117,35 @@ export const useTasksStore = defineStore("tasks", () => {
 
   /**
    * @param preview forces a UI state for design verification
-   * (`?preview=loading|error|empty`); null performs a normal mock load.
+   * (`?preview=loading|error|empty`) — mock mode only.
    */
   async function load(preview: PreviewState = null): Promise<void> {
     status.value = "loading";
+    lastError.value = null;
 
     if (preview === "loading") return; // stay loading for review
 
-    await delay(MOCK_LATENCY_MS);
+    if (USE_MOCK) {
+      await delay(MOCK_LATENCY_MS);
 
-    if (preview === "error") {
-      status.value = "error";
+      if (preview === "error") {
+        status.value = "error";
+        return;
+      }
+
+      previewEmpty.value = preview === "empty";
+      status.value = "ready";
       return;
     }
 
-    previewEmpty.value = preview === "empty";
-    status.value = "ready";
+    try {
+      const list = await tasksApi.list();
+      tasks.value = list.map(taskResponseToTask);
+      status.value = "ready";
+    } catch (error) {
+      status.value = "error";
+      lastError.value = errorMessage(error);
+    }
   }
 
   function setSearch(query: string): void {
@@ -131,49 +156,86 @@ export const useTasksStore = defineStore("tasks", () => {
     statusFilter.value = filter;
   }
 
-  function addInboxTask(title: string): Task {
-    const now = new Date().toISOString();
-    const task: Task = {
-      id: nextLocalId(),
-      title,
-      description: null,
-      status: "INBOX",
-      priority: null,
-      energy: null,
-      estimatedMinutes: null,
-      dueDate: null,
-      projectId: null,
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    };
-    tasks.value.unshift(task);
-    return task;
+  /** Create a task in the inbox. Mock mode is synchronous and immediate;
+   *  real mode persists on the server and prepends the confirmed task. */
+  function addInboxTask(title: string): Task | null {
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      const now = new Date().toISOString();
+      const task: Task = {
+        id: nextLocalId(),
+        title,
+        description: null,
+        status: "INBOX",
+        priority: null,
+        energy: null,
+        estimatedMinutes: null,
+        dueDate: null,
+        projectId: null,
+        completedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      tasks.value.unshift(task);
+      return task;
+    }
+
+    tasksApi
+      .create({ title })
+      .then((created) => {
+        tasks.value.unshift(taskResponseToTask(created));
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+    return null;
   }
 
-  function addTask(draft: NewTaskDraft): Task {
-    const now = new Date().toISOString();
-    const task: Task = {
-      id: nextLocalId(),
-      title: draft.title,
-      description: draft.description || null,
-      status: "INBOX",
-      priority: draft.priority,
-      energy: null,
-      estimatedMinutes: draft.estimatedMinutes,
-      dueDate: draft.dueDate,
-      projectId: draft.projectId,
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-      scheduledTime: draft.scheduledTime,
-      recurrence: draft.recurrence,
-    };
-    tasks.value.unshift(task);
-    return task;
+  function addTask(draft: NewTaskDraft): Task | null {
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      const now = new Date().toISOString();
+      const task: Task = {
+        id: nextLocalId(),
+        title: draft.title,
+        description: draft.description || null,
+        status: "INBOX",
+        priority: draft.priority,
+        energy: null,
+        estimatedMinutes: draft.estimatedMinutes,
+        dueDate: draft.dueDate,
+        projectId: draft.projectId,
+        completedAt: null,
+        createdAt: now,
+        updatedAt: now,
+        scheduledTime: draft.scheduledTime,
+        recurrence: draft.recurrence,
+      };
+      tasks.value.unshift(task);
+      return task;
+    }
+
+    tasksApi
+      .create({
+        title: draft.title,
+        description: draft.description || null,
+        dueDate: draft.dueDate,
+        priority: draft.priority ?? undefined,
+        estimatedDurationMinutes: draft.estimatedMinutes,
+      })
+      .then((created) => {
+        tasks.value.unshift(taskResponseToTask(created));
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+    return null;
   }
 
-  /** Snapshot of the last destructive change, so the UI can offer Undo. */
+  /** Snapshot of the last destructive change, so the UI can offer Undo.
+   *  Set only in mock mode — real-mode completion is one-way. */
   const lastUndoable = ref<{
     kind: "complete" | "reopen" | "create";
     taskId: string;
@@ -183,18 +245,38 @@ export const useTasksStore = defineStore("tasks", () => {
   function toggleTaskComplete(taskId: string): void {
     const task = taskById(taskId);
     if (!task) return;
+    lastError.value = null;
 
-    const now = new Date().toISOString();
-    lastUndoable.value = { kind: task.status === "COMPLETED" ? "reopen" : "complete", taskId, task: { ...task } };
+    if (USE_MOCK) {
+      const now = new Date().toISOString();
+      lastUndoable.value = {
+        kind: task.status === "COMPLETED" ? "reopen" : "complete",
+        taskId,
+        task: { ...task },
+      };
 
-    if (task.status === "COMPLETED") {
-      task.status = "PLANNED";
-      task.completedAt = null;
-    } else {
-      task.status = "COMPLETED";
-      task.completedAt = now;
+      if (task.status === "COMPLETED") {
+        task.status = "PLANNED";
+        task.completedAt = null;
+      } else {
+        task.status = "COMPLETED";
+        task.completedAt = now;
+      }
+      task.updatedAt = now;
+      return;
     }
-    task.updatedAt = now;
+
+    // Real mode: server-confirmed, no optimistic flip, no undo
+    // (backend has no un-complete transition — plan 002).
+    tasksApi
+      .complete(taskId)
+      .then((updated) => {
+        const live = taskById(taskId);
+        if (live) Object.assign(live, taskResponseToTask(updated));
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
   }
 
   function undoLast(): Task | null {
@@ -226,6 +308,7 @@ export const useTasksStore = defineStore("tasks", () => {
     inboxCount,
     filterCounts,
     hasActiveSearch,
+    lastError,
     taskById,
     load,
     setSearch,
@@ -235,5 +318,6 @@ export const useTasksStore = defineStore("tasks", () => {
     toggleTaskComplete,
     undoLast,
     lastUndoable,
+    clearError,
   };
 });
