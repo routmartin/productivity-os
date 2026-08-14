@@ -1,4 +1,4 @@
-.PHONY: dev run db-up db-down build test clean docs web web-install preview kill
+.PHONY: dev run db-up db-down build test clean docs web web-mock web-install preview kill
 
 web-install:
 	cd apps/web && pnpm install
@@ -7,6 +7,13 @@ web-install:
 # (auth explicitly mock — the features default to real once integrated).
 web:
 	cd apps/web && VITE_USE_MOCK_AUTH=true pnpm dev
+
+# Full mock preview: every feature serves mock data, no backend needed.
+web-mock:
+	cd apps/web && \
+	VITE_USE_MOCK_AUTH=true VITE_USE_MOCK_TASKS=true VITE_USE_MOCK_PROJECTS=true \
+	VITE_USE_MOCK_GOALS=true VITE_USE_MOCK_PLANNING=true VITE_USE_MOCK_FOCUS=true \
+	pnpm dev
 
 # End-to-end run against the real backend: DB + API + web with real auth.
 preview: db-up
