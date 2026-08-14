@@ -86,6 +86,18 @@ class TaskService(
         return TaskResponse.from(taskRepository.save(entity))
     }
 
+    fun update(taskId: UUID, userId: UUID, request: UpdateTaskRequest): TaskResponse {
+        val entity = loadOwned(taskId, userId)
+        request.title?.let { entity.title = it }
+        entity.description = request.description
+        entity.dueDate = request.dueDate
+        entity.priority = request.priority
+        entity.energy = request.energy
+        entity.estimatedDurationMinutes = request.estimatedDurationMinutes
+        entity.updatedAt = clock.instant()
+        return TaskResponse.from(taskRepository.save(entity))
+    }
+
     fun delete(taskId: UUID, userId: UUID) {
         val entity = loadOwned(taskId, userId)
         require(entity.deletedAt == null) { "Task is already deleted" }

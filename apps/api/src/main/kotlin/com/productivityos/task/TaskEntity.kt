@@ -27,24 +27,24 @@ class TaskEntity(
     var projectId: UUID? = null,
 
     @Column(nullable = false)
-    val title: String,
+    var title: String,
 
     @Column
-    val description: String? = null,
+    var description: String? = null,
 
     @Column(name = "due_date")
-    val dueDate: LocalDate? = null,
+    var dueDate: LocalDate? = null,
 
     @Enumerated(EnumType.STRING)
     @Column
-    val priority: Priority? = null,
+    var priority: Priority? = null,
 
     @Enumerated(EnumType.STRING)
     @Column
-    val energy: Energy? = null,
+    var energy: Energy? = null,
 
     @Column(name = "estimated_duration_minutes")
-    val estimatedDurationMinutes: Int? = null,
+    var estimatedDurationMinutes: Int? = null,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

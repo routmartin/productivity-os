@@ -24,20 +24,20 @@ class ProjectEntity(
     val userId: UUID,
 
     @Column(name = "goal_id")
-    val goalId: UUID? = null,
+    var goalId: UUID? = null,
 
     @Column(nullable = false)
-    val title: String,
+    var title: String,
 
     @Column
-    val description: String? = null,
+    var description: String? = null,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var status: ProjectStatus = ProjectStatus.DRAFT,
 
     @Column
-    val deadline: LocalDate? = null,
+    var deadline: LocalDate? = null,
 
     @Column(name = "completed_at")
     var completedAt: Instant? = null,

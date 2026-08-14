@@ -2,6 +2,7 @@ package com.productivityos.goal
 
 import com.productivityos.project.ProjectRepository
 import com.productivityos.project.ProjectStatus
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -12,6 +13,7 @@ import java.util.UUID
 class GoalService(
     private val goalRepository: GoalRepository,
     private val projectRepository: ProjectRepository,
+    private val jdbcTemplate: JdbcTemplate,
     private val clock: Clock
 ) {
     fun create(userId: UUID, request: CreateGoalRequest): GoalResponse {
@@ -115,9 +117,29 @@ class GoalService(
         return GoalResponse.from(loadOwned(goalId, userId))
     }
 
+    fun update(goalId: UUID, userId: UUID, request: UpdateGoalRequest): GoalResponse {
+        val entity = loadOwned(goalId, userId)
+        request.title?.let { entity.title = it }
+        entity.description = request.description
+        entity.deadline = request.deadline
+        entity.updatedAt = clock.instant()
+        return GoalResponse.from(goalRepository.save(entity))
+    }
+
+    fun delete(goalId: UUID, userId: UUID) {
+        val entity = loadOwned(goalId, userId)
+        // Detach the goal's projects so they stay alive, goal-less
+        // (amendment AC-017). Same transaction as the delete.
+        jdbcTemplate.update(
+            "UPDATE projects SET goal_id = NULL WHERE goal_id = ?",
+            goalId
+        )
+        goalRepository.delete(entity)
+    }
+
     private fun loadOwned(goalId: UUID, userId: UUID): GoalEntity {
         val entity = goalRepository.findById(goalId).orElse(null)
-            ?: throw NoSuchElementException("Goal not found: $goalId")
+            ?: throw GoalNotFoundException(goalId)
         require(entity.userId == userId) { "Goal does not belong to the current user" }
         return entity
     }

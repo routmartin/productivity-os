@@ -74,6 +74,14 @@ class TaskController(
         return taskService.restore(id, currentUser.id())
     }
 
+    @PutMapping("/{id}")
+    fun update(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: UpdateTaskRequest
+    ): TaskResponse {
+        return taskService.update(id, currentUser.id(), request)
+    }
+
     @PutMapping("/{id}/project")
     fun assignProject(@PathVariable id: UUID, @RequestBody request: AssignProjectRequest): TaskResponse {
         return taskService.assignProject(id, request.projectId, currentUser.id())

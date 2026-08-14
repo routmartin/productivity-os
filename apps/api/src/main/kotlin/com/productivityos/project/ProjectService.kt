@@ -1,6 +1,7 @@
 package com.productivityos.project
 
 import com.productivityos.task.TaskRepository
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -11,6 +12,7 @@ import java.util.UUID
 class ProjectService(
     private val projectRepository: ProjectRepository,
     private val taskRepository: TaskRepository,
+    private val jdbcTemplate: JdbcTemplate,
     private val clock: Clock
 ) {
     fun create(userId: UUID, request: CreateProjectRequest): ProjectResponse {
@@ -76,9 +78,30 @@ class ProjectService(
         return ProjectResponse.from(projectRepository.save(entity))
     }
 
+    fun update(projectId: UUID, userId: UUID, request: UpdateProjectRequest): ProjectResponse {
+        val entity = loadOwned(projectId, userId)
+        request.title?.let { entity.title = it }
+        entity.description = request.description
+        entity.goalId = request.goalId
+        entity.deadline = request.deadline
+        entity.updatedAt = clock.instant()
+        return ProjectResponse.from(projectRepository.save(entity))
+    }
+
+    fun delete(projectId: UUID, userId: UUID) {
+        val entity = loadOwned(projectId, userId)
+        // Detach the project's tasks so they stay alive, project-less
+        // (amendment AC-015). Same transaction as the delete.
+        jdbcTemplate.update(
+            "UPDATE tasks SET project_id = NULL WHERE project_id = ?",
+            projectId
+        )
+        projectRepository.delete(entity)
+    }
+
     private fun loadOwned(projectId: UUID, userId: UUID): ProjectEntity {
         val entity = projectRepository.findById(projectId).orElse(null)
-            ?: throw NoSuchElementException("Project not found: $projectId")
+            ?: throw ProjectNotFoundException(projectId)
         require(entity.userId == userId) { "Project does not belong to the current user" }
         return entity
     }

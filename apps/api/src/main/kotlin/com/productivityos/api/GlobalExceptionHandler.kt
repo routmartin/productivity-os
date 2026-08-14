@@ -4,6 +4,8 @@ import com.productivityos.task.TaskNotFoundException
 import com.productivityos.user.AuthenticationException
 import com.productivityos.user.DuplicateEmailException
 import com.productivityos.user.InvalidRefreshTokenException
+import com.productivityos.project.ProjectNotFoundException
+import com.productivityos.goal.GoalNotFoundException
 import org.slf4j.MDC
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
@@ -18,6 +20,26 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(TaskNotFoundException::class)
     fun handleTaskNotFound(ex: TaskNotFoundException): ResponseEntity<ErrorResponse> {
+        val body = ErrorResponse(
+            code = "NOT_FOUND",
+            message = ex.message ?: "Not found",
+            traceId = traceId()
+        )
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body)
+    }
+
+    @ExceptionHandler(ProjectNotFoundException::class)
+    fun handleProjectNotFound(ex: ProjectNotFoundException): ResponseEntity<ErrorResponse> {
+        val body = ErrorResponse(
+            code = "NOT_FOUND",
+            message = ex.message ?: "Not found",
+            traceId = traceId()
+        )
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body)
+    }
+
+    @ExceptionHandler(GoalNotFoundException::class)
+    fun handleGoalNotFound(ex: GoalNotFoundException): ResponseEntity<ErrorResponse> {
         val body = ErrorResponse(
             code = "NOT_FOUND",
             message = ex.message ?: "Not found",

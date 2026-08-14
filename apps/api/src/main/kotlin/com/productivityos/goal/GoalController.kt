@@ -4,9 +4,11 @@ import com.productivityos.user.CurrentUser
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
@@ -14,7 +16,7 @@ import java.net.URI
 import java.util.UUID
 
 @RestController
-@Tag(name = "Goals", description = "Goal lifecycle: create, activate, return-to-draft, complete, reopen, archive")
+@Tag(name = "Goals", description = "Goal lifecycle: create, update, delete, activate, return-to-draft, complete, reopen, archive")
 @RequestMapping("/api/v1/goals")
 class GoalController(
     private val goalService: GoalService,
@@ -35,6 +37,20 @@ class GoalController(
     @GetMapping("/{id}")
     fun get(@PathVariable id: UUID): GoalResponse {
         return goalService.getById(id, currentUser.id())
+    }
+
+    @PutMapping("/{id}")
+    fun update(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: UpdateGoalRequest
+    ): GoalResponse {
+        return goalService.update(id, currentUser.id(), request)
+    }
+
+    @DeleteMapping("/{id}")
+    fun delete(@PathVariable id: UUID): ResponseEntity<Void> {
+        goalService.delete(id, currentUser.id())
+        return ResponseEntity.noContent().build()
     }
 
     @PostMapping("/{id}/activation")
