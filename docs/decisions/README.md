@@ -5,6 +5,7 @@ ADRs record significant technical decisions and their reasoning.
 ## When to create an ADR
 
 Create an ADR when a decision:
+
 - affects architecture
 - introduces a major dependency
 - creates a significant trade-off

@@ -13,6 +13,27 @@ Draft
   -> Deprecated
 ```
 
+- **Verified** — every acceptance criterion has passed against the
+  implementation; the spec and code agree.
+- **Deprecated** — the spec is superseded or the feature no longer exists.
+
+## Amendments (keeping specs in sync with implementation)
+
+Approved specs stay living documents. Implementation drifts from them
+(human-driven changes, vibe-coded UI, ACs that prove impractical), and the
+spec must be updated to stay the truthful source of behavior:
+
+- Every mismatch is classified: **defect** (fix the code, never the spec)
+  or **intended change** (amend the spec with human approval, never revert
+  working code). Ambiguous cases stop and ask the human.
+- Amendments keep AC IDs stable; changed ACs are marked `*(amended)*` and
+  recorded in the spec's Change History with the reason.
+- The governing plan tracks each AC's status (`PASS` / `FAIL` /
+  `NOT VERIFIED` / `AMENDED`) as work proceeds.
+- Spec changes are human-approved. Agents never self-approve amendments and
+  never change specs to make a review pass.
+- Agents use the `/spec-sync` command to run this workflow.
+
 ## Specification Template
 
 ```md
