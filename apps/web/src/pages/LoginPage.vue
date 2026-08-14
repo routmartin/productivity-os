@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import LoginForm from '@/features/auth/components/LoginForm.vue'
+import { USE_MOCK } from '@/features/auth/api'
 </script>
 
 <template>
@@ -19,15 +20,12 @@ import LoginForm from '@/features/auth/components/LoginForm.vue'
       </header>
 
       <div class="panel">
-        <div class="panel-header">
-          <h1 class="title">Welcome back</h1>
-          <p class="subtitle">Sign in to your calm command center.</p>
-        </div>
         <LoginForm />
       </div>
 
       <footer class="footer">
-        <span>Preview build · mock authentication</span>
+        <template v-if="USE_MOCK">Preview build · mock authentication</template>
+        <template v-else>Self-serve registration enabled · data lives in your database</template>
       </footer>
     </main>
   </div>
@@ -93,21 +91,6 @@ import LoginForm from '@/features/auth/components/LoginForm.vue'
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-}
-
-.panel-header {
-  margin-bottom: var(--space-6);
-}
-
-.title {
-  font-size: var(--text-2xl);
-  letter-spacing: -0.02em;
-}
-
-.subtitle {
-  margin-top: var(--space-1);
-  font-size: var(--text-md);
-  color: var(--text-tertiary);
 }
 
 .footer {

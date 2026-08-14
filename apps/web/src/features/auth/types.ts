@@ -16,6 +16,15 @@ export interface LoginRequest {
   password: string;
 }
 
+/** Body of POST /api/v1/auth/register (backend RegisterRequest).
+ *  Password must be at least 12 characters; timezone is optional
+ *  (server defaults to UTC). */
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  timezone?: string | null;
+}
+
 export interface LoginResponse {
   accessToken: string;
   user: UserProfile | null;

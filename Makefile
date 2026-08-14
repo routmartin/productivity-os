@@ -3,17 +3,16 @@
 web-install:
 	cd apps/web && pnpm install
 
-# Design review without the backend: every feature serves mock data
-# (auth explicitly mock — the features default to real once integrated).
-web:
-	cd apps/web && VITE_USE_MOCK_AUTH=true pnpm dev
-
 # Full mock preview: every feature serves mock data, no backend needed.
 web-mock:
 	cd apps/web && \
 	VITE_USE_MOCK_AUTH=true VITE_USE_MOCK_TASKS=true VITE_USE_MOCK_PROJECTS=true \
 	VITE_USE_MOCK_GOALS=true VITE_USE_MOCK_PLANNING=true VITE_USE_MOCK_FOCUS=true \
 	pnpm dev
+
+# Design review without the backend: mock auth only.
+web:
+	cd apps/web && VITE_USE_MOCK_AUTH=true pnpm dev
 
 # End-to-end run against the real backend: DB + API + web with real auth.
 preview: db-up

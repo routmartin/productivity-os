@@ -12,6 +12,7 @@ export const useAuthStore = defineStore("auth", () => {
   const accessToken = ref<string | null>(null);
   const isSubmitting = ref(false);
   const loginError = ref<string | null>(null);
+  const registerError = ref<string | null>(null);
   const restored = ref(false);
 
   const isAuthenticated = computed(
@@ -53,6 +54,25 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  /** Create an account, then sign in immediately (the register endpoint
+   *  returns no token — only the created profile). */
+  async function register(email: string, password: string): Promise<boolean> {
+    isSubmitting.value = true;
+    registerError.value = null;
+    try {
+      await authApi.register({ email, password });
+      return await login(email, password);
+    } catch (error) {
+      registerError.value =
+        error instanceof ApiError
+          ? error.message
+          : "Something went wrong. Please try again.";
+      return false;
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
   async function logout(): Promise<void> {
     try {
       await authApi.logout();
@@ -69,9 +89,11 @@ export const useAuthStore = defineStore("auth", () => {
     accessToken,
     isSubmitting,
     loginError,
+    registerError,
     isAuthenticated,
     restore,
     login,
+    register,
     logout,
   };
 });
