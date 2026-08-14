@@ -4,6 +4,11 @@
  * Conventions follow ADR-005: JSON over REST under `/api/v1`, Bearer
  * access tokens (ADR-004), and the structured error model
  * (`code` / `message` / `details` / `traceId`).
+ *
+ * Silent refresh (spec: docs/specs/api-integration.md, AC-006/AC-007):
+ * a 401 on any non-auth endpoint triggers one shared
+ * `POST /auth/refresh`; on success the original request is retried once,
+ * on failure the session-expired handler runs (clear + redirect to login).
  */
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
@@ -28,16 +33,70 @@ export function setTokenProvider(provider: TokenProvider): void {
   tokenProvider = provider;
 }
 
+export interface SessionHandlers {
+  /** Called with the new access token after a successful silent refresh. */
+  onRefreshed?: (accessToken: string) => void;
+  /** Called when the refresh token is expired/revoked — clear + redirect. */
+  onSessionExpired?: () => void;
+}
+
+let sessionHandlers: SessionHandlers = {};
+
+export function setSessionHandlers(handlers: SessionHandlers): void {
+  sessionHandlers = handlers;
+}
+
 interface ErrorResponseBody {
   code?: string;
   message?: string;
   details?: Record<string, unknown>;
 }
 
+interface RefreshResponseBody {
+  accessToken?: string;
+}
+
+/** Auth endpoints never trigger a refresh attempt (login 401 = bad
+ *  credentials, not an expired token; refresh 401 = session over). */
+function isAuthPath(path: string): boolean {
+  return path.startsWith("/auth/");
+}
+
+let refreshPromise: Promise<boolean> | null = null;
+
+/** One in-flight refresh at most — concurrent 401s share the result
+ *  (spec Rule 5). */
+function refreshAccessToken(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const response = await fetch(`${BASE_URL}/auth/refresh`, {
+          method: "POST",
+          headers: { Accept: "application/json" },
+          credentials: "include",
+        });
+        if (!response.ok) return false;
+        const data = (await response.json()) as RefreshResponseBody;
+        if (typeof data.accessToken !== "string" || !data.accessToken) {
+          return false;
+        }
+        sessionHandlers.onRefreshed?.(data.accessToken);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+  }
+  return refreshPromise;
+}
+
 async function request<T>(
   method: string,
   path: string,
   body?: unknown,
+  isRetry = false,
 ): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (body !== undefined) {
@@ -63,6 +122,16 @@ async function request<T>(
       "NETWORK_ERROR",
       "Could not reach the server. Check your connection and try again.",
     );
+  }
+
+  // Expired access token — try one silent refresh, then retry once
+  // (spec Rule 6).
+  if (response.status === 401 && !isAuthPath(path) && !isRetry) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      return request<T>(method, path, body, true);
+    }
+    sessionHandlers.onSessionExpired?.();
   }
 
   if (!response.ok) {
