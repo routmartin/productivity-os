@@ -4,9 +4,8 @@ import { Check, RotateCcw } from 'lucide-vue-next'
 
 import UiButton from '@/components/ui/UiButton.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
-import { showPreviewNote } from '@/lib/preview'
 
-import { useGoalsStore } from '../store'
+import { useGoalsStore, USE_MOCK } from '../store'
 import type { Goal } from '../types'
 
 const props = defineProps<{
@@ -45,13 +44,9 @@ function toggle(projectId: string) {
   selected.value = next
 }
 
-const selectedCount = computed(() => selected.value.size)
-
 function onConfirm() {
   emit('close')
-  showPreviewNote(
-    `“${props.goal.title}” would reopen with ${selectedCount.value} project${selectedCount.value === 1 ? '' : 's'} reactivated — preview only.`,
-  )
+  goals.reopenGoal(props.goal.id, [...selected.value])
 }
 </script>
 
@@ -89,7 +84,7 @@ function onConfirm() {
     </div>
 
     <template #footer>
-      <span class="note">Preview only — nothing changes</span>
+      <span v-if="USE_MOCK" class="note">Preview only — nothing changes</span>
       <div class="footer-actions">
         <UiButton variant="ghost" type="button" @click="emit('close')">Cancel</UiButton>
         <UiButton variant="primary" type="button" @click="onConfirm">

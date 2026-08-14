@@ -1,12 +1,15 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
+import { errorMessage } from "@/lib/api/errorMessages";
 import type { PreviewState } from "@/features/planning/types";
 import { useProjectsStore } from "@/features/projects/store";
 import type { Project } from "@/features/projects/types";
 import { useTasksStore } from "@/features/tasks/store";
 import type { Task } from "@/features/tasks/types";
 
+import { goalsApi } from "./api";
+import { goalResponseToGoal } from "./api-types";
 import { mockGoals } from "./mock";
 import type { Goal, NewGoalDraft } from "./types";
 
@@ -28,11 +31,28 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Goals collection for the Goals workspace (and the sidebar list).
+ *
+ * Mock mode (`VITE_USE_MOCK_GOALS=true`) keeps the milestone behavior for
+ * design review, and locally mirrors the domain rules for complete/reopen
+ * (archiving/reactivating the goal's projects). Real mode (default) talks
+ * to the Goal API; new goals are created as DRAFT then activated when the
+ * dialog asked for an Active goal.
+ */
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK_GOALS === "true";
+
 export const useGoalsStore = defineStore("goals", () => {
   const goals = ref<Goal[]>([...mockGoals]);
   const status = ref<LoadStatus>("idle");
   const statusFilter = ref<GoalFilter>("ACTIVE");
   const previewEmpty = ref(false);
+  /** Last failed mutation message (null when none). */
+  const lastError = ref<string | null>(null);
+
+  function clearError(): void {
+    lastError.value = null;
+  }
 
   const projectsStore = useProjectsStore();
   const tasksStore = useTasksStore();
@@ -119,40 +139,144 @@ export const useGoalsStore = defineStore("goals", () => {
     goals.value.filter((g) => g.status === "ACTIVE"),
   );
 
+  /**
+   * @param preview forces a UI state for design verification
+   * (`?preview=loading|error|empty`) — mock mode only.
+   */
   async function load(preview: PreviewState = null): Promise<void> {
     status.value = "loading";
+    lastError.value = null;
 
     if (preview === "loading") return;
 
-    await delay(MOCK_LATENCY_MS);
+    if (USE_MOCK) {
+      await delay(MOCK_LATENCY_MS);
 
-    if (preview === "error") {
-      status.value = "error";
+      if (preview === "error") {
+        status.value = "error";
+        return;
+      }
+
+      previewEmpty.value = preview === "empty";
+      status.value = "ready";
       return;
     }
 
-    previewEmpty.value = preview === "empty";
-    status.value = "ready";
+    try {
+      const list = await goalsApi.list();
+      goals.value = list.map(goalResponseToGoal);
+      status.value = "ready";
+    } catch (error) {
+      status.value = "error";
+      lastError.value = errorMessage(error);
+    }
   }
 
   function setFilter(filter: GoalFilter): void {
     statusFilter.value = filter;
   }
 
-  function addGoal(draft: NewGoalDraft): Goal {
-    const now = new Date().toISOString();
-    const goal: Goal = {
-      id: `goal-local-${Date.now()}`,
-      title: draft.title,
-      description: draft.description || null,
-      status: draft.status,
-      deadline: draft.deadline,
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    };
-    goals.value.unshift(goal);
-    return goal;
+  /** Create a goal. Mock mode is immediate; real mode creates as DRAFT,
+   *  then activates when the dialog asked for an Active goal. */
+  function addGoal(draft: NewGoalDraft): Goal | null {
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      const now = new Date().toISOString();
+      const goal: Goal = {
+        id: `goal-local-${Date.now()}`,
+        title: draft.title,
+        description: draft.description || null,
+        status: draft.status,
+        deadline: draft.deadline,
+        completedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      goals.value.unshift(goal);
+      return goal;
+    }
+
+    const activate = draft.status === "ACTIVE";
+    goalsApi
+      .create({
+        title: draft.title,
+        description: draft.description || null,
+        deadline: draft.deadline,
+      })
+      .then((created) => (activate ? goalsApi.activate(created.id) : created))
+      .then((created) => {
+        goals.value.unshift(goalResponseToGoal(created));
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+    return null;
+  }
+
+  /** ACTIVE → COMPLETED. Mock mode mirrors the domain rule that the
+   *  goal's active projects get archived. */
+  function completeGoal(goalId: string): void {
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      const goal = goalById(goalId);
+      if (!goal) return;
+      goal.status = "COMPLETED";
+      goal.completedAt = new Date().toISOString();
+      for (const project of projectsStore.projects) {
+        if (
+          project.goalId === goalId &&
+          (project.status === "ACTIVE" || project.status === "DRAFT")
+        ) {
+          project.status = "ARCHIVED";
+        }
+      }
+      return;
+    }
+
+    goalsApi
+      .complete(goalId)
+      .then((updated) => {
+        const live = goalById(goalId);
+        if (live) Object.assign(live, goalResponseToGoal(updated));
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+  }
+
+  /** COMPLETED → ACTIVE with the chosen archived projects reactivated. */
+  function reopenGoal(goalId: string, projectIds: string[]): void {
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      const goal = goalById(goalId);
+      if (!goal) return;
+      goal.status = "ACTIVE";
+      goal.completedAt = null;
+      const reactivate = new Set(projectIds);
+      for (const project of projectsStore.projects) {
+        if (
+          project.goalId === goalId &&
+          project.status === "ARCHIVED" &&
+          reactivate.has(project.id)
+        ) {
+          project.status = "ACTIVE";
+        }
+      }
+      return;
+    }
+
+    goalsApi
+      .reopening(goalId, { projectIds })
+      .then((updated) => {
+        const live = goalById(goalId);
+        if (live) Object.assign(live, goalResponseToGoal(updated));
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
   }
 
   return {
@@ -162,6 +286,7 @@ export const useGoalsStore = defineStore("goals", () => {
     visibleGoals,
     activeGoals,
     filterCounts,
+    lastError,
     goalById,
     projectsForGoal,
     archivedProjectsForGoal,
@@ -171,5 +296,8 @@ export const useGoalsStore = defineStore("goals", () => {
     load,
     setFilter,
     addGoal,
+    completeGoal,
+    reopenGoal,
+    clearError,
   };
 });

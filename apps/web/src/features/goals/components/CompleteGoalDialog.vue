@@ -4,9 +4,8 @@ import { CheckCircle2 } from 'lucide-vue-next'
 
 import UiButton from '@/components/ui/UiButton.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
-import { showPreviewNote } from '@/lib/preview'
 
-import { useGoalsStore } from '../store'
+import { useGoalsStore, USE_MOCK } from '../store'
 import type { Goal } from '../types'
 
 const props = defineProps<{
@@ -29,12 +28,7 @@ const activeProjects = computed(() =>
 
 function onConfirm() {
   emit('close')
-  const count = activeProjects.value.length
-  showPreviewNote(
-    count > 0
-      ? `“${props.goal.title}” would be completed and ${count} project${count === 1 ? '' : 's'} archived — preview only.`
-      : `“${props.goal.title}” would be completed directly — preview only.`,
-  )
+  goals.completeGoal(props.goal.id)
 }
 </script>
 
@@ -62,7 +56,7 @@ function onConfirm() {
     </div>
 
     <template #footer>
-      <span class="note">Preview only — nothing changes</span>
+      <span v-if="USE_MOCK" class="note">Preview only — nothing changes</span>
       <div class="footer-actions">
         <UiButton variant="ghost" type="button" @click="emit('close')">Cancel</UiButton>
         <UiButton variant="primary" type="button" @click="onConfirm">
