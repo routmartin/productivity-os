@@ -11,9 +11,9 @@ import { planningApi, todayISODate } from "./api";
 import {
   topThreeResponseToEntry,
 } from "./api-types";
-import { mockDailyPlan, mockTopThree } from "./mock";
+import { mockDailyPlan, mockSchedule, mockTopThree } from "./mock";
 import { mockTasks } from "@/features/tasks/mock";
-import type { DailyPlanSummary, PreviewState, TopThreeEntry } from "./types";
+import type { DailyPlanSummary, PreviewState, ScheduleEntry, TopThreeEntry } from "./types";
 
 export type LoadStatus = "idle" | "loading" | "ready" | "error";
 
@@ -44,6 +44,7 @@ export const useTodayStore = defineStore("today", () => {
   const status = ref<LoadStatus>("idle");
   const topThree = ref<TopThreeEntry[]>([]);
   const plan = ref<DailyPlanSummary | null>(null);
+  const schedule = ref<ScheduleEntry[]>([]);
   const tasks = ref<Task[]>([]);
   /** Last failed load message (null when none). */
   const lastError = ref<string | null>(null);
@@ -120,10 +121,12 @@ export const useTodayStore = defineStore("today", () => {
       if (preview === "empty") {
         topThree.value = [];
         plan.value = EMPTY_PLAN;
+        schedule.value = [];
         tasks.value = [];
       } else {
         topThree.value = mockTopThree;
         plan.value = mockDailyPlan;
+        schedule.value = mockSchedule;
         tasks.value = mockTasks;
       }
       status.value = "ready";
@@ -160,6 +163,24 @@ export const useTodayStore = defineStore("today", () => {
         // Computed from focus sessions once those load (plan 002 Step 7).
         focusCompletedMinutes: 0,
       };
+
+      // Today's schedule = the REAL daily plan entries. The backend has no
+      // wall-clock times yet, so entries render without a time label
+      // (mock mode keeps the timed mockSchedule for design review).
+      schedule.value = planEntries
+        .filter((entry) => !entry.isDeleted)
+        .map((entry) => {
+          const task = taskByIdMap.get(entry.taskId);
+          return {
+            id: entry.id,
+            time: null,
+            title: task?.title ?? "Planned task",
+            meta: task?.priority ? `Priority ${task.priority}` : "Planned",
+            durationMinutes: task?.estimatedMinutes ?? 0,
+            tone: "accent" as const,
+            taskId: entry.taskId,
+          };
+        });
       status.value = "ready";
     } catch (error) {
       status.value = "error";
@@ -171,6 +192,7 @@ export const useTodayStore = defineStore("today", () => {
     status,
     topThree,
     plan,
+    schedule,
     plannedTasks,
     unplannedTasks,
     unplannedExtraCount,

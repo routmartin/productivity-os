@@ -13,7 +13,6 @@ import FocusTodayCard from '@/features/focus/components/FocusTodayCard.vue'
 import CalendarRail from '@/features/planning/components/CalendarRail.vue'
 import ScheduleTimeline from '@/features/planning/components/ScheduleTimeline.vue'
 import TopThreeSection from '@/features/planning/components/TopThreeSection.vue'
-import { mockSchedule } from '@/features/planning/mock'
 import { useTodayStore } from '@/features/planning/todayStore'
 import type { PreviewState } from '@/features/planning/types'
 import RecentActivity, { type ActivityItem } from '@/features/tasks/components/RecentActivity.vue'
@@ -53,7 +52,7 @@ const isLoading = computed(() => today.status === 'loading' || today.status === 
 
 const isEmpty = computed(() => today.topThree.length === 0)
 
-const scheduleEntries = computed(() => (isEmpty.value ? [] : mockSchedule))
+const scheduleEntries = computed(() => (isEmpty.value ? [] : today.schedule))
 
 /** Recent work mixed with fresh captures, newest first — mirrors the
  *  reference's Completed / Created activity feed. */

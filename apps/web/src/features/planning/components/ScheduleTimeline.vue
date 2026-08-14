@@ -29,7 +29,7 @@ function onKeydown(event: KeyboardEvent, taskId: string | null) {
 
     <ol v-if="entries.length > 0" class="timeline">
       <li v-for="entry in entries" :key="entry.id" class="slot">
-        <span class="time tnum">{{ entry.time }}</span>
+        <span class="time tnum">{{ entry.time ?? '—' }}</span>
         <span class="rail" aria-hidden="true">
           <span class="dot" :class="`tone-${entry.tone}`" />
         </span>

@@ -34,8 +34,9 @@ export type ScheduleTone =
 
 export interface ScheduleEntry {
   id: string;
-  /** Wall-clock start time label, e.g. "09:00". */
-  time: string;
+  /** Wall-clock start time label, e.g. "09:00" — null when the backend
+   *  has no time for the entry (real daily-plan rows). */
+  time: string | null;
   title: string;
   /** Secondary line, e.g. "Productivity OS · High Priority". */
   meta: string;

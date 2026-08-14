@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { nextTick, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 
 import UiButton from '@/components/ui/UiButton.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
+import { useGoalsStore } from '@/features/goals/store'
+import { useProjectsStore } from '@/features/projects/store'
+import { useMock } from '@/lib/mock'
 
-import { mockGoals, mockProjects } from '../mock'
 import type { NewTaskDraft, Priority } from '../types'
 
 const props = defineProps<{ open: boolean }>()
@@ -16,6 +18,12 @@ const emit = defineEmits<{
   close: []
   create: [draft: NewTaskDraft]
 }>()
+
+const goalsStore = useGoalsStore()
+const projectsStore = useProjectsStore()
+/** scheduledTime/recurrence exist only in mock mode — the backend has no
+ *  such fields, so the selects are hidden when running against the API. */
+const mockMode = useMock('TASKS')
 
 const emptyDraft = (): NewTaskDraft => ({
   title: '',
@@ -32,15 +40,17 @@ const draft = reactive<NewTaskDraft>(emptyDraft())
 const isSubmitting = ref(false)
 const titleInput = ref<{ $el: HTMLElement } | null>(null)
 
-const projectOptions = [
+const projectOptions = computed(() => [
   { value: '', label: 'No project' },
-  ...mockProjects.map((p) => ({ value: p.id, label: p.name })),
-]
+  ...projectsStore.projects.map((p) => ({ value: p.id, label: p.name })),
+])
 
-const goalOptions = [
+const goalOptions = computed(() => [
   { value: '', label: 'No goal' },
-  ...mockGoals.map((g) => ({ value: g.id, label: g.title })),
-]
+  ...goalsStore.goals
+    .filter((goal) => goal.status === 'ACTIVE' || goal.status === 'DRAFT')
+    .map((goal) => ({ value: goal.id, label: goal.title })),
+])
 
 const durationOptions = [
   { value: '', label: 'No estimate' },
@@ -108,6 +118,9 @@ watch(
       timeValue.value = ''
       recurrenceValue.value = ''
       isSubmitting.value = false
+      // Dropdowns come from the server — load once if never loaded.
+      if (projectsStore.status === 'idle') void projectsStore.load()
+      if (goalsStore.status === 'idle') void goalsStore.load()
       await nextTick()
       titleInput.value?.$el.querySelector('input')?.focus()
     }
@@ -118,8 +131,7 @@ function onSubmit() {
   if (!draft.title.trim() || isSubmitting.value) return
   isSubmitting.value = true
 
-  // Simulated submission latency — the creation loading state is part of
-  // the spec (§19); the real POST /api/v1/tasks plugs in later.
+  // Emits the draft; the tasks store performs the real POST /api/v1/tasks.
   setTimeout(() => {
     emit('create', {
       title: draft.title.trim(),
@@ -177,20 +189,21 @@ function onSubmit() {
             </div>
           </div>
 
-          <div class="field-row">
+          <div class="field-row" v-if="mockMode">
             <UiInput v-model="dueValue" label="Due date" type="date" :disabled="isSubmitting" />
             <UiSelect v-model="timeValue" label="Time" :options="timeOptions" :disabled="isSubmitting" />
           </div>
+          <UiInput v-else v-model="dueValue" label="Due date" type="date" :disabled="isSubmitting" />
 
           <div class="field-row">
             <UiSelect v-model="durationValue" label="Duration" :options="durationOptions" :disabled="isSubmitting" />
-            <UiSelect v-model="recurrenceValue" label="Repeat" :options="recurrenceOptions" :disabled="isSubmitting" />
+            <UiSelect v-if="mockMode" v-model="recurrenceValue" label="Repeat" :options="recurrenceOptions" :disabled="isSubmitting" />
           </div>
 
     </form>
 
     <template #footer>
-      <span class="note">Saved locally — preview only</span>
+      <span v-if="mockMode" class="note">Preview only — nothing changes</span>
       <div class="footer-actions">
         <UiButton variant="ghost" type="button" :disabled="isSubmitting" @click="emit('close')">
           Cancel
