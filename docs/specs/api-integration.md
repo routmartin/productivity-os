@@ -29,9 +29,11 @@ devices.
 ## Behavior
 
 - On login, the user sees their own previously saved data, not seed data.
-- Creating, completing, reopening, and deleting a task persists immediately
-  and is visible after a page refresh.
-- Creating and archiving projects and goals persists the same way.
+- Creating, editing, completing, reopening, and deleting a task persists
+  immediately and is visible after a page refresh.
+- Creating, editing, archiving, and deleting projects and goals persists the
+  same way. Deleting a project detaches its tasks (they stay, project-less);
+  deleting a goal detaches its projects (they stay, goal-less).
 - Selecting Today's Top 3, reordering it, and clearing it persist per date.
 - Starting and stopping a focus session records it; the focus history and
   today's summary reflect real recorded sessions.
@@ -70,15 +72,24 @@ devices.
 9. ISO-8601 handling follows ADR-006: timestamps are UTC instants, calendar
    dates are date-only strings; no client-side timezone conversion of
    server-provided instants beyond display formatting.
-10. The integration must not change any backend behavior, endpoint, or
-    response shape. If a UI need is unmet by the existing API, that gap is
-    reported rather than worked around client-side (per AGENTS.md source of
-    truth).
+10. Beyond the scoped edit/delete surface added by the 2026-08-14 amendment
+    (`PUT /tasks/{id}`, `PUT /projects/{id}`, `PUT /goals/{id}`,
+    `DELETE /projects/{id}`, `DELETE /goals/{id}`), the integration must not
+    change backend behavior, endpoint, or response shape. Any other unmet UI
+    need is reported rather than worked around client-side (per AGENTS.md
+    source of truth).
 
 ## Constraints
 
-- Backend endpoints, DTOs, and status codes are fixed by Milestone 1; the
-  frontend adapts to them, not the reverse.
+- Backend endpoints, DTOs, and status codes are fixed by Milestone 1,
+  except the approved 2026-08-14 amendment which adds the edit/delete
+  surface (Rule 10). The frontend adapts to the API, not the reverse.
+- Edit semantics are full-replace PUT: the client sends the complete edited
+  field set; an explicit `null` clears a nullable field (title is never
+  cleared — an absent/blank title keeps the existing one).
+- Delete semantics are hard delete with detach: deleting a project sets its
+  tasks' `project_id` to NULL; deleting a goal sets its projects' `goal_id`
+  to NULL. Task delete stays soft (`deletedAt`), per the existing endpoint.
 - No new dependencies are required: the existing `fetch`-based `apiClient`
   is sufficient.
 - Pagination follows ADR-005 (`page`, `size` with server-capped maximums).
@@ -164,6 +175,42 @@ Given any API call made by the frontend
 When the request is inspected
 Then it contains no userId in path, query, or body — only the Bearer token.
 
+### AC-012 — Task edit persists
+
+Given a logged-in user with a task
+When they edit its title, priority, or due date and reload the page
+Then the task shows the updated values.
+
+### AC-013 — Task delete persists
+
+Given a logged-in user with a task
+When they delete it and reload the page
+Then the task no longer appears in any list.
+
+### AC-014 — Project edit persists
+
+Given a logged-in user with a project
+When they rename it or change its goal or deadline and reload the page
+Then the project shows the updated values.
+
+### AC-015 — Project delete detaches its tasks
+
+Given a logged-in user with a project that has tasks
+When they delete the project and reload the page
+Then the project is gone and its tasks remain with no project.
+
+### AC-016 — Goal edit persists
+
+Given a logged-in user with a goal
+When they edit its title, description, or deadline and reload the page
+Then the goal shows the updated values.
+
+### AC-017 — Goal delete detaches its projects
+
+Given a logged-in user with a goal that has projects
+When they delete the goal and reload the page
+Then the goal is gone and its projects remain with no goal.
+
 ## Edge Cases
 
 - Page reload during an active focus session: the backend exposes the
@@ -183,8 +230,9 @@ Then it contains no userId in path, query, or body — only the Bearer token.
 - Real-time sync (WebSockets, SSE) between tabs or devices.
 - Offline queue / conflict resolution for disconnected editing.
 - Infinite scroll or cursor pagination UI.
-- Backend changes of any kind (new endpoints, changed DTOs, new error
-  codes). Gaps are reported to the human, not patched client-side.
+- Backend changes beyond the approved 2026-08-14 edit/delete amendment
+  (new endpoints, changed DTOs, new error codes). Gaps are reported to the
+  human, not patched client-side.
 - OAuth/social login (ADR-004 defers this).
 - AI feature integration.
 - Service-worker caching or PWA behavior.
@@ -253,3 +301,8 @@ finalizing this spec:
   question (plain-array list responses), documented the verified refresh
   flow and error contract, and recorded the `user: null` refresh response
   handling. No behavioral changes.
+- Amended 2026-08-14 (human-approved): added the edit/delete surface —
+  `PUT /tasks/{id}`, `PUT /projects/{id}`, `PUT /goals/{id}` (full-replace
+  update), `DELETE /projects/{id}`, `DELETE /goals/{id}` (hard delete with
+  detach of dependents). Added AC-012 through AC-017. Rule 10, Constraints,
+  and Out of Scope updated to allow this scoped amendment only.

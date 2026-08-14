@@ -300,6 +300,45 @@ refresh-failure redirect is implemented in Step 1 (`onSessionExpired` in
 - **Risks/ambiguities:** token TTL is short (minutes per ADR-004); the
   refresh test may need a shortened TTL or a manual mock.
 
+## Step 11 — Edit/delete endpoints (backend amendment)
+
+**Status:** pending
+
+- **Files/modules:** `apps/api/.../{task,project,goal}/` — new
+  `UpdateTaskRequest`, `UpdateProjectRequest`, `UpdateGoalRequest`; PUT on
+  the three controllers; `DELETE /projects/{id}` + `DELETE /goals/{id}`
+  with detach; 404 for missing/foreign resources.
+- **Spec/AC:** AC-012 through AC-017.
+- **Behavior:** full-replace PUT (send complete edited set; explicit
+  `null` clears nullable fields; absent/blank title keeps existing).
+  Project delete sets `tasks.project_id = NULL`; goal delete sets
+  `projects.goal_id = NULL`. Task delete already exists (soft).
+- **Dependencies:** human-approved amendment (D7, D8).
+- **Tests:** deferred per human decision (all tests skipped until
+  requested); manual curl checks during Step 10.
+- **Risks/ambiguities:** detach must run in the same transaction as the
+  delete; ownership checks on both the resource and its user scope.
+
+## Step 12 — Edit/delete UI (frontend)
+
+**Status:** pending
+
+- **Files/modules:** `features/{tasks,projects,goals}/{api.ts,store.ts}`,
+  dialogs (`NewTaskDialog`, `NewProjectDialog`, `NewGoalDialog` gain an
+  edit mode), `TaskActionMenu` (wire plan/start/complete/delete/edit),
+  project/goal cards + detail panels gain action menus, delete
+  confirmations.
+- **Spec/AC:** AC-012 through AC-017.
+- **Behavior:** edit dialogs prefill from the row and PUT the changes;
+  delete asks for confirmation, calls DELETE, and removes the row; task
+  menu items that already had backend endpoints (plan/start/complete) are
+  wired for real; mock mode keeps the milestone behavior.
+- **Dependencies:** Step 11.
+- **Tests:** deferred per human decision.
+- **Risks/ambiguities:** edit dialogs must keep the existing mock-mode
+  fields (scheduledTime/recurrence) out of the real payload; goal option
+  lists in edit mode must allow "No goal" (clears via `null`).
+
 ## Tests
 
 Traceability matrix:
@@ -314,6 +353,12 @@ Traceability matrix:
 - AC-009 → Step 9 mapping tests + Step 6 manual TOP3_FULL check
 - AC-010 → Steps 3–7 toggle tests (env var set, no backend)
 - AC-011 → Step 3 request-interceptor test (assert no userId in payload)
+- AC-012 → Step 11/12 store + curl checks, manual reload check
+- AC-013 → Step 12 store + manual reload check
+- AC-014 → Step 11/12 store + curl checks, manual reload check
+- AC-015 → Step 11/12 curl check (tasks keep no project) + manual reload
+- AC-016 → Step 11/12 store + curl checks, manual reload check
+- AC-017 → Step 11/12 curl check (projects keep no goal) + manual reload
 
 ## AC Status (spec-sync drift check, 2026-08-14)
 
@@ -371,14 +416,19 @@ Before reporting completion (per AGENTS.md):
 - **D6 (resolved 2026-08-14):** For manual AC-006 testing, run the backend
   with `JWT_ACCESS_TOKEN_TTL_MINUTES=1` (env var already exists; default
   15 min). No client-side test machinery.
+- **D7 (resolved 2026-08-14, human-approved):** edit semantics are
+  full-replace PUT (`null` clears nullable fields; title never cleared).
+- **D8 (resolved 2026-08-14, human-approved):** delete semantics are hard
+  delete with detach (project → `tasks.project_id = NULL`; goal →
+  `projects.goal_id = NULL`). Task delete remains soft.
 
 ## Out of Scope for This Plan
 
 - Real-time sync (WebSockets, SSE).
 - Offline queue / conflict resolution.
 - Infinite scroll or cursor pagination UI.
-- Backend changes of any kind (new endpoints, changed DTOs, new error
-  codes). Gaps are reported, not patched.
+- Backend changes beyond the approved 2026-08-14 edit/delete amendment
+  (Steps 11–12). Gaps are reported, not patched.
 - OAuth/social login.
 - AI feature integration.
 - Service-worker caching or PWA behavior.
@@ -391,9 +441,9 @@ Before reporting completion (per AGENTS.md):
   (planning API + todayStore), Step 7 (focus API + store, incl. reload
   resume), Step 8 (logout + refresh-failure wiring), Step 9 (error-message
   mapping — `lib/api/errorMessages.ts`, used by every store).
-- **Pending:** Step 10 (end-to-end verification), the unit tests listed
-  under Steps 1–8 (deferred by human decision — all tests skipped until
-  explicitly requested).
+- **Pending:** Step 10 (end-to-end verification), Steps 11–12 (edit/delete
+  amendment), the unit tests listed under Steps 1–8 (deferred by human
+  decision — all tests skipped until explicitly requested).
 - **Human decisions:** D4 resolved (reopen projectIds from the dialog),
   D6 resolved (`JWT_ACCESS_TOKEN_TTL_MINUTES=1` for AC-006 manual checks).
 
