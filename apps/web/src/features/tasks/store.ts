@@ -244,6 +244,125 @@ export const useTasksStore = defineStore("tasks", () => {
     task: Task;
   } | null>(null);
 
+  /** INBOX → PLANNED. */
+  function planTask(taskId: string): void {
+    const task = taskById(taskId);
+    if (!task) return;
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      task.status = "PLANNED";
+      task.updatedAt = new Date().toISOString();
+      return;
+    }
+
+    tasksApi
+      .plan(taskId)
+      .then((updated) => {
+        const live = taskById(taskId);
+        if (live) Object.assign(live, taskResponseToTask(updated));
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+  }
+
+  /** PLANNED → IN_PROGRESS. */
+  function startTask(taskId: string): void {
+    const task = taskById(taskId);
+    if (!task) return;
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      task.status = "IN_PROGRESS";
+      task.updatedAt = new Date().toISOString();
+      return;
+    }
+
+    tasksApi
+      .start(taskId)
+      .then((updated) => {
+        const live = taskById(taskId);
+        if (live) Object.assign(live, taskResponseToTask(updated));
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+  }
+
+  /** Persist edits (amendment AC-012). Mock mode mutates locally; real
+   *  mode sends PUT /api/v1/tasks/{id} and reassigns the project through
+   *  PUT /{id}/project when it changed. */
+  function updateTask(taskId: string, draft: NewTaskDraft): void {
+    const task = taskById(taskId);
+    if (!task) return;
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      task.title = draft.title;
+      task.description = draft.description;
+      task.priority = draft.priority;
+      task.dueDate = draft.dueDate;
+      task.estimatedMinutes = draft.estimatedMinutes;
+      task.projectId = draft.projectId;
+      task.scheduledTime = draft.scheduledTime ?? null;
+      task.recurrence = draft.recurrence ?? null;
+      task.updatedAt = new Date().toISOString();
+      return;
+    }
+
+    tasksApi
+      .update(taskId, {
+        title: draft.title,
+        description: draft.description,
+        dueDate: draft.dueDate,
+        priority: draft.priority ?? null,
+        estimatedDurationMinutes: draft.estimatedMinutes,
+      })
+      .then((updated) => {
+        const live = taskById(taskId);
+        if (live) Object.assign(live, taskResponseToTask(updated));
+      })
+      .then(() => {
+        const live = taskById(taskId);
+        if (live && live.projectId !== draft.projectId) {
+          return tasksApi
+            .assignProject(taskId, { projectId: draft.projectId })
+            .then((updated) => {
+              const current = taskById(taskId);
+              if (current) Object.assign(current, taskResponseToTask(updated));
+            });
+        }
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+  }
+
+  /** Delete a task (amendment AC-013). Mock removes locally; real mode
+   *  soft-deletes via DELETE /api/v1/tasks/{id} then drops it from the
+   *  list. */
+  function deleteTask(taskId: string): void {
+    const task = taskById(taskId);
+    if (!task) return;
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      tasks.value = tasks.value.filter((t) => t.id !== taskId);
+      if (lastUndoable.value?.taskId === taskId) lastUndoable.value = null;
+      return;
+    }
+
+    tasksApi
+      .delete(taskId)
+      .then(() => {
+        tasks.value = tasks.value.filter((t) => t.id !== taskId);
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+  }
+
   function toggleTaskComplete(taskId: string): void {
     const task = taskById(taskId);
     if (!task) return;
@@ -317,6 +436,10 @@ export const useTasksStore = defineStore("tasks", () => {
     setFilter,
     addInboxTask,
     addTask,
+    planTask,
+    startTask,
+    updateTask,
+    deleteTask,
     toggleTaskComplete,
     undoLast,
     lastUndoable,

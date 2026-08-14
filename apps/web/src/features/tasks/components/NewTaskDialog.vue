@@ -10,14 +10,17 @@ import { useGoalsStore } from '@/features/goals/store'
 import { useProjectsStore } from '@/features/projects/store'
 import { useMock } from '@/lib/mock'
 
-import type { NewTaskDraft, Priority } from '../types'
+import type { NewTaskDraft, Priority, Task } from '../types'
 
-const props = defineProps<{ open: boolean }>()
+const props = defineProps<{ open: boolean; editing?: Task | null }>()
 
 const emit = defineEmits<{
   close: []
   create: [draft: NewTaskDraft]
+  update: [taskId: string, draft: NewTaskDraft]
 }>()
+
+const isEdit = computed(() => props.editing != null)
 
 const goalsStore = useGoalsStore()
 const projectsStore = useProjectsStore()
@@ -117,6 +120,26 @@ watch(
       durationValue.value = ''
       timeValue.value = ''
       recurrenceValue.value = ''
+
+      const task = props.editing
+      if (task) {
+        Object.assign(draft, {
+          title: task.title,
+          description: task.description ?? '',
+          projectId: task.projectId,
+          priority: task.priority,
+          dueDate: task.dueDate,
+          estimatedMinutes: task.estimatedMinutes,
+          scheduledTime: task.scheduledTime ?? null,
+          recurrence: task.recurrence ?? null,
+        })
+        projectValue.value = task.projectId ?? ''
+        dueValue.value = task.dueDate ?? ''
+        durationValue.value = task.estimatedMinutes ? String(task.estimatedMinutes) : ''
+        timeValue.value = task.scheduledTime ?? ''
+        recurrenceValue.value = task.recurrence ?? ''
+      }
+
       isSubmitting.value = false
       // Dropdowns come from the server — load once if never loaded.
       if (projectsStore.status === 'idle') void projectsStore.load()
@@ -131,18 +154,24 @@ function onSubmit() {
   if (!draft.title.trim() || isSubmitting.value) return
   isSubmitting.value = true
 
-  // Emits the draft; the tasks store performs the real POST /api/v1/tasks.
+  const payload = {
+    title: draft.title.trim(),
+    description: draft.description.trim(),
+    projectId: projectValue.value || null,
+    priority: draft.priority,
+    dueDate: dueValue.value || null,
+    estimatedMinutes: durationValue.value ? Number(durationValue.value) : null,
+    scheduledTime: timeValue.value || null,
+    recurrence: recurrenceValue.value || null,
+  }
+
+  // Emits the draft; the tasks store performs the real API call.
   setTimeout(() => {
-    emit('create', {
-      title: draft.title.trim(),
-      description: draft.description.trim(),
-      projectId: projectValue.value || null,
-      priority: draft.priority,
-      dueDate: dueValue.value || null,
-      estimatedMinutes: durationValue.value ? Number(durationValue.value) : null,
-      scheduledTime: timeValue.value || null,
-      recurrence: recurrenceValue.value || null,
-    })
+    if (props.editing) {
+      emit('update', props.editing.id, payload)
+    } else {
+      emit('create', payload)
+    }
     emit('close')
   }, 400)
 }
@@ -150,7 +179,7 @@ function onSubmit() {
 </script>
 
 <template>
-  <UiDialog :open="open" title="New Task" @close="emit('close')">
+  <UiDialog :open="open" :title="isEdit ? 'Edit Task' : 'New Task'" @close="emit('close')">
     <form class="form" @submit.prevent="onSubmit">
           <UiInput
             ref="titleInput"
@@ -209,7 +238,7 @@ function onSubmit() {
           Cancel
         </UiButton>
         <UiButton variant="primary" type="submit" :loading="isSubmitting" :disabled="!draft.title.trim()">
-          Add task
+          {{ isEdit ? 'Save changes' : 'Add task' }}
         </UiButton>
       </div>
     </template>

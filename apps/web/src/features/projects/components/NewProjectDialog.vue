@@ -10,14 +10,17 @@ import { useGoalsStore } from '@/features/goals/store'
 import { useMock } from '@/lib/mock'
 
 import { PROJECT_COLORS } from '../mock'
-import type { NewProjectDraft } from '../types'
+import type { NewProjectDraft, Project } from '../types'
 
-const props = defineProps<{ open: boolean }>()
+const props = defineProps<{ open: boolean; editing?: Project | null }>()
 
 const emit = defineEmits<{
   close: []
   create: [draft: NewProjectDraft]
+  update: [projectId: string, draft: NewProjectDraft]
 }>()
+
+const isEdit = computed(() => props.editing != null)
 
 const goalsStore = useGoalsStore()
 const mockMode = useMock('PROJECTS')
@@ -26,6 +29,7 @@ const emptyDraft = (): NewProjectDraft => ({
   name: '',
   description: '',
   goalId: null,
+  deadline: null,
   color: PROJECT_COLORS[0],
 })
 
@@ -43,6 +47,7 @@ const goalOptions = computed(() => [
 ])
 
 const goalValue = ref('')
+const deadlineValue = ref('')
 
 watch(
   () => props.open,
@@ -50,6 +55,20 @@ watch(
     if (isOpen) {
       Object.assign(draft, emptyDraft())
       goalValue.value = ''
+      deadlineValue.value = ''
+
+      const project = props.editing
+      if (project) {
+        Object.assign(draft, {
+          name: project.name,
+          description: project.description ?? '',
+          goalId: project.goalId,
+          deadline: project.deadline,
+        })
+        goalValue.value = project.goalId ?? ''
+        deadlineValue.value = project.deadline ?? ''
+      }
+
       isSubmitting.value = false
       // Goal options come from the server — load once if never loaded.
       if (goalsStore.status === 'idle') void goalsStore.load()
@@ -63,21 +82,28 @@ function onSubmit() {
   if (!draft.name.trim() || isSubmitting.value) return
   isSubmitting.value = true
 
-  // Emits the draft; the projects store performs the real POST /api/v1/projects.
+  const payload = {
+    name: draft.name.trim(),
+    description: draft.description.trim(),
+    goalId: goalValue.value || null,
+    deadline: deadlineValue.value || null,
+    color: draft.color,
+  }
+
+  // Emits the draft; the projects store performs the real API call.
   setTimeout(() => {
-    emit('create', {
-      name: draft.name.trim(),
-      description: draft.description.trim(),
-      goalId: goalValue.value || null,
-      color: draft.color,
-    })
+    if (props.editing) {
+      emit('update', props.editing.id, payload)
+    } else {
+      emit('create', payload)
+    }
     emit('close')
   }, 400)
 }
 </script>
 
 <template>
-  <UiDialog :open="open" title="New Project" @close="emit('close')">
+  <UiDialog :open="open" :title="isEdit ? 'Edit Project' : 'New Project'" @close="emit('close')">
     <form class="form" @submit.prevent="onSubmit">
       <UiInput
         ref="nameInput"
@@ -95,7 +121,10 @@ function onSubmit() {
         :disabled="isSubmitting"
       />
 
-      <UiSelect v-model="goalValue" label="Goal" :options="goalOptions" :disabled="isSubmitting" />
+      <div class="field-row">
+        <UiSelect v-model="goalValue" label="Goal" :options="goalOptions" :disabled="isSubmitting" />
+        <UiInput v-model="deadlineValue" label="Deadline" type="date" :disabled="isSubmitting" />
+      </div>
 
       <div class="field">
         <span class="field-label">Accent color</span>
@@ -129,7 +158,7 @@ function onSubmit() {
           :disabled="!draft.name.trim()"
           @click="onSubmit"
         >
-          Create project
+          {{ isEdit ? 'Save changes' : 'Create project' }}
         </UiButton>
       </div>
     </template>
@@ -140,6 +169,12 @@ function onSubmit() {
 .form {
   display: flex;
   flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
 }
 

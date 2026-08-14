@@ -31,5 +31,7 @@ export interface NewProjectDraft {
   name: string;
   description: string;
   goalId: string | null;
+  /** ISO calendar date (YYYY-MM-DD) or null — persisted on the backend. */
+  deadline: string | null;
   color: string;
 }

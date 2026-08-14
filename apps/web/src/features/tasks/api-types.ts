@@ -35,6 +35,18 @@ export interface CreateTaskRequest {
   estimatedDurationMinutes?: number | null;
 }
 
+/** Body of PUT /api/v1/tasks/{id} (backend UpdateTaskRequest, amendment
+ *  AC-012). Full-replace: explicit null clears a nullable field; absent
+ *  or blank title keeps the existing one. */
+export interface UpdateTaskRequest {
+  title?: string;
+  description?: string | null;
+  dueDate?: string | null;
+  priority?: Priority | null;
+  energy?: Energy | null;
+  estimatedDurationMinutes?: number | null;
+}
+
 /** Body of PUT /api/v1/tasks/{id}/project (backend AssignProjectRequest).
  *  A null projectId unassigns the task. */
 export interface AssignProjectRequest {

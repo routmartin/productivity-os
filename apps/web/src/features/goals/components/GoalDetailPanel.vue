@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Archive, CalendarDays, CheckSquare, RotateCcw, SearchX } from 'lucide-vue-next'
+import { Archive, CalendarDays, CheckSquare, Pencil, RotateCcw, SearchX, Trash2 } from 'lucide-vue-next'
 
 import { useContextPanelStore } from '@/app/layouts/contextPanelStore'
 import EmptyState from '@/components/shared/EmptyState.vue'
@@ -14,6 +14,7 @@ import { showPreviewNote } from '@/lib/preview'
 import { useGoalsStore } from '../store'
 import { GOAL_STATUS_LABELS } from '../types'
 import CompleteGoalDialog from './CompleteGoalDialog.vue'
+import NewGoalDialog from './NewGoalDialog.vue'
 import ReopenGoalDialog from './ReopenGoalDialog.vue'
 
 const props = defineProps<{ goalId: string }>()
@@ -29,6 +30,8 @@ const activity = computed(() => goals.recentActivityForGoal(props.goalId))
 
 const completeOpen = ref(false)
 const reopenOpen = ref(false)
+const editOpen = ref(false)
+const confirmingDelete = ref(false)
 
 type PillTone = 'neutral' | 'accent' | 'success'
 
@@ -55,6 +58,17 @@ function progressOf(projectId: string): number {
 
 function onSimpleAction(label: string) {
   showPreviewNote(`“${label}” will call the Goal API in a later milestone — visual only for now.`)
+}
+
+function onUpdate(goalId: string, draft: Parameters<typeof goals.updateGoal>[1]) {
+  goals.updateGoal(goalId, draft)
+  editOpen.value = false
+}
+
+function onDelete() {
+  if (!props.goalId) return
+  goals.deleteGoal(props.goalId)
+  panel.close()
 }
 </script>
 
@@ -153,6 +167,29 @@ function onSimpleAction(label: string) {
         <Archive :size="15" :stroke-width="1.75" />
         Archive goal
       </UiButton>
+      <UiButton variant="ghost" full-width @click="editOpen = true">
+        <Pencil :size="15" :stroke-width="1.75" />
+        Edit goal
+      </UiButton>
+      <template v-if="!confirmingDelete">
+        <UiButton variant="ghost" full-width class="danger-btn" @click="confirmingDelete = true">
+          <Trash2 :size="15" :stroke-width="1.75" />
+          Delete goal
+        </UiButton>
+      </template>
+      <template v-else>
+        <div class="confirm-box">
+          <p class="confirm-copy">Delete “{{ goal.title }}”? Its projects stay, goal-less.</p>
+          <div class="confirm-row">
+            <UiButton variant="ghost" size="sm" full-width @click="confirmingDelete = false">
+              Cancel
+            </UiButton>
+            <UiButton variant="ghost" size="sm" full-width class="danger-btn" @click="onDelete">
+              Delete
+            </UiButton>
+          </div>
+        </div>
+      </template>
     </div>
 
     <footer class="footer tnum">
@@ -162,6 +199,12 @@ function onSimpleAction(label: string) {
 
     <CompleteGoalDialog :open="completeOpen" :goal="goal" @close="completeOpen = false" />
     <ReopenGoalDialog :open="reopenOpen" :goal="goal" @close="reopenOpen = false" />
+    <NewGoalDialog
+      :open="editOpen"
+      :editing="goal"
+      @close="editOpen = false"
+      @update="onUpdate"
+    />
   </div>
 
   <EmptyState
@@ -357,6 +400,34 @@ function onSimpleAction(label: string) {
 .actions {
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
+}
+
+.danger-btn {
+  color: var(--danger) !important;
+}
+
+.danger-btn:hover {
+  background: var(--danger-soft);
+}
+
+.confirm-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+}
+
+.confirm-copy {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.confirm-row {
+  display: flex;
   gap: var(--space-2);
 }
 

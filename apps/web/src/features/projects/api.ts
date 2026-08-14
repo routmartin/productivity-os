@@ -12,6 +12,7 @@ import { apiClient } from "@/lib/api/client";
 import type {
   CreateProjectRequest,
   ProjectResponse,
+  UpdateProjectRequest,
 } from "./api-types";
 
 const BASE = "/projects";
@@ -50,6 +51,19 @@ async function archive(id: string): Promise<ProjectResponse> {
   return apiClient.post<ProjectResponse>(`${BASE}/${id}/archival`);
 }
 
+/** Full-replace edit (amendment AC-014). */
+async function update(
+  id: string,
+  request: UpdateProjectRequest,
+): Promise<ProjectResponse> {
+  return apiClient.put<ProjectResponse>(`${BASE}/${id}`, request);
+}
+
+/** Hard delete; the backend detaches the project's tasks (AC-015). */
+async function remove(id: string): Promise<void> {
+  await apiClient.delete<void>(`${BASE}/${id}`);
+}
+
 export const projectsApi = {
   list,
   get,
@@ -58,4 +72,6 @@ export const projectsApi = {
   returnToDraft,
   complete,
   archive,
+  update,
+  delete: remove,
 };

@@ -13,6 +13,7 @@ import type {
   CreateGoalRequest,
   GoalResponse,
   ReopenGoalRequest,
+  UpdateGoalRequest,
 } from "./api-types";
 
 const BASE = "/goals";
@@ -59,6 +60,19 @@ async function archive(id: string): Promise<GoalResponse> {
   return apiClient.post<GoalResponse>(`${BASE}/${id}/archival`);
 }
 
+/** Full-replace edit (amendment AC-016). */
+async function update(
+  id: string,
+  request: UpdateGoalRequest,
+): Promise<GoalResponse> {
+  return apiClient.put<GoalResponse>(`${BASE}/${id}`, request);
+}
+
+/** Hard delete; the backend detaches the goal's projects (AC-017). */
+async function remove(id: string): Promise<void> {
+  await apiClient.delete<void>(`${BASE}/${id}`);
+}
+
 export const goalsApi = {
   list,
   get,
@@ -68,4 +82,6 @@ export const goalsApi = {
   complete,
   reopening,
   archive,
+  update,
+  delete: remove,
 };

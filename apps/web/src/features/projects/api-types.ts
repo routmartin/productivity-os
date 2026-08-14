@@ -29,6 +29,17 @@ export interface CreateProjectRequest {
   deadline?: string | null;
 }
 
+/** Body of PUT /api/v1/projects/{id} (backend UpdateProjectRequest,
+ *  amendment AC-014). Full-replace: explicit null clears a nullable
+ *  field (goalId, deadline, description); absent or blank title keeps
+ *  the existing one. */
+export interface UpdateProjectRequest {
+  title?: string;
+  description?: string | null;
+  goalId?: string | null;
+  deadline?: string | null;
+}
+
 /** Map a backend response to the UI Project shape. The backend has no
  *  `color` (UI-only accent); server-loaded projects get a stable palette
  *  color derived from their id, so the accent never flickers across

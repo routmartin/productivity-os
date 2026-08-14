@@ -33,6 +33,15 @@ export interface ReopenGoalRequest {
   projectIds: string[];
 }
 
+/** Body of PUT /api/v1/goals/{id} (backend UpdateGoalRequest, amendment
+ *  AC-016). Full-replace: explicit null clears a nullable field
+ *  (description, deadline); absent or blank title keeps the existing one. */
+export interface UpdateGoalRequest {
+  title?: string;
+  description?: string | null;
+  deadline?: string | null;
+}
+
 /** Map a backend response to the UI Goal shape. */
 export function goalResponseToGoal(response: GoalResponse): Goal {
   return {

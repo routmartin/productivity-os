@@ -1,43 +1,20 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue'
-import {
-  CalendarPlus,
-  CheckCircle2,
-  MoreHorizontal,
-  Pencil,
-  Play,
-  Trash2,
-} from 'lucide-vue-next'
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-vue-next'
 
-import { useTasksStore } from '../store'
-import type { Task } from '../types'
-import NewTaskDialog from './NewTaskDialog.vue'
+import { useProjectsStore } from '../store'
+import type { Project } from '../types'
+import NewProjectDialog from './NewProjectDialog.vue'
 
-const props = defineProps<{ task: Task }>()
+const props = defineProps<{ project: Project }>()
 
-const store = useTasksStore()
+const store = useProjectsStore()
 
 const open = ref(false)
 const menuRef = ref<HTMLElement | null>(null)
 const confirmingDelete = ref(false)
 const editOpen = ref(false)
 const error = ref('')
-
-interface MenuAction {
-  key: string
-  label: string
-  icon: typeof Play
-  danger?: boolean
-  disabled?: boolean
-}
-
-const actions = (): MenuAction[] => [
-  { key: 'plan', label: 'Plan for today', icon: CalendarPlus, disabled: props.task.status !== 'INBOX' },
-  { key: 'start', label: 'Start', icon: Play, disabled: props.task.status !== 'PLANNED' },
-  { key: 'complete', label: 'Mark complete', icon: CheckCircle2, disabled: props.task.status !== 'IN_PROGRESS' },
-  { key: 'edit', label: 'Edit task', icon: Pencil },
-  { key: 'delete', label: 'Delete', icon: Trash2, danger: true },
-]
 
 function toggle(event: MouseEvent) {
   event.stopPropagation()
@@ -50,48 +27,28 @@ function close() {
   confirmingDelete.value = false
 }
 
-function onAction(action: MenuAction, event: MouseEvent) {
+function onEdit(event: MouseEvent) {
   event.stopPropagation()
-  if (action.disabled) return
-
-  if (action.key === 'delete') {
-    confirmingDelete.value = true
-    return
-  }
-
-  if (action.key === 'edit') {
-    close()
-    editOpen.value = true
-    return
-  }
-
   close()
-  switch (action.key) {
-    case 'plan':
-      store.planTask(props.task.id)
-      break
-    case 'start':
-      store.startTask(props.task.id)
-      break
-    case 'complete':
-      store.toggleTaskComplete(props.task.id)
-      break
-  }
+  editOpen.value = true
+}
+
+function onDeleteClick(event: MouseEvent) {
+  event.stopPropagation()
+  confirmingDelete.value = true
 }
 
 function confirmDelete(event: MouseEvent) {
   event.stopPropagation()
   close()
-  store.deleteTask(props.task.id)
+  store.deleteProject(props.project.id)
 }
 
-function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1]) {
-  store.updateTask(taskId, draft)
+function onUpdate(projectId: string, draft: Parameters<typeof store.updateProject>[1]) {
+  store.updateProject(projectId, draft)
   editOpen.value = false
 }
 
-/** Surface the last failed mutation inside the menu (e.g. a 409 invalid
- *  transition) so the user knows the action didn't stick. */
 let errorTimer: ReturnType<typeof setTimeout> | undefined
 watch(
   () => store.lastError,
@@ -135,7 +92,7 @@ onBeforeUnmount(() => {
     <button
       class="trigger"
       type="button"
-      aria-label="Task actions"
+      aria-label="Project actions"
       aria-haspopup="menu"
       :aria-expanded="open"
       @click="toggle"
@@ -146,7 +103,8 @@ onBeforeUnmount(() => {
     <Transition name="menu">
       <div v-if="open" class="menu" role="menu" @click.stop>
         <template v-if="confirmingDelete">
-          <p class="confirm-copy">Delete this task?</p>
+          <p class="confirm-copy">Delete this project?</p>
+          <p class="confirm-hint">Its tasks stay in your inbox.</p>
           <div class="confirm-row">
             <button
               class="menu-item"
@@ -168,18 +126,13 @@ onBeforeUnmount(() => {
         </template>
 
         <template v-else>
-          <button
-            v-for="action in actions()"
-            :key="action.key"
-            class="menu-item"
-            :class="{ danger: action.danger, disabled: action.disabled }"
-            role="menuitem"
-            type="button"
-            :disabled="action.disabled"
-            @click="onAction(action, $event)"
-          >
-            <component :is="action.icon" :size="14" :stroke-width="1.75" />
-            {{ action.label }}
+          <button class="menu-item" role="menuitem" type="button" @click="onEdit($event)">
+            <Pencil :size="14" :stroke-width="1.75" />
+            Edit project
+          </button>
+          <button class="menu-item danger" role="menuitem" type="button" @click="onDeleteClick($event)">
+            <Trash2 :size="14" :stroke-width="1.75" />
+            Delete
           </button>
         </template>
 
@@ -187,9 +140,9 @@ onBeforeUnmount(() => {
       </div>
     </Transition>
 
-    <NewTaskDialog
+    <NewProjectDialog
       :open="editOpen"
-      :editing="task"
+      :editing="project"
       @close="editOpen = false"
       @update="onUpdate"
     />
@@ -216,11 +169,8 @@ onBeforeUnmount(() => {
     opacity var(--duration-fast) var(--ease-out);
 }
 
-/* Revealed by the parent row/card hover */
-:global(.task-list-row:hover) .trigger,
-:global(.inbox-row:hover) .trigger,
-:global(.inbox-card:hover) .trigger,
-:global(.inbox-card:focus-visible) .trigger,
+:global(.project-card:hover) .trigger,
+:global(.project-card:focus-visible) .trigger,
 .trigger[aria-expanded='true'] {
   opacity: 1;
 }
@@ -267,16 +217,17 @@ onBeforeUnmount(() => {
   color: var(--danger);
 }
 
-.menu-item:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 .confirm-copy {
   padding: var(--space-2) var(--space-3) var(--space-1);
   font-size: var(--text-xs);
   font-weight: 600;
   color: var(--danger);
+}
+
+.confirm-hint {
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
 }
 
 .confirm-row {

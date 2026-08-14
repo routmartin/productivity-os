@@ -8,6 +8,7 @@ import { useProjectsStore } from '@/features/projects/store'
 import type { Project } from '@/features/projects/types'
 
 import type { Goal } from '../types'
+import GoalActionMenu from './GoalActionMenu.vue'
 
 const props = defineProps<{
   goal: Goal
@@ -57,6 +58,7 @@ function onKeydown(event: KeyboardEvent) {
         <UiPill v-if="goal.status === 'DRAFT'" tone="neutral">Draft</UiPill>
         <UiPill v-else-if="goal.status === 'COMPLETED'" tone="success">Completed</UiPill>
         <UiPill v-else-if="goal.status === 'ARCHIVED'" tone="neutral">Archived</UiPill>
+        <GoalActionMenu :goal="goal" />
       </header>
 
       <p v-if="goal.description" class="description">{{ goal.description }}</p>

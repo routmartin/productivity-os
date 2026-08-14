@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Archive, CheckCircle2, CheckSquare, SearchX, Target } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import { Archive, CheckCircle2, CheckSquare, Pencil, SearchX, Target, Trash2 } from 'lucide-vue-next'
 
 import EmptyState from '@/components/shared/EmptyState.vue'
 import SegmentedProgress from '@/components/shared/SegmentedProgress.vue'
@@ -14,6 +14,7 @@ import { showPreviewNote } from '@/lib/preview'
 
 import { useProjectsStore } from '../store'
 import { PROJECT_STATUS_LABELS } from '../types'
+import NewProjectDialog from './NewProjectDialog.vue'
 
 const props = defineProps<{ projectId: string }>()
 
@@ -27,6 +28,9 @@ const goal = computed(() =>
 )
 const stats = computed(() => projects.statsForProject(props.projectId))
 const taskLists = computed(() => projects.tasksForProject(props.projectId))
+
+const editOpen = ref(false)
+const confirmingDelete = ref(false)
 
 type PillTone = 'neutral' | 'accent' | 'success'
 
@@ -43,6 +47,17 @@ const statusTone = computed<PillTone>(() => {
 
 function onAction(label: string) {
   showPreviewNote(`“${label}” will call the Project API in a later milestone — visual only for now.`)
+}
+
+function onUpdate(projectId: string, draft: Parameters<typeof projects.updateProject>[1]) {
+  projects.updateProject(projectId, draft)
+  editOpen.value = false
+}
+
+function onDelete() {
+  if (!props.projectId) return
+  projects.deleteProject(props.projectId)
+  panel.close()
 }
 </script>
 
@@ -133,7 +148,37 @@ function onAction(label: string) {
         <Archive :size="15" :stroke-width="1.75" />
         Restore project
       </UiButton>
+      <UiButton variant="ghost" full-width @click="editOpen = true">
+        <Pencil :size="15" :stroke-width="1.75" />
+        Edit project
+      </UiButton>
+      <template v-if="!confirmingDelete">
+        <UiButton variant="ghost" full-width class="danger-btn" @click="confirmingDelete = true">
+          <Trash2 :size="15" :stroke-width="1.75" />
+          Delete project
+        </UiButton>
+      </template>
+      <template v-else>
+        <div class="confirm-box">
+          <p class="confirm-copy">Delete “{{ project.name }}”? Its tasks stay in your inbox.</p>
+          <div class="confirm-row">
+            <UiButton variant="ghost" size="sm" full-width @click="confirmingDelete = false">
+              Cancel
+            </UiButton>
+            <UiButton variant="ghost" size="sm" full-width class="danger-btn" @click="onDelete">
+              Delete
+            </UiButton>
+          </div>
+        </div>
+      </template>
     </div>
+
+    <NewProjectDialog
+      :open="editOpen"
+      :editing="project"
+      @close="editOpen = false"
+      @update="onUpdate"
+    />
 
     <footer class="footer tnum">
       <span>Created {{ relativeTime(project.createdAt) }}</span>
@@ -312,6 +357,34 @@ function onAction(label: string) {
 .actions {
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
+}
+
+.danger-btn {
+  color: var(--danger) !important;
+}
+
+.danger-btn:hover {
+  background: var(--danger-soft);
+}
+
+.confirm-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+}
+
+.confirm-copy {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.confirm-row {
+  display: flex;
   gap: var(--space-2);
 }
 

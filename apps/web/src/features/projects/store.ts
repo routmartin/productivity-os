@@ -119,6 +119,69 @@ export const useProjectsStore = defineStore("projects", () => {
     };
   }
 
+  /** Persist edits (amendment AC-014). Mock mode mutates locally (color
+   *  stays UI-only); real mode sends PUT /api/v1/projects/{id}. */
+  function updateProject(projectId: string, draft: NewProjectDraft): void {
+    const project = projectById(projectId);
+    if (!project) return;
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      project.name = draft.name;
+      project.description = draft.description;
+      project.goalId = draft.goalId;
+      project.color = draft.color;
+      return;
+    }
+
+    projectsApi
+      .update(projectId, {
+        title: draft.name,
+        description: draft.description,
+        goalId: draft.goalId,
+        deadline: draft.deadline ?? null,
+      })
+      .then((updated) => {
+        const live = projectById(projectId);
+        if (live) {
+          const mapped = projectResponseToProject(updated);
+          mapped.color = live.color;
+          Object.assign(live, mapped);
+        }
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+  }
+
+  /** Delete a project (amendment AC-015). The backend detaches the
+   *  project's tasks (project_id = NULL); the stores mirror that so the
+   *  tasks keep their data and surface as unassigned. */
+  function deleteProject(projectId: string): void {
+    const project = projectById(projectId);
+    if (!project) return;
+    lastError.value = null;
+
+    const detach = () => {
+      projects.value = projects.value.filter((p) => p.id !== projectId);
+      for (const task of tasksStore.tasks) {
+        if (task.projectId === projectId) task.projectId = null;
+      }
+    };
+
+    if (USE_MOCK) {
+      detach();
+      return;
+    }
+
+    projectsApi
+      .delete(projectId)
+      .then(detach)
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+  }
+
   /**
    * @param preview forces a UI state for design verification
    * (`?preview=loading|error|empty`) — mock mode only.
@@ -181,6 +244,7 @@ export const useProjectsStore = defineStore("projects", () => {
         title: draft.name,
         description: draft.description || null,
         goalId: draft.goalId,
+        deadline: draft.deadline ?? null,
       })
       .then((created) => projectsApi.activate(created.id))
       .then((activated) => {
@@ -208,6 +272,8 @@ export const useProjectsStore = defineStore("projects", () => {
     load,
     setFilter,
     addProject,
+    updateProject,
+    deleteProject,
     clearError,
   };
 });

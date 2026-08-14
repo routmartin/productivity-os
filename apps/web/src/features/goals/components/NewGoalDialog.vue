@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 
 import UiButton from '@/components/ui/UiButton.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
@@ -7,14 +7,17 @@ import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
 
-import type { NewGoalDraft } from '../types'
+import type { Goal, NewGoalDraft } from '../types'
 
-const props = defineProps<{ open: boolean }>()
+const props = defineProps<{ open: boolean; editing?: Goal | null }>()
 
 const emit = defineEmits<{
   close: []
   create: [draft: NewGoalDraft]
+  update: [goalId: string, draft: NewGoalDraft]
 }>()
+
+const isEdit = computed(() => props.editing != null)
 
 const emptyDraft = () => ({
   title: '',
@@ -37,6 +40,16 @@ watch(
   async (isOpen) => {
     if (isOpen) {
       Object.assign(draft, emptyDraft())
+
+      const goal = props.editing
+      if (goal) {
+        Object.assign(draft, {
+          title: goal.title,
+          description: goal.description ?? '',
+          deadline: goal.deadline ?? '',
+        })
+      }
+
       isSubmitting.value = false
       await nextTick()
       titleInput.value?.$el.querySelector('input')?.focus()
@@ -48,21 +61,27 @@ function onSubmit() {
   if (!draft.title.trim() || isSubmitting.value) return
   isSubmitting.value = true
 
-  // Simulated submission latency; the real POST /api/v1/goals plugs in later.
+  const payload = {
+    title: draft.title.trim(),
+    description: draft.description.trim(),
+    deadline: draft.deadline || null,
+    status: draft.status,
+  }
+
+  // Emits the draft; the goals store performs the real API call.
   setTimeout(() => {
-    emit('create', {
-      title: draft.title.trim(),
-      description: draft.description.trim(),
-      deadline: draft.deadline || null,
-      status: draft.status,
-    })
+    if (props.editing) {
+      emit('update', props.editing.id, payload)
+    } else {
+      emit('create', payload)
+    }
     emit('close')
   }, 400)
 }
 </script>
 
 <template>
-  <UiDialog :open="open" title="New Goal" @close="emit('close')">
+  <UiDialog :open="open" :title="isEdit ? 'Edit Goal' : 'New Goal'" @close="emit('close')">
     <form class="form" @submit.prevent="onSubmit">
       <UiInput
         ref="titleInput"
@@ -87,12 +106,18 @@ function onSubmit() {
           type="date"
           :disabled="isSubmitting"
         />
-        <UiSelect v-model="draft.status" label="Initial state" :options="statusOptions" :disabled="isSubmitting" />
+        <UiSelect
+          v-if="!isEdit"
+          v-model="draft.status"
+          label="Initial state"
+          :options="statusOptions"
+          :disabled="isSubmitting"
+        />
       </div>
     </form>
 
     <template #footer>
-      <span class="note">Saved locally — preview only</span>
+      <span v-if="!isEdit" class="note">Saved locally — preview only</span>
       <div class="footer-actions">
         <UiButton variant="ghost" type="button" :disabled="isSubmitting" @click="emit('close')">
           Cancel
@@ -104,7 +129,7 @@ function onSubmit() {
           :disabled="!draft.title.trim()"
           @click="onSubmit"
         >
-          Create goal
+          {{ isEdit ? 'Save changes' : 'Create goal' }}
         </UiButton>
       </div>
     </template>

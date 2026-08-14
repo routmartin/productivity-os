@@ -15,6 +15,7 @@ import type {
   AssignProjectRequest,
   CreateTaskRequest,
   TaskResponse,
+  UpdateTaskRequest,
 } from "./api-types";
 
 const BASE = "/tasks";
@@ -66,6 +67,14 @@ async function assignProject(
   return apiClient.put<TaskResponse>(`${BASE}/${id}/project`, request);
 }
 
+/** Full-replace edit (amendment AC-012). */
+async function update(
+  id: string,
+  request: UpdateTaskRequest,
+): Promise<TaskResponse> {
+  return apiClient.put<TaskResponse>(`${BASE}/${id}`, request);
+}
+
 /** Soft delete. */
 async function remove(id: string): Promise<void> {
   await apiClient.delete<void>(`${BASE}/${id}`);
@@ -81,5 +90,6 @@ export const tasksApi = {
   cancel,
   restore,
   assignProject,
+  update,
   delete: remove,
 };

@@ -280,6 +280,62 @@ export const useGoalsStore = defineStore("goals", () => {
       });
   }
 
+  /** Persist edits (amendment AC-016). */
+  function updateGoal(goalId: string, draft: NewGoalDraft): void {
+    const goal = goalById(goalId);
+    if (!goal) return;
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      goal.title = draft.title;
+      goal.description = draft.description;
+      goal.deadline = draft.deadline;
+      return;
+    }
+
+    goalsApi
+      .update(goalId, {
+        title: draft.title,
+        description: draft.description,
+        deadline: draft.deadline,
+      })
+      .then((updated) => {
+        const live = goalById(goalId);
+        if (live) Object.assign(live, goalResponseToGoal(updated));
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+  }
+
+  /** Delete a goal (amendment AC-017). The backend detaches the goal's
+   *  projects (goal_id = NULL); the stores mirror that so the projects
+   *  keep their data and surface as standalone. */
+  function deleteGoal(goalId: string): void {
+    const goal = goalById(goalId);
+    if (!goal) return;
+    lastError.value = null;
+
+    const detach = () => {
+      goals.value = goals.value.filter((g) => g.id !== goalId);
+      for (const project of projectsStore.projects) {
+        if (project.goalId === goalId) project.goalId = null;
+      }
+    };
+
+    if (USE_MOCK) {
+      detach();
+      return;
+    }
+
+    goalsApi
+      .delete(goalId)
+      .then(detach)
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+  }
+
   return {
     goals,
     status,
@@ -299,6 +355,8 @@ export const useGoalsStore = defineStore("goals", () => {
     addGoal,
     completeGoal,
     reopenGoal,
+    updateGoal,
+    deleteGoal,
     clearError,
   };
 });
