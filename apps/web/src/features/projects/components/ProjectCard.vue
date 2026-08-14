@@ -4,7 +4,7 @@ import { Target } from 'lucide-vue-next'
 
 import SegmentedProgress from '@/components/shared/SegmentedProgress.vue'
 import UiPill from '@/components/ui/UiPill.vue'
-import { findGoalById } from '@/features/tasks/mock'
+import { useGoalsStore } from '@/features/goals/store'
 
 import type { ProjectTaskStats } from '../store'
 import type { Project } from '../types'
@@ -17,7 +17,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{ select: [projectId: string] }>()
 
-const goal = computed(() => findGoalById(props.project.goalId))
+const goalsStore = useGoalsStore()
+
+const goal = computed(() =>
+  props.project.goalId ? goalsStore.goalById(props.project.goalId) : undefined,
+)
 
 const isQuiet = computed(
   () => props.project.status === 'COMPLETED' || props.project.status === 'ARCHIVED',

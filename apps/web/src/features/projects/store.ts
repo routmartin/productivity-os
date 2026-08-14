@@ -61,7 +61,7 @@ function statsFor(projectId: string, tasks: Task[]): ProjectTaskStats {
 const USE_MOCK = useMock("PROJECTS");
 
 export const useProjectsStore = defineStore("projects", () => {
-  const projects = ref<Project[]>([...mockProjects]);
+  const projects = ref<Project[]>(USE_MOCK ? [...mockProjects] : []);
   const status = ref<LoadStatus>("idle");
   const statusFilter = ref<ProjectFilter>("ACTIVE");
   const previewEmpty = ref(false);

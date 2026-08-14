@@ -8,7 +8,7 @@ import UiButton from '@/components/ui/UiButton.vue'
 import UiPill from '@/components/ui/UiPill.vue'
 import { useContextPanelStore } from '@/app/layouts/contextPanelStore'
 import TaskRow from '@/features/tasks/components/TaskRow.vue'
-import { findGoalById } from '@/features/tasks/mock'
+import { useGoalsStore } from '@/features/goals/store'
 import { relativeTime } from '@/lib/utils/date'
 import { showPreviewNote } from '@/lib/preview'
 
@@ -18,10 +18,13 @@ import { PROJECT_STATUS_LABELS } from '../types'
 const props = defineProps<{ projectId: string }>()
 
 const projects = useProjectsStore()
+const goals = useGoalsStore()
 const panel = useContextPanelStore()
 
 const project = computed(() => projects.projectById(props.projectId))
-const goal = computed(() => findGoalById(project.value?.goalId ?? null))
+const goal = computed(() =>
+  project.value?.goalId ? goals.goalById(project.value.goalId) : undefined,
+)
 const stats = computed(() => projects.statsForProject(props.projectId))
 const taskLists = computed(() => projects.tasksForProject(props.projectId))
 

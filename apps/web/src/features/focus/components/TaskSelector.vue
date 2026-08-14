@@ -4,11 +4,12 @@ import { Check } from "lucide-vue-next";
 
 import UiInput from "@/components/ui/UiInput.vue";
 import { useFocusStore } from "@/features/focus/store";
-import { findProjectById } from "@/features/tasks/mock";
+import { useProjectsStore } from "@/features/projects/store";
 import type { Task } from "@/features/tasks/types";
 import { PRIORITY_LABELS } from "@/features/tasks/types";
 
 const store = useFocusStore();
+const projectsStore = useProjectsStore();
 
 const search = ref("");
 
@@ -61,7 +62,7 @@ function onSelect(taskId: string) {
             <span class="task-title">{{ task.title }}</span>
             <span class="task-meta">
               <span v-if="task.projectId" class="project-name">
-                {{ findProjectById(task.projectId)?.name }}
+                {{ projectsStore.projectById(task.projectId)?.name }}
               </span>
               <span v-if="task.priority" class="priority">
                 {{ PRIORITY_LABELS[task.priority] }}

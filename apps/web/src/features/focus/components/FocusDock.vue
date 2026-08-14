@@ -12,7 +12,7 @@ import {
 
 import UiPill from "@/components/ui/UiPill.vue";
 import { useFocusStore } from "@/features/focus/store";
-import { findProjectById } from "@/features/tasks/mock";
+import { useProjectsStore } from "@/features/projects/store";
 import { PRIORITY_LABELS } from "@/features/tasks/types";
 
 /**
@@ -22,12 +22,13 @@ import { PRIORITY_LABELS } from "@/features/tasks/types";
  * full timer dialog.
  */
 const focusStore = useFocusStore();
+const projectsStore = useProjectsStore();
 const expanded = ref(false);
 
 const project = computed(() => {
   const task = focusStore.selectedTask;
   if (!task?.projectId) return null;
-  return findProjectById(task.projectId) ?? null;
+  return projectsStore.projectById(task.projectId) ?? null;
 });
 
 function formattedCompletionDuration(): string {

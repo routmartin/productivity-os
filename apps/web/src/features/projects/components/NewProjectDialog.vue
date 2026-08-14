@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { nextTick, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 
 import UiButton from '@/components/ui/UiButton.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 import UiSelect from '@/components/ui/UiSelect.vue'
 import UiTextarea from '@/components/ui/UiTextarea.vue'
-import { mockGoals } from '@/features/tasks/mock'
+import { useGoalsStore } from '@/features/goals/store'
+import { useMock } from '@/lib/mock'
 
 import { PROJECT_COLORS } from '../mock'
 import type { NewProjectDraft } from '../types'
@@ -17,6 +18,9 @@ const emit = defineEmits<{
   close: []
   create: [draft: NewProjectDraft]
 }>()
+
+const goalsStore = useGoalsStore()
+const mockMode = useMock('PROJECTS')
 
 const emptyDraft = (): NewProjectDraft => ({
   name: '',
@@ -29,10 +33,14 @@ const draft = reactive<NewProjectDraft>(emptyDraft())
 const isSubmitting = ref(false)
 const nameInput = ref<{ $el: HTMLElement } | null>(null)
 
-const goalOptions = [
+/** Goals you can attach a project to — ACTIVE (incl. DRAFT) from the real
+ *  goals store, matching the Goals workspace's Active view. */
+const goalOptions = computed(() => [
   { value: '', label: 'No goal' },
-  ...mockGoals.map((g) => ({ value: g.id, label: g.title })),
-]
+  ...goalsStore.goals
+    .filter((goal) => goal.status === 'ACTIVE' || goal.status === 'DRAFT')
+    .map((goal) => ({ value: goal.id, label: goal.title })),
+])
 
 const goalValue = ref('')
 
@@ -43,6 +51,8 @@ watch(
       Object.assign(draft, emptyDraft())
       goalValue.value = ''
       isSubmitting.value = false
+      // Goal options come from the server — load once if never loaded.
+      if (goalsStore.status === 'idle') void goalsStore.load()
       await nextTick()
       nameInput.value?.$el.querySelector('input')?.focus()
     }
@@ -53,7 +63,7 @@ function onSubmit() {
   if (!draft.name.trim() || isSubmitting.value) return
   isSubmitting.value = true
 
-  // Simulated submission latency; the real POST /api/v1/projects plugs in later.
+  // Emits the draft; the projects store performs the real POST /api/v1/projects.
   setTimeout(() => {
     emit('create', {
       name: draft.name.trim(),
@@ -107,7 +117,7 @@ function onSubmit() {
     </form>
 
     <template #footer>
-      <span class="note">Saved locally — preview only</span>
+      <span v-if="mockMode" class="note">Preview only — nothing changes</span>
       <div class="footer-actions">
         <UiButton variant="ghost" type="button" :disabled="isSubmitting" @click="emit('close')">
           Cancel

@@ -10,6 +10,7 @@ import FilterChips from '@/components/shared/FilterChips.vue'
 import SkeletonBlock from '@/components/shared/SkeletonBlock.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import type { PreviewState } from '@/features/planning/types'
+import { useGoalsStore } from '@/features/goals/store'
 import NewProjectDialog from '@/features/projects/components/NewProjectDialog.vue'
 import ProjectCard from '@/features/projects/components/ProjectCard.vue'
 import {
@@ -18,10 +19,12 @@ import {
   type ProjectFilter,
 } from '@/features/projects/store'
 import type { NewProjectDraft } from '@/features/projects/types'
+import { useMock } from '@/lib/mock'
 import { showPreviewNote } from '@/lib/preview'
 
 const route = useRoute()
 const store = useProjectsStore()
+const goalsStore = useGoalsStore()
 const panel = useContextPanelStore()
 
 /** `?preview=loading|error|empty` forces a UI state for design review. */
@@ -35,6 +38,8 @@ function previewFromQuery(): PreviewState {
 async function loadAndSelect(preview: PreviewState) {
   if (!panel.isOpen) panel.openSkeleton()
   await store.load(preview)
+  // Goal titles on cards/detail come from the goals store — load it once.
+  if (goalsStore.status === 'idle') void goalsStore.load()
   if (preview === 'loading' || !panel.isSkeleton) return
   if (store.status === 'ready' && store.visibleProjects.length > 0) {
     panel.openProject(store.visibleProjects[0].id)
@@ -92,7 +97,9 @@ function onSelectProject(projectId: string) {
 
 function onCreateProject(draft: NewProjectDraft) {
   store.addProject(draft)
-  showPreviewNote('Project created locally — it will sync once the Project API is connected.')
+  if (useMock('PROJECTS')) {
+    showPreviewNote('Project created locally — preview only.')
+  }
 }
 
 function onRetry() {

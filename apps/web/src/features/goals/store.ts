@@ -44,7 +44,7 @@ function delay(ms: number): Promise<void> {
 export const USE_MOCK = useMock("GOALS");
 
 export const useGoalsStore = defineStore("goals", () => {
-  const goals = ref<Goal[]>([...mockGoals]);
+  const goals = ref<Goal[]>(USE_MOCK ? [...mockGoals] : []);
   const status = ref<LoadStatus>("idle");
   const statusFilter = ref<GoalFilter>("ACTIVE");
   const previewEmpty = ref(false);

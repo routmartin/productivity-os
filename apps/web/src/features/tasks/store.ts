@@ -53,7 +53,7 @@ function nextLocalId(): string {
 const USE_MOCK = useMock("TASKS");
 
 export const useTasksStore = defineStore("tasks", () => {
-  const tasks = ref<Task[]>([...mockTasks]);
+  const tasks = ref<Task[]>(USE_MOCK ? [...mockTasks] : []);
   const status = ref<LoadStatus>("idle");
   const searchQuery = ref("");
   const statusFilter = ref<TaskStatusFilter>("ALL");

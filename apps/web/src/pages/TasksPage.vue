@@ -31,13 +31,14 @@ import NewTaskDialog from '@/features/tasks/components/NewTaskDialog.vue'
 import TaskFilters from '@/features/tasks/components/TaskFilters.vue'
 import TaskListRow from '@/features/tasks/components/TaskListRow.vue'
 import TaskPrioritySegments from '@/features/tasks/components/TaskPrioritySegments.vue'
-import { mockProjects } from '@/features/tasks/mock'
+import { useProjectsStore } from '@/features/projects/store'
 import { useTasksStore } from '@/features/tasks/store'
 import type { Task } from '@/features/tasks/types'
 import { showPreviewNote } from '@/lib/preview'
 
 const route = useRoute()
 const store = useTasksStore()
+const projectsStore = useProjectsStore()
 const panel = useContextPanelStore()
 
 /** `?preview=loading|error|empty` forces a UI state for design review. */
@@ -51,6 +52,8 @@ function previewFromQuery(): PreviewState {
 async function loadAndSelect(preview: PreviewState) {
   if (!panel.isOpen) panel.openSkeleton()
   await store.load(preview)
+  // Project names for grouping come from the projects store — load once.
+  if (projectsStore.status === 'idle') void projectsStore.load()
   if (preview === 'loading' || !panel.isSkeleton) return
   if (store.status === 'ready' && store.visibleTasks.length > 0) {
     panel.openTask(store.visibleTasks[0].id)
@@ -182,7 +185,7 @@ const projectGroups = computed<ProjectGroup[]>(() => {
   }
 
   const ordered: ProjectGroup[] = []
-  for (const project of mockProjects) {
+  for (const project of projectsStore.projects) {
     const tasks = byProject.get(project.id)
     if (tasks?.length) {
       ordered.push({ key: project.id, name: project.name, color: project.color, tasks })

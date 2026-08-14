@@ -4,7 +4,8 @@ import { ArrowRight, CalendarCheck2, Check, Flag } from 'lucide-vue-next'
 
 import EmptyState from '@/components/shared/EmptyState.vue'
 import SectionHeader from '@/components/shared/SectionHeader.vue'
-import { findProjectById, findTaskById } from '@/features/tasks/mock'
+import { useProjectsStore } from '@/features/projects/store'
+import { useTasksStore } from '@/features/tasks/store'
 import type { Priority, Task } from '@/features/tasks/types'
 
 import type { TopThreeEntry } from '../types'
@@ -15,6 +16,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ select: [taskId: string] }>()
+
+const tasksStore = useTasksStore()
+const projectsStore = useProjectsStore()
 
 interface PriorityRow {
   position: number
@@ -28,13 +32,15 @@ const rows = computed<PriorityRow[]>(() =>
     .slice()
     .sort((a, b) => a.position - b.position)
     .flatMap((entry) => {
-      const task = findTaskById(entry.taskId)
+      const task = tasksStore.taskById(entry.taskId)
       if (!task) return []
       return [
         {
           position: entry.position,
           task,
-          projectName: findProjectById(task.projectId)?.name ?? null,
+          projectName: task.projectId
+            ? projectsStore.projectById(task.projectId)?.name ?? null
+            : null,
           priority: task.priority,
         },
       ]

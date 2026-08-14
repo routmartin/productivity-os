@@ -19,8 +19,8 @@ import UiButton from "@/components/ui/UiButton.vue";
 import UiPill from "@/components/ui/UiPill.vue";
 import FocusSummary from "@/features/focus/components/FocusSummary.vue";
 import { useFocusStore } from "@/features/focus/store";
+import { useProjectsStore } from "@/features/projects/store";
 import { useTasksStore } from "@/features/tasks/store";
-import { findProjectById } from "@/features/tasks/mock";
 import { PRIORITY_LABELS } from "@/features/tasks/types";
 import type { Priority, Task } from "@/features/tasks/types";
 import type { PreviewState } from "@/features/planning/types";
@@ -28,6 +28,7 @@ import type { PreviewState } from "@/features/planning/types";
 const route = useRoute();
 const focusStore = useFocusStore();
 const tasksStore = useTasksStore();
+const projectsStore = useProjectsStore();
 
 const search = ref("");
 
@@ -39,6 +40,7 @@ function previewFromQuery(): PreviewState {
 onMounted(async () => {
   const preview = previewFromQuery();
   await tasksStore.load(preview);
+  if (projectsStore.status === "idle") await projectsStore.load();
   await focusStore.load();
   // Default-select the first eligible task so the start bar is ready to go
   // (an active session restored by load() already owns the selection).
@@ -76,12 +78,12 @@ const selectedTask = computed(() => focusStore.selectedTask);
 const selectedProject = computed(() => {
   const task = selectedTask.value;
   if (!task?.projectId) return null;
-  return findProjectById(task.projectId) ?? null;
+  return projectsStore.projectById(task.projectId) ?? null;
 });
 
 function projectName(task: Task): string | null {
   if (!task.projectId) return null;
-  return findProjectById(task.projectId)?.name ?? null;
+  return projectsStore.projectById(task.projectId)?.name ?? null;
 }
 
 function priorityTone(priority: Priority): "danger" | "warning" | "neutral" {
