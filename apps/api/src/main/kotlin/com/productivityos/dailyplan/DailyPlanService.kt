@@ -99,11 +99,14 @@ class DailyPlanService(
     }
 
     fun getCapacity(userId: UUID, calendarDate: LocalDate): Int {
-        val default = jdbcTemplate.queryForObject(
+        // queryForObject throws on an empty result set — use query so a
+        // missing row falls back to the 6h default instead of a 500.
+        val rows = jdbcTemplate.query(
             "SELECT capacity_hours FROM daily_capacities WHERE user_id = ? AND calendar_date = ?",
-            Int::class.java, userId, calendarDate
+            { rs, _ -> rs.getInt("capacity_hours") },
+            userId, calendarDate
         )
-        return default ?: 6
+        return rows.firstOrNull() ?: 6
     }
 
     fun getCapacityInfo(userId: UUID, calendarDate: LocalDate): CapacityInfo {
