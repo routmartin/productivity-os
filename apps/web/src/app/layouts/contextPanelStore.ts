@@ -9,7 +9,10 @@ import { computed, ref } from "vue";
 export type PanelContent =
   | { kind: "task"; taskId: string }
   | { kind: "project"; projectId: string }
-  | { kind: "goal"; goalId: string };
+  | { kind: "goal"; goalId: string }
+  /** Placeholder shown while a page loads — reserves the panel space so the
+   *  workspace doesn't reflow when the default item opens. */
+  | { kind: "skeleton" };
 
 export const useContextPanelStore = defineStore("contextPanel", () => {
   const content = ref<PanelContent | null>(null);
@@ -27,6 +30,12 @@ export const useContextPanelStore = defineStore("contextPanel", () => {
   const activeGoalId = computed(() =>
     content.value?.kind === "goal" ? content.value.goalId : null,
   );
+
+  const isSkeleton = computed(() => content.value?.kind === "skeleton");
+
+  function openSkeleton(): void {
+    content.value = { kind: "skeleton" };
+  }
 
   function openTask(taskId: string): void {
     content.value = { kind: "task", taskId };
@@ -78,6 +87,8 @@ export const useContextPanelStore = defineStore("contextPanel", () => {
     activeTaskId,
     activeProjectId,
     activeGoalId,
+    isSkeleton,
+    openSkeleton,
     openTask,
     openProject,
     openGoal,

@@ -15,7 +15,6 @@ import {
 } from 'lucide-vue-next'
 
 import { useAuthStore } from '@/features/auth/store'
-import { useProjectsStore } from '@/features/projects/store'
 import { useTasksStore } from '@/features/tasks/store'
 import { firstNameFromEmail } from '@/lib/utils/date'
 
@@ -23,20 +22,6 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const tasksStore = useTasksStore()
-const projectsStore = useProjectsStore()
-
-/** Favorites mirror the reference sidebar: the user's flagship projects with
- * their accent dots. Falls back to the first active projects. */
-const FAVORITE_IDS = ['proj-pos', 'proj-mobile', 'proj-web', 'proj-personal']
-
-const favorites = computed(() => {
-  const active = projectsStore.activeProjects
-  const pinned = FAVORITE_IDS.flatMap((id) => {
-    const project = active.find((p) => p.id === id)
-    return project ? [project] : []
-  })
-  return pinned.length > 0 ? pinned : active.slice(0, 4)
-})
 
 const mainNav = [
   { name: 'today', title: 'Today', icon: CalendarCheck2 },
@@ -88,19 +73,6 @@ async function onLogout() {
             <component :is="item.icon" :size="18" :stroke-width="1.75" class="nav-icon" />
             <span class="nav-label">{{ item.title }}</span>
             <span v-if="'badge' in item && item.badge" class="badge tnum">{{ inboxCount }}</span>
-          </RouterLink>
-        </li>
-      </ul>
-
-      <span class="section-label">Favorites</span>
-      <ul class="nav-list">
-        <li v-for="project in favorites" :key="project.id">
-          <RouterLink
-            :to="{ name: 'projects' }"
-            class="nav-item sub-item"
-          >
-            <span class="dot" :style="{ background: project.color }" aria-hidden="true" />
-            <span class="nav-label">{{ project.name }}</span>
           </RouterLink>
         </li>
       </ul>
@@ -270,24 +242,6 @@ async function onLogout() {
 .nav-item.active .badge {
   background: var(--accent-soft);
   color: var(--accent-strong);
-}
-
-.sub-item {
-  height: 38px;
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
-}
-
-.sub-item:hover {
-  color: var(--text-primary);
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  margin: 0 5px;
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
 }
 
 .bottom {

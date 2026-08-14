@@ -30,10 +30,23 @@ function previewFromQuery(): PreviewState {
   return value === 'loading' || value === 'error' || value === 'empty' ? value : null
 }
 
-onMounted(() => store.load(previewFromQuery()))
+/** Lands the workspace with the first project's detail open. While loading,
+ *  a skeleton reserves the panel so the workspace doesn't reflow on ready. */
+async function loadAndSelect(preview: PreviewState) {
+  if (!panel.isOpen) panel.openSkeleton()
+  await store.load(preview)
+  if (preview === 'loading' || !panel.isSkeleton) return
+  if (store.status === 'ready' && store.visibleProjects.length > 0) {
+    panel.openProject(store.visibleProjects[0].id)
+  } else {
+    panel.close()
+  }
+}
+
+onMounted(() => loadAndSelect(previewFromQuery()))
 watch(
   () => route.query.preview,
-  () => store.load(previewFromQuery()),
+  () => loadAndSelect(previewFromQuery()),
 )
 
 const dialogOpen = ref(false)
@@ -107,9 +120,19 @@ function onRetry() {
       @change="store.setFilter($event)"
     />
 
-    <!-- Loading -->
-    <div v-if="isLoading" class="grid" aria-busy="true" aria-label="Loading projects">
-      <SkeletonBlock v-for="i in 4" :key="i" height="220px" rounded="lg" />
+    <!-- Loading — mirrors the header, filter chips, and card grid -->
+    <div v-if="isLoading" class="skeleton-page" aria-busy="true" aria-label="Loading projects">
+      <div class="skeleton-header">
+        <div class="skeleton-heading">
+          <SkeletonBlock height="30px" width="180px" rounded="md" />
+          <SkeletonBlock height="18px" width="260px" rounded="md" />
+        </div>
+        <SkeletonBlock height="44px" width="150px" rounded="md" />
+      </div>
+      <SkeletonBlock height="38px" width="360px" rounded="full" />
+      <div class="grid">
+        <SkeletonBlock v-for="i in 4" :key="i" height="220px" rounded="lg" />
+      </div>
     </div>
 
     <!-- Error -->
@@ -193,6 +216,25 @@ function onRetry() {
 
 .empty-action {
   margin-top: var(--space-4);
+}
+
+.skeleton-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.skeleton-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 @media (max-width: 900px) {

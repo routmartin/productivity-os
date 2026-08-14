@@ -17,7 +17,6 @@ import SkeletonBlock from "@/components/shared/SkeletonBlock.vue";
 import SurfaceCard from "@/components/shared/SurfaceCard.vue";
 import UiButton from "@/components/ui/UiButton.vue";
 import UiPill from "@/components/ui/UiPill.vue";
-import FocusHistory from "@/features/focus/components/FocusHistory.vue";
 import FocusSummary from "@/features/focus/components/FocusSummary.vue";
 import { useFocusStore } from "@/features/focus/store";
 import { useTasksStore } from "@/features/tasks/store";
@@ -40,8 +39,9 @@ function previewFromQuery(): PreviewState {
 onMounted(() => {
   const preview = previewFromQuery();
   tasksStore.load(preview);
-  if (!preview) {
-    focusStore.selectTask(null);
+  // Default-select the first eligible task so the start bar is ready to go.
+  if (!preview && !focusStore.selectedTaskId) {
+    focusStore.selectTask(focusStore.eligibleTasks[0]?.id ?? null);
   }
 });
 
@@ -101,13 +101,21 @@ function onRetry() {
   <div class="focus-page">
     <!-- Loading -->
     <div v-if="isLoading" class="loading" aria-busy="true" aria-label="Loading tasks">
-      <div class="loading-head">
-        <SkeletonBlock height="34px" width="180px" rounded="md" />
-        <SkeletonBlock height="20px" width="280px" rounded="md" />
+      <div class="loading-header">
+        <div class="loading-head">
+          <SkeletonBlock height="34px" width="180px" rounded="md" />
+          <SkeletonBlock height="20px" width="280px" rounded="md" />
+        </div>
+        <SkeletonBlock height="40px" width="200px" rounded="md" />
+      </div>
+      <div class="loading-toolbar">
+        <SkeletonBlock height="44px" width="420px" rounded="md" />
+        <SkeletonBlock height="20px" width="90px" rounded="md" />
       </div>
       <div class="card-grid">
-        <SkeletonBlock v-for="n in 6" :key="n" height="150px" rounded="lg" />
+        <SkeletonBlock v-for="n in 6" :key="n" height="148px" rounded="lg" />
       </div>
+      <SkeletonBlock height="180px" rounded="lg" />
     </div>
 
     <!-- Error -->
@@ -241,15 +249,8 @@ function onRetry() {
           </div>
         </Transition>
 
-        <!-- Insights -->
-        <div class="insights-grid">
-          <SurfaceCard>
-            <FocusSummary />
-          </SurfaceCard>
-          <SurfaceCard>
-            <FocusHistory />
-          </SurfaceCard>
-        </div>
+        <!-- Today's focus summary -->
+        <FocusSummary />
       </template>
     </template>
   </div>
@@ -272,10 +273,24 @@ function onRetry() {
   gap: var(--space-6);
 }
 
+.loading-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
 .loading-head {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.loading-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
 }
 
 /* Page header — same pattern as other pages */
@@ -551,19 +566,6 @@ function onRetry() {
   flex-shrink: 0;
 }
 
-/* Insights */
-.insights-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-  gap: var(--space-6);
-  align-items: start;
-}
-
-@container workspace (max-width: 900px) {
-  .insights-grid {
-    grid-template-columns: 1fr;
-  }
-}
 
 /* Start bar entrance */
 .rise-enter-active {

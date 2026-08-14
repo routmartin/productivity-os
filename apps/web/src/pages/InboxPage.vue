@@ -24,10 +24,23 @@ function previewFromQuery(): PreviewState {
   return value === 'loading' || value === 'error' || value === 'empty' ? value : null
 }
 
-onMounted(() => store.load(previewFromQuery()))
+/** Lands the workspace with the newest captured item's detail open. While
+ *  loading, a skeleton reserves the panel so the workspace doesn't reflow. */
+async function loadAndSelect(preview: PreviewState) {
+  if (!panel.isOpen) panel.openSkeleton()
+  await store.load(preview)
+  if (preview === 'loading' || !panel.isSkeleton) return
+  if (store.status === 'ready' && store.inboxTasks.length > 0) {
+    panel.openTask(store.inboxTasks[0].id)
+  } else {
+    panel.close()
+  }
+}
+
+onMounted(() => loadAndSelect(previewFromQuery()))
 watch(
   () => route.query.preview,
-  () => store.load(previewFromQuery()),
+  () => loadAndSelect(previewFromQuery()),
 )
 
 const isLoading = computed(() => store.status === 'loading' || store.status === 'idle')
@@ -133,9 +146,20 @@ function onRetry() {
       </div>
     </div>
 
-    <!-- Loading -->
-    <div v-if="isLoading" class="card-grid" aria-busy="true" aria-label="Loading inbox">
-      <SkeletonBlock v-for="i in 8" :key="i" height="216px" rounded="lg" />
+    <!-- Loading — mirrors the header, quick capture, tabs, and card grid -->
+    <div v-if="isLoading" class="skeleton-page" aria-busy="true" aria-label="Loading inbox">
+      <div class="skeleton-heading">
+        <SkeletonBlock height="30px" width="140px" rounded="md" />
+        <SkeletonBlock height="18px" width="320px" rounded="md" />
+      </div>
+      <SkeletonBlock height="64px" rounded="lg" />
+      <div class="skeleton-toolbar">
+        <SkeletonBlock height="38px" width="300px" rounded="md" />
+        <SkeletonBlock height="38px" width="220px" rounded="md" />
+      </div>
+      <div class="card-grid">
+        <SkeletonBlock v-for="i in 8" :key="i" height="216px" rounded="lg" />
+      </div>
     </div>
 
     <!-- Error -->
@@ -268,6 +292,25 @@ function onRetry() {
   grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
   gap: var(--space-5);
   align-items: stretch;
+}
+
+.skeleton-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.skeleton-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.skeleton-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
 }
 
 .card-move,

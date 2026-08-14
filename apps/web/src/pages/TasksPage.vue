@@ -46,10 +46,23 @@ function previewFromQuery(): PreviewState {
   return value === 'loading' || value === 'error' || value === 'empty' ? value : null
 }
 
-onMounted(() => store.load(previewFromQuery()))
+/** Lands the workspace with the first task's detail open. While loading, a
+ *  skeleton reserves the panel so the workspace doesn't reflow on ready. */
+async function loadAndSelect(preview: PreviewState) {
+  if (!panel.isOpen) panel.openSkeleton()
+  await store.load(preview)
+  if (preview === 'loading' || !panel.isSkeleton) return
+  if (store.status === 'ready' && store.visibleTasks.length > 0) {
+    panel.openTask(store.visibleTasks[0].id)
+  } else {
+    panel.close()
+  }
+}
+
+onMounted(() => loadAndSelect(previewFromQuery()))
 watch(
   () => route.query.preview,
-  () => store.load(previewFromQuery()),
+  () => loadAndSelect(previewFromQuery()),
 )
 
 const searchInput = ref<HTMLInputElement | null>(null)
@@ -351,12 +364,25 @@ function onUndo() {
       </div>
     </div>
 
-    <!-- Loading -->
-    <div v-if="isLoading" class="skeleton-list" aria-busy="true" aria-label="Loading tasks">
-      <div v-for="i in 3" :key="i" class="skeleton-group">
-        <SkeletonBlock height="20px" width="140px" rounded="sm" />
-        <div class="skeleton-rows">
-          <SkeletonBlock v-for="j in 4" :key="j" height="56px" rounded="md" />
+    <!-- Loading — mirrors the hero, toolbar, and grouped rows -->
+    <div v-if="isLoading" class="skeleton-page" aria-busy="true" aria-label="Loading tasks">
+      <div class="skeleton-hero">
+        <div class="skeleton-hero-text">
+          <SkeletonBlock height="44px" width="220px" rounded="md" />
+          <SkeletonBlock height="20px" width="300px" rounded="md" />
+        </div>
+        <SkeletonBlock height="44px" width="280px" rounded="md" />
+      </div>
+      <div class="skeleton-toolbar">
+        <SkeletonBlock height="38px" width="380px" rounded="full" />
+        <SkeletonBlock height="36px" width="220px" rounded="md" />
+      </div>
+      <div class="skeleton-list">
+        <div v-for="i in 3" :key="i" class="skeleton-group">
+          <SkeletonBlock height="20px" width="140px" rounded="sm" />
+          <div class="skeleton-rows">
+            <SkeletonBlock v-for="j in 4" :key="j" height="56px" rounded="md" />
+          </div>
         </div>
       </div>
     </div>
@@ -952,6 +978,32 @@ function onUndo() {
 }
 
 /* ---------- Skeletons ---------- */
+
+.skeleton-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.skeleton-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.skeleton-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.skeleton-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
 
 .skeleton-list {
   display: flex;

@@ -30,10 +30,23 @@ function previewFromQuery(): PreviewState {
   return value === 'loading' || value === 'error' || value === 'empty' ? value : null
 }
 
-onMounted(() => store.load(previewFromQuery()))
+/** Lands the workspace with the first goal's detail open. While loading, a
+ *  skeleton reserves the panel so the workspace doesn't reflow on ready. */
+async function loadAndSelect(preview: PreviewState) {
+  if (!panel.isOpen) panel.openSkeleton()
+  await store.load(preview)
+  if (preview === 'loading' || !panel.isSkeleton) return
+  if (store.status === 'ready' && store.visibleGoals.length > 0) {
+    panel.openGoal(store.visibleGoals[0].id)
+  } else {
+    panel.close()
+  }
+}
+
+onMounted(() => loadAndSelect(previewFromQuery()))
 watch(
   () => route.query.preview,
-  () => store.load(previewFromQuery()),
+  () => loadAndSelect(previewFromQuery()),
 )
 
 const dialogOpen = ref(false)
@@ -107,9 +120,19 @@ function onRetry() {
       @change="store.setFilter($event)"
     />
 
-    <!-- Loading -->
-    <div v-if="isLoading" class="list" aria-busy="true" aria-label="Loading goals">
-      <SkeletonBlock v-for="i in 3" :key="i" height="148px" rounded="lg" />
+    <!-- Loading — mirrors the header, filter chips, and goal list -->
+    <div v-if="isLoading" class="skeleton-page" aria-busy="true" aria-label="Loading goals">
+      <div class="skeleton-header">
+        <div class="skeleton-heading">
+          <SkeletonBlock height="30px" width="160px" rounded="md" />
+          <SkeletonBlock height="18px" width="260px" rounded="md" />
+        </div>
+        <SkeletonBlock height="44px" width="140px" rounded="md" />
+      </div>
+      <SkeletonBlock height="38px" width="360px" rounded="full" />
+      <div class="list">
+        <SkeletonBlock v-for="i in 3" :key="i" height="148px" rounded="lg" />
+      </div>
     </div>
 
     <!-- Error -->
@@ -195,5 +218,24 @@ function onRetry() {
 
 .empty-action {
   margin-top: var(--space-4);
+}
+
+.skeleton-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.skeleton-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 </style>

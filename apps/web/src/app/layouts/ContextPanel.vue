@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { X } from 'lucide-vue-next'
 
+import SkeletonBlock from '@/components/shared/SkeletonBlock.vue'
 import GoalDetailPanel from '@/features/goals/components/GoalDetailPanel.vue'
 import ProjectDetailPanel from '@/features/projects/components/ProjectDetailPanel.vue'
 import TaskDetailPanel from '@/features/tasks/components/TaskDetailPanel.vue'
@@ -15,6 +16,7 @@ const route = useRoute()
 const panelTitle = computed(() => {
   if (panel.content?.kind === 'project') return 'Project'
   if (panel.content?.kind === 'goal') return 'Goal'
+  if (panel.content?.kind === 'skeleton') return 'Details'
   return 'Task'
 })
 
@@ -69,8 +71,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         </button>
       </div>
       <div class="panel-body">
+        <div v-if="panel.content.kind === 'skeleton'" class="panel-skeleton" aria-busy="true">
+          <SkeletonBlock height="28px" width="65%" rounded="md" />
+          <SkeletonBlock height="16px" width="40%" rounded="md" />
+          <SkeletonBlock height="96px" rounded="lg" />
+          <SkeletonBlock v-for="i in 3" :key="i" height="56px" rounded="md" />
+        </div>
         <TaskDetailPanel
-          v-if="panel.content.kind === 'task'"
+          v-else-if="panel.content.kind === 'task'"
           :key="`task-${panel.content.taskId}`"
           :task-id="panel.content.taskId"
         />
@@ -138,6 +146,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   flex: 1;
   overflow-y: auto;
   padding: var(--space-6);
+}
+
+.panel-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .backdrop {
