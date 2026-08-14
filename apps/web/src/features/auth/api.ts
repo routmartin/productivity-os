@@ -1,4 +1,5 @@
 import { ApiError, apiClient } from "@/lib/api/client";
+import { useMock } from "@/lib/mock";
 
 import type {
   LoginRequest,
@@ -8,12 +9,11 @@ import type {
 } from "./types";
 
 /**
- * Milestone 1 runs against a mock adapter by default so the UI can be
- * evaluated without the backend. Set VITE_USE_MOCK_AUTH=false to call the
- * real POST /api/v1/auth/login endpoint — the request/response contract
- * is identical, so no other code changes.
+ * Auth API module. Real endpoints talk to the backend; mock mode is
+ * opt-in via the global `VITE_USE_MOCK_DATA` switch or the per-feature
+ * `VITE_USE_MOCK_AUTH=true` override (see src/lib/mock.ts).
  */
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH !== "false";
+export const USE_MOCK = useMock("AUTH");
 
 const MOCK_LATENCY_MS = 650;
 

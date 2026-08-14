@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
 import { errorMessage } from "@/lib/api/errorMessages";
+import { useMock } from "@/lib/mock";
 import type { PreviewState } from "@/features/planning/types";
 
 import { tasksApi } from "./api";
@@ -42,13 +43,14 @@ function nextLocalId(): string {
 /**
  * Tasks collection for the Tasks and Inbox workspaces.
  *
- * Mock mode (`VITE_USE_MOCK_TASKS=true`) keeps the milestone behavior:
- * seed data, local ids, immediate optimistic flips with Undo — for design
- * review. Real mode (default) talks to the Task API: server-confirmed
- * writes, no optimistic flips, and completion is one-way (the backend has
- * no un-complete transition; plan 002 records this decision).
+ * Mock mode (`VITE_USE_MOCK_DATA=true` global or `VITE_USE_MOCK_TASKS=true`)
+ * keeps the milestone behavior: seed data, local ids, immediate optimistic
+ * flips with Undo — for design review. Real mode (default) talks to the
+ * Task API: server-confirmed writes, no optimistic flips, and completion is
+ * one-way (the backend has no un-complete transition; plan 002 records
+ * this decision).
  */
-const USE_MOCK = import.meta.env.VITE_USE_MOCK_TASKS === "true";
+const USE_MOCK = useMock("TASKS");
 
 export const useTasksStore = defineStore("tasks", () => {
   const tasks = ref<Task[]>([...mockTasks]);

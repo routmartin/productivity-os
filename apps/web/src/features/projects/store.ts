@@ -6,6 +6,7 @@ import type { PreviewState } from "@/features/planning/types";
 import { useTasksStore } from "@/features/tasks/store";
 import type { Task } from "@/features/tasks/types";
 
+import { useMock } from "@/lib/mock";
 import { projectsApi } from "./api";
 import { projectResponseToProject } from "./api-types";
 import { mockProjects } from "./mock";
@@ -57,7 +58,7 @@ function statsFor(projectId: string, tasks: Task[]): ProjectTaskStats {
  * projects are created as DRAFT then immediately activated, matching the
  * UI's expectation that new projects are Active.
  */
-const USE_MOCK = import.meta.env.VITE_USE_MOCK_PROJECTS === "true";
+const USE_MOCK = useMock("PROJECTS");
 
 export const useProjectsStore = defineStore("projects", () => {
   const projects = ref<Project[]>([...mockProjects]);

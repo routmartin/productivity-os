@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
 import { errorMessage } from "@/lib/api/errorMessages";
+import { useMock } from "@/lib/mock";
 import { tasksApi } from "@/features/tasks/api";
 import { taskResponseToTask } from "@/features/tasks/api-types";
 import type { Task } from "@/features/tasks/types";
@@ -31,12 +32,13 @@ const EMPTY_PLAN: DailyPlanSummary = {
 /**
  * Aggregates everything the Today dashboard needs.
  *
- * Mock mode (`VITE_USE_MOCK_PLANNING=true`) keeps the milestone behavior
- * for design review. Real mode (default) loads the daily top three, the
- * daily plan, its capacity, and the first page of tasks from the backend,
- * bucketing "today" in the user's profile timezone (ADR-006).
+ * Mock mode (global `VITE_USE_MOCK_DATA=true` or `VITE_USE_MOCK_PLANNING=true`)
+ * keeps the milestone behavior for design review. Real mode (default)
+ * loads the daily top three, the daily plan, its capacity, and the first
+ * page of tasks from the backend, bucketing "today" in the user's profile
+ * timezone (ADR-006).
  */
-const USE_MOCK = import.meta.env.VITE_USE_MOCK_PLANNING === "true";
+const USE_MOCK = useMock("PLANNING");
 
 export const useTodayStore = defineStore("today", () => {
   const status = ref<LoadStatus>("idle");

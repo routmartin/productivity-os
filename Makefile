@@ -5,20 +5,18 @@ web-install:
 
 # Full mock preview: every feature serves mock data, no backend needed.
 web-mock:
-	cd apps/web && \
-	VITE_USE_MOCK_AUTH=true VITE_USE_MOCK_TASKS=true VITE_USE_MOCK_PROJECTS=true \
-	VITE_USE_MOCK_GOALS=true VITE_USE_MOCK_PLANNING=true VITE_USE_MOCK_FOCUS=true \
-	pnpm dev
+	cd apps/web && VITE_USE_MOCK_DATA=true pnpm dev
 
 # Design review without the backend: mock auth only.
 web:
 	cd apps/web && VITE_USE_MOCK_AUTH=true pnpm dev
 
-# End-to-end run against the real backend: DB + API + web with real auth.
+# End-to-end run against the real backend: DB + API + web with real auth
+# (every feature defaults to the real API — no env vars needed).
 preview: db-up
 	./gradlew :apps:api:bootRun &
 	sleep 8
-	cd apps/web && VITE_USE_MOCK_AUTH=false pnpm dev
+	cd apps/web && pnpm dev
 
 dev: db-up
 	./gradlew :apps:api:bootRun &

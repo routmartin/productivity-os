@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
 import { errorMessage } from "@/lib/api/errorMessages";
+import { useMock } from "@/lib/mock";
 import type { PreviewState } from "@/features/planning/types";
 import { useProjectsStore } from "@/features/projects/store";
 import type { Project } from "@/features/projects/types";
@@ -34,13 +35,13 @@ function delay(ms: number): Promise<void> {
 /**
  * Goals collection for the Goals workspace (and the sidebar list).
  *
- * Mock mode (`VITE_USE_MOCK_GOALS=true`) keeps the milestone behavior for
- * design review, and locally mirrors the domain rules for complete/reopen
- * (archiving/reactivating the goal's projects). Real mode (default) talks
- * to the Goal API; new goals are created as DRAFT then activated when the
- * dialog asked for an Active goal.
+ * Mock mode (global `VITE_USE_MOCK_DATA=true` or `VITE_USE_MOCK_GOALS=true`)
+ * keeps the milestone behavior for design review, and locally mirrors the
+ * domain rules for complete/reopen (archiving/reactivating the goal's
+ * projects). Real mode (default) talks to the Goal API; new goals are
+ * created as DRAFT then activated when the dialog asked for an Active goal.
  */
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK_GOALS === "true";
+export const USE_MOCK = useMock("GOALS");
 
 export const useGoalsStore = defineStore("goals", () => {
   const goals = ref<Goal[]>([...mockGoals]);

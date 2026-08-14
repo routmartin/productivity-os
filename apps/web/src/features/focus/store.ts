@@ -7,6 +7,7 @@ import { useProjectsStore } from "@/features/projects/store";
 import { useTasksStore } from "@/features/tasks/store";
 import type { Task } from "@/features/tasks/types";
 
+import { useMock } from "@/lib/mock";
 import { focusApi } from "./api";
 import type { FocusSessionResponse } from "./api-types";
 import { mockFocusHistory } from "./mock";
@@ -15,13 +16,13 @@ import type { FocusSessionRecord, FocusState } from "./types";
 /**
  * Focus session state for the Focus workspace and dock.
  *
- * Mock mode (`VITE_USE_MOCK_FOCUS=true`) keeps the milestone behavior for
- * design review. Real mode (default) talks to the Focus API: sessions
- * start and end on the server, an active session resumes after a page
- * reload from its server-recorded start time, and the history comes from
- * GET /focus.
+ * Mock mode (global `VITE_USE_MOCK_DATA=true` or `VITE_USE_MOCK_FOCUS=true`)
+ * keeps the milestone behavior for design review. Real mode (default)
+ * talks to the Focus API: sessions start and end on the server, an active
+ * session resumes after a page reload from its server-recorded start time,
+ * and the history comes from GET /focus.
  */
-const USE_MOCK = import.meta.env.VITE_USE_MOCK_FOCUS === "true";
+const USE_MOCK = useMock("FOCUS");
 
 const MOCK_LATENCY_MS = 500;
 
