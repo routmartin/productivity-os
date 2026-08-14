@@ -100,6 +100,21 @@ export function toISODate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/** ISO calendar date (YYYY-MM-DD) in a given IANA timezone — used for
+ *  "today" bucketing per ADR-006 (dates follow the user's timezone, never
+ *  UTC). Falls back to the device-local date when no zone is given. */
+export function toISODateInZone(date: Date, timeZone?: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone,
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
 /** Display name from an email local part: "martin.dev" → "Martin". */
 export function firstNameFromEmail(email: string): string {
   const local = email.split("@")[0] ?? "";

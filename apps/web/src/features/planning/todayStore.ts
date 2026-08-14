@@ -1,10 +1,17 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
-import { mockTasks } from "@/features/tasks/mock";
+import { errorMessage } from "@/lib/api/errorMessages";
+import { tasksApi } from "@/features/tasks/api";
+import { taskResponseToTask } from "@/features/tasks/api-types";
 import type { Task } from "@/features/tasks/types";
 
+import { planningApi, todayISODate } from "./api";
+import {
+  topThreeResponseToEntry,
+} from "./api-types";
 import { mockDailyPlan, mockTopThree } from "./mock";
+import { mockTasks } from "@/features/tasks/mock";
 import type { DailyPlanSummary, PreviewState, TopThreeEntry } from "./types";
 
 export type LoadStatus = "idle" | "loading" | "ready" | "error";
@@ -22,16 +29,26 @@ const EMPTY_PLAN: DailyPlanSummary = {
 };
 
 /**
- * Aggregates everything the Today dashboard needs. Milestone 1 serves mock
- * data with realistic latency; Milestone 2 swaps `load()` internals for
- * real endpoints (daily plan, daily top three, tasks) without touching
- * the components.
+ * Aggregates everything the Today dashboard needs.
+ *
+ * Mock mode (`VITE_USE_MOCK_PLANNING=true`) keeps the milestone behavior
+ * for design review. Real mode (default) loads the daily top three, the
+ * daily plan, its capacity, and the first page of tasks from the backend,
+ * bucketing "today" in the user's profile timezone (ADR-006).
  */
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_PLANNING === "true";
+
 export const useTodayStore = defineStore("today", () => {
   const status = ref<LoadStatus>("idle");
   const topThree = ref<TopThreeEntry[]>([]);
   const plan = ref<DailyPlanSummary | null>(null);
   const tasks = ref<Task[]>([]);
+  /** Last failed load message (null when none). */
+  const lastError = ref<string | null>(null);
+
+  function clearError(): void {
+    lastError.value = null;
+  }
 
   const topThreeIds = computed(
     () => new Set(topThree.value.map((e) => e.taskId)),
@@ -80,32 +97,72 @@ export const useTodayStore = defineStore("today", () => {
 
   /**
    * @param preview forces a UI state for design verification
-   * (`?preview=loading|error|empty`); null performs a normal mock load.
+   * (`?preview=loading|error|empty`) — mock mode only.
    */
   async function load(preview: PreviewState = null): Promise<void> {
     status.value = "loading";
+    lastError.value = null;
 
     if (preview === "loading") {
       return; // stay in the loading state for review
     }
 
-    await delay(MOCK_LATENCY_MS);
+    if (USE_MOCK) {
+      await delay(MOCK_LATENCY_MS);
 
-    if (preview === "error") {
-      status.value = "error";
+      if (preview === "error") {
+        status.value = "error";
+        return;
+      }
+
+      if (preview === "empty") {
+        topThree.value = [];
+        plan.value = EMPTY_PLAN;
+        tasks.value = [];
+      } else {
+        topThree.value = mockTopThree;
+        plan.value = mockDailyPlan;
+        tasks.value = mockTasks;
+      }
+      status.value = "ready";
       return;
     }
 
-    if (preview === "empty") {
-      topThree.value = [];
-      plan.value = EMPTY_PLAN;
-      tasks.value = [];
-    } else {
-      topThree.value = mockTopThree;
-      plan.value = mockDailyPlan;
-      tasks.value = mockTasks;
+    try {
+      const date = todayISODate();
+      const [topThreeResponse, planEntries, capacity, taskList] =
+        await Promise.all([
+          planningApi.topThree(date),
+          planningApi.dailyPlan(date),
+          planningApi.capacity(date),
+          tasksApi.list(),
+        ]);
+
+      topThree.value = topThreeResponse
+        .map(topThreeResponseToEntry)
+        .filter((entry): entry is TopThreeEntry => entry !== null);
+
+      tasks.value = taskList.map(taskResponseToTask);
+
+      const taskByIdMap = new Map(tasks.value.map((t) => [t.id, t]));
+      const plannedMinutes = planEntries
+        .filter((entry) => !entry.isDeleted)
+        .reduce((sum, entry) => {
+          const task = taskByIdMap.get(entry.taskId);
+          return sum + (task?.estimatedMinutes ?? 0);
+        }, 0);
+
+      plan.value = {
+        plannedMinutes,
+        focusCapacityMinutes: capacity.capacityHours * 60,
+        // Computed from focus sessions once those load (plan 002 Step 7).
+        focusCompletedMinutes: 0,
+      };
+      status.value = "ready";
+    } catch (error) {
+      status.value = "error";
+      lastError.value = errorMessage(error);
     }
-    status.value = "ready";
   }
 
   return {
@@ -117,6 +174,8 @@ export const useTodayStore = defineStore("today", () => {
     unplannedExtraCount,
     recentTasks,
     taskById,
+    lastError,
     load,
+    clearError,
   };
 });
