@@ -1,10 +1,18 @@
-.PHONY: dev run db-up db-down build test clean docs web web-install kill
+.PHONY: dev run db-up db-down build test clean docs web web-install preview kill
 
 web-install:
 	cd apps/web && pnpm install
 
+# Design review without the backend: every feature serves mock data
+# (auth explicitly mock — the features default to real once integrated).
 web:
-	cd apps/web && pnpm dev
+	cd apps/web && VITE_USE_MOCK_AUTH=true pnpm dev
+
+# End-to-end run against the real backend: DB + API + web with real auth.
+preview: db-up
+	./gradlew :apps:api:bootRun &
+	sleep 8
+	cd apps/web && VITE_USE_MOCK_AUTH=false pnpm dev
 
 dev: db-up
 	./gradlew :apps:api:bootRun &
