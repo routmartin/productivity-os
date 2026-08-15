@@ -7,30 +7,38 @@ import {
   Clock,
   Flag,
   Folder,
+  Pencil,
   SearchX,
   Target,
   Timer,
+  Trash2,
   Zap,
 } from 'lucide-vue-next'
 
 import EmptyState from '@/components/shared/EmptyState.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiPill from '@/components/ui/UiPill.vue'
+import { useContextPanelStore } from '@/app/layouts/contextPanelStore'
 import { formatLongDate, relativeTime } from '@/lib/utils/date'
 import { formatMinutes } from '@/lib/utils/duration'
 
 import { findProjectById, goalForTask } from '../mock'
 import { useTasksStore } from '../store'
 import { ENERGY_LABELS, PRIORITY_LABELS, TASK_STATUS_LABELS } from '../types'
+import NewTaskDialog from './NewTaskDialog.vue'
 import TaskStatusIcon from './TaskStatusIcon.vue'
 
 const props = defineProps<{ taskId: string }>()
 
 const store = useTasksStore()
+const panel = useContextPanelStore()
 
 const task = computed(() => store.taskById(props.taskId))
 const project = computed(() => findProjectById(task.value?.projectId ?? null))
 const goal = computed(() => (task.value ? goalForTask(task.value) : undefined))
+
+const editOpen = ref(false)
+const confirmingDelete = ref(false)
 
 type PillTone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger'
 
@@ -64,8 +72,7 @@ const dueLabel = computed(() => {
   return formatLongDate(new Date(`${due}T00:00:00`))
 })
 
-/** Milestone 1: panel actions are visual only. Pressing one explains that
- * honestly instead of pretending a mutation happened. */
+/** Focus sessions belong to the Focus module — still preview only. */
 const previewNote = ref<string | null>(null)
 let noteTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -73,6 +80,16 @@ function showPreviewNote(action: string) {
   previewNote.value = `${action} arrives with the Focus module in Milestone 2 — this preview is visual only.`
   clearTimeout(noteTimer)
   noteTimer = setTimeout(() => (previewNote.value = null), 3200)
+}
+
+function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1]) {
+  store.updateTask(taskId, draft)
+  editOpen.value = false
+}
+
+function onDelete() {
+  store.deleteTask(props.taskId)
+  panel.close()
 }
 </script>
 
@@ -129,11 +146,34 @@ function showPreviewNote(action: string) {
         v-if="task.status !== 'COMPLETED'"
         variant="ghost"
         full-width
-        @click="showPreviewNote('Completing tasks')"
+        @click="store.toggleTaskComplete(task.id)"
       >
         <CheckCircle2 :size="15" :stroke-width="1.75" />
         Mark complete
       </UiButton>
+      <UiButton variant="ghost" full-width @click="editOpen = true">
+        <Pencil :size="15" :stroke-width="1.75" />
+        Edit task
+      </UiButton>
+      <template v-if="!confirmingDelete">
+        <UiButton variant="ghost" full-width class="danger-btn" @click="confirmingDelete = true">
+          <Trash2 :size="15" :stroke-width="1.75" />
+          Delete task
+        </UiButton>
+      </template>
+      <template v-else>
+        <div class="confirm-box">
+          <p class="confirm-copy">Delete “{{ task.title }}”? This can't be undone.</p>
+          <div class="confirm-row">
+            <UiButton variant="ghost" size="sm" full-width @click="confirmingDelete = false">
+              Cancel
+            </UiButton>
+            <UiButton variant="ghost" size="sm" full-width class="danger-btn" @click="onDelete">
+              Delete
+            </UiButton>
+          </div>
+        </div>
+      </template>
       <Transition name="fade">
         <p v-if="previewNote" class="preview-note" role="status">
           <CircleSlash :size="13" :stroke-width="1.75" />
@@ -147,6 +187,13 @@ function showPreviewNote(action: string) {
       <span v-if="task.completedAt">Completed {{ relativeTime(task.completedAt) }}</span>
       <span v-else>Updated {{ relativeTime(task.updatedAt) }}</span>
     </footer>
+
+    <NewTaskDialog
+      :open="editOpen"
+      :editing="task"
+      @close="editOpen = false"
+      @update="onUpdate"
+    />
   </div>
 
   <EmptyState
@@ -228,6 +275,34 @@ function showPreviewNote(action: string) {
 .actions {
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
+}
+
+.danger-btn {
+  color: var(--danger) !important;
+}
+
+.danger-btn:hover {
+  background: var(--danger-soft);
+}
+
+.confirm-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+}
+
+.confirm-copy {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.confirm-row {
+  display: flex;
   gap: var(--space-2);
 }
 

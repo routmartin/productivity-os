@@ -7,7 +7,7 @@ import SegmentedProgress from '@/components/shared/SegmentedProgress.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiPill from '@/components/ui/UiPill.vue'
 import { useContextPanelStore } from '@/app/layouts/contextPanelStore'
-import TaskRow from '@/features/tasks/components/TaskRow.vue'
+import TaskListRow from '@/features/tasks/components/TaskListRow.vue'
 import { useGoalsStore } from '@/features/goals/store'
 import { relativeTime } from '@/lib/utils/date'
 import { showPreviewNote } from '@/lib/preview'
@@ -102,10 +102,12 @@ function onDelete() {
     <section class="task-section">
       <h3 class="section-label">Active tasks</h3>
       <div v-if="taskLists.active.length > 0" class="task-list">
-        <TaskRow
+        <TaskListRow
           v-for="task in taskLists.active"
           :key="task.id"
           :task="task"
+          :active="task.id === panel.activeTaskId"
+          hide-project
           @select="panel.openTask($event)"
         />
       </div>

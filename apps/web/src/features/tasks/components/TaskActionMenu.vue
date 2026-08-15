@@ -209,23 +209,13 @@ onBeforeUnmount(() => {
   height: 26px;
   border-radius: var(--radius-sm);
   color: var(--text-disabled);
-  opacity: 0;
   transition:
     background-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out),
-    opacity var(--duration-fast) var(--ease-out);
+    color var(--duration-fast) var(--ease-out);
 }
 
-/* Revealed by the parent row/card hover */
-:global(.task-list-row:hover) .trigger,
-:global(.inbox-row:hover) .trigger,
-:global(.inbox-card:hover) .trigger,
-:global(.inbox-card:focus-visible) .trigger,
+.trigger:hover,
 .trigger[aria-expanded='true'] {
-  opacity: 1;
-}
-
-.trigger:hover {
   background: var(--surface-3);
   color: var(--text-secondary);
 }
