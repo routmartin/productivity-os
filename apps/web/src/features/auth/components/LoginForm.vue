@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { AlertCircle } from 'lucide-vue-next'
+import { AlertCircle, CheckCircle2 } from 'lucide-vue-next'
 
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
@@ -68,6 +68,10 @@ const formError = computed(() =>
   mode.value === 'login' ? auth.loginError : auth.registerError,
 )
 
+/** Shown after a successful password change redirects here
+ *  (`/login?password_changed=1` — account-settings spec Resolved Q1). */
+const showPasswordChanged = computed(() => route.query.password_changed === '1')
+
 function switchMode() {
   mode.value = mode.value === 'login' ? 'register' : 'login'
   auth.loginError = null
@@ -98,6 +102,17 @@ async function onSubmit() {
       <h1 class="title">{{ heading }}</h1>
       <p class="subtitle">{{ subtitle }}</p>
     </div>
+
+    <Transition name="fade">
+      <div
+        v-if="showPasswordChanged && mode === 'login'"
+        class="success-banner"
+        role="status"
+      >
+        <CheckCircle2 :size="15" :stroke-width="1.75" />
+        <span>Password changed. Sign in with your new password.</span>
+      </div>
+    </Transition>
 
     <Transition name="fade">
       <div v-if="formError" class="form-error" role="alert">
@@ -192,6 +207,23 @@ async function onSubmit() {
 }
 
 .form-error svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.success-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgba(57, 197, 138, 0.3);
+  border-radius: var(--radius-md);
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: var(--text-sm);
+}
+
+.success-banner svg {
   flex-shrink: 0;
   margin-top: 2px;
 }

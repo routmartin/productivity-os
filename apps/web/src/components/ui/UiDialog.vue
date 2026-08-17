@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted } from 'vue'
 import { X } from 'lucide-vue-next'
 
 defineProps<{
@@ -11,6 +12,17 @@ const emit = defineEmits<{ close: [] }>()
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') emit('close')
 }
+
+/** Global search takes over any open overlay (spec: global-search, Edge
+ *  Cases — ⌘K closes other dialogs). */
+function onCloseOverlays() {
+  emit('close')
+}
+
+onMounted(() => window.addEventListener('app:close-overlays', onCloseOverlays))
+onBeforeUnmount(() =>
+  window.removeEventListener('app:close-overlays', onCloseOverlays),
+)
 </script>
 
 <template>

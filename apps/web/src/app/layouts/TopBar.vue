@@ -4,11 +4,13 @@ import { useRoute } from 'vue-router'
 import { Bell, Moon, Search, Settings, Sun } from 'lucide-vue-next'
 
 import { useAuthStore } from '@/features/auth/store'
+import { useSearchStore } from '@/features/search/store'
 import { theme, toggleTheme } from '@/lib/theme'
 import { firstNameFromEmail, greetingFor } from '@/lib/utils/date'
 
 const route = useRoute()
 const auth = useAuthStore()
+const search = useSearchStore()
 
 /** Today leads with the personal greeting (see the approved reference);
  *  other sections show their page title. */
@@ -32,7 +34,14 @@ const contextLabel = computed(() => {
     </div>
 
     <div class="chrome">
-      <button class="search" type="button" title="Search arrives in a later milestone">
+      <button
+        id="global-search-trigger"
+        class="search"
+        type="button"
+        aria-label="Open search"
+        title="Search tasks, projects, goals"
+        @click="search.openSearch()"
+      >
         <Search :size="15" :stroke-width="1.75" />
         <span class="search-label">Search tasks, projects, goals…</span>
         <kbd class="kbd tnum">⌘K</kbd>

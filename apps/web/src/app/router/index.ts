@@ -21,6 +21,7 @@ import GoalsPage from "@/pages/GoalsPage.vue";
 import InboxPage from "@/pages/InboxPage.vue";
 import LoginPage from "@/pages/LoginPage.vue";
 import ProjectsPage from "@/pages/ProjectsPage.vue";
+import SettingsPage from "@/pages/SettingsPage.vue";
 import TasksPage from "@/pages/TasksPage.vue";
 import TodayPage from "@/pages/TodayPage.vue";
 
@@ -134,15 +135,8 @@ export const router = createRouter({
         {
           path: "settings",
           name: "settings",
-          component: ComingSoonPage,
-          meta: {
-            title: "Settings",
-            icon: Settings,
-            implemented: false,
-            blurb:
-              "Profile, timezone, and workspace preferences — including your daily focus capacity.",
-            milestone: "Milestone 4",
-          },
+          component: SettingsPage,
+          meta: { title: "Settings", icon: Settings, implemented: true },
         },
       ],
     },

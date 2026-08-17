@@ -2,16 +2,16 @@
 
 ## Status
 
-Draft — the governing specification
-(`docs/specs/users/account-settings.md`) is Draft. Implementation must
-not proceed until the spec is Approved and the pre-implementation
-decisions are resolved.
+Approved — the governing specification
+(`docs/specs/users/account-settings.md`) is Approved and the
+pre-implementation decisions D1–D4 are resolved (2026-08-16).
+Implementation may proceed.
 
 ## Specification
 
 Primary behavioral source of truth:
 
-- `docs/specs/users/account-settings.md` (Draft)
+- `docs/specs/users/account-settings.md` (Approved)
 
 Acceptance criteria in scope:
 
@@ -82,8 +82,8 @@ Modules introduced or changed:
     (AC-003).
   - Mock 400 `INVALID_TIMEZONE` and 400 `VALIDATION_ERROR` → codes
     surface (AC-002, AC-005).
-- **Risks/ambiguities:** mock mode follows spec Open Question 3
-  (`VITE_USE_MOCK_SETTINGS`).
+- **Risks/ambiguities:** mock mode follows the resolved decision:
+  `VITE_USE_MOCK_SETTINGS` (spec Resolved Question 3).
 
 ## Step 2 — Settings store + auth profile update
 
@@ -118,12 +118,16 @@ Modules introduced or changed:
   `app/router/index.ts` (edit)
 - **Spec/AC:** AC-001–AC-009
 - **Behavior:**
-  - Two sections: **Profile** (email, current timezone — read-only
-    until edited) and **Password** (current, new, confirm).
-  - Timezone: searchable IANA list (Open Question 2) with the current
-    value preselected; saves via the store.
+  - Two sections: **Profile** (email — read-only, change is out of
+    scope; timezone — the only editable field) and **Password**
+    (current, new, confirm).
+  - Timezone: searchable IANA picker per spec Resolved Question 2 —
+    `Intl.supportedValuesOf('timeZone')` with the detected local zone
+    pinned, a common-zones group, region grouping, UTC-offset display,
+    and a fallback list for unsupported browsers; current value
+    preselected; saves via the store.
   - Password: new password input with client-side length validation
-    (≥ 12, AC-005) and a confirm field that must match; wrong current
+    (≥ 12) and a confirm field that must match (AC-005); wrong current
     password shows the server message inline (AC-003).
   - Loading skeleton while the page mounts; error state with Retry when
     the backend is unreachable (AC-008); disabled submit while in
@@ -142,7 +146,8 @@ Modules introduced or changed:
 
 - **Files/modules:** `features/settings/api.ts` (edit)
 - **Spec/AC:** AC-007
-- **Behavior:** behind `VITE_USE_MOCK_SETTINGS` (default on), the API
+- **Behavior:** behind `VITE_USE_MOCK_SETTINGS` (default on in
+  development, off in production — spec Resolved Question 3), the API
   module returns mock `UserResponse`s (mirroring backend validation
   codes) with latency, so the page is reviewable without the backend.
 - **Dependencies:** Step 1.
@@ -186,10 +191,9 @@ Traceability matrix:
 ## AC Status (spec-sync drift check, 2026-08-14)
 
 Per `docs/specs/users/account-settings.md` and the spec-sync workflow.
-No implementation exists yet (spec is Draft; pre-implementation decisions
-D2–D4 open), so every AC is recorded NOT VERIFIED — planned work, not
-drift. No FAIL, UNREACHABLE, or intended-change items; no spec amendment
-needed.
+No implementation exists yet, so every AC is recorded NOT VERIFIED —
+planned work, not drift. No FAIL, UNREACHABLE, or intended-change items;
+no spec amendment needed.
 
 - AC-001 through AC-009 → NOT VERIFIED (no implementation; Steps 1–5 pending)
 
@@ -204,18 +208,18 @@ Before reporting completion (per AGENTS.md):
 4. Completion report includes: summary, specification references, files
    changed, AC pass/fail evidence, deviations, risks, follow-ups.
 
-## Pre-Implementation Decisions (must be resolved first)
+## Pre-Implementation Decisions (resolved 2026-08-16)
 
-- **D1:** the spec `docs/specs/users/account-settings.md` must be
-  **Approved** before implementation starts (SDD workflow, ADR-001).
-- **D2 (spec Open Question 1):** after a successful password change,
-  end the session immediately and return to login (recommended), or
-  keep the user signed in until the next 401? Backend behavior is fixed
-  either way (all refresh tokens revoked).
-- **D3 (spec Open Question 2):** timezone picker — full IANA list with
-  search or a curated subset?
-- **D4 (spec Open Question 3):** mock toggle name —
-  `VITE_USE_MOCK_SETTINGS` or reuse `VITE_USE_MOCK_AUTH`.
+- **D1:** the spec `docs/specs/users/account-settings.md` is
+  **Approved** (SDD workflow, ADR-001). ✔ resolved
+- **D2 (spec Resolved Question 1):** after a successful password change,
+  end the session immediately and redirect to the login screen with a
+  "password changed" banner (`/login?password_changed=1`). ✔ resolved
+- **D3 (spec Resolved Question 2):** full IANA list with search, backed
+  by `Intl.supportedValuesOf('timeZone')`, local zone pinned, common
+  group, UTC offsets, fallback list. ✔ resolved
+- **D4 (spec Resolved Question 3):** new toggle `VITE_USE_MOCK_SETTINGS`,
+  default on in dev, off in prod. ✔ resolved
 
 ## Out of Scope for This Plan
 
@@ -228,6 +232,9 @@ Before reporting completion (per AGENTS.md):
 
 ## Change History
 
+- Plan approved: governing spec approved and D1–D4 resolved
+  (2026-08-16); status updated to Approved, step details aligned with
+  spec Resolved Questions 1–3.
 - Initial plan created against `docs/specs/users/account-settings.md`
   (Draft).
 - Spec-sync drift check (2026-08-14): all ACs recorded NOT VERIFIED — no

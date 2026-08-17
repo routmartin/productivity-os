@@ -84,6 +84,25 @@ export const useAuthStore = defineStore("auth", () => {
     clearSession();
   }
 
+  /** Update the persisted profile's timezone after a settings change
+   *  (account-settings AC-001/AC-009). */
+  function setTimezone(timezone: string): void {
+    if (!user.value) return;
+    user.value = { ...user.value, timezone };
+    if (accessToken.value) {
+      saveSession({ accessToken: accessToken.value, user: user.value });
+    }
+  }
+
+  /** End the local session without calling the logout endpoint — used after
+   *  a password change, where the server already revoked every refresh
+   *  token (spec Rule 3). */
+  function endSession(): void {
+    accessToken.value = null;
+    user.value = null;
+    clearSession();
+  }
+
   return {
     user,
     accessToken,
@@ -95,5 +114,7 @@ export const useAuthStore = defineStore("auth", () => {
     login,
     register,
     logout,
+    setTimezone,
+    endSession,
   };
 });

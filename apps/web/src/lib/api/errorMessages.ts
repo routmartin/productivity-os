@@ -12,6 +12,7 @@ const CODE_MESSAGES: Record<string, string> = {
   NETWORK_ERROR: "Could not reach the server. Check your connection and try again.",
   VALIDATION_ERROR: "Some fields are invalid. Review them and try again.",
   INVALID_TIMEZONE: "That timezone isn't valid.",
+  invalid_credentials: "Incorrect email or password.",
   NOT_FOUND: "That item no longer exists.",
   INTERNAL_ERROR: "Something went wrong on the server. Please try again.",
 };

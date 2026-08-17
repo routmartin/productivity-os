@@ -30,11 +30,24 @@ function previewFromQuery(): PreviewState {
   return value === 'loading' || value === 'error' || value === 'empty' ? value : null
 }
 
+/** `?open=<id>` lands here from global search (spec: global-search AC-010). */
+const openGoalId = computed(() => {
+  const value = route.query.open
+  return typeof value === 'string' && value ? value : null
+})
+
 /** Lands the workspace with the first goal's detail open. While loading, a
  *  skeleton reserves the panel so the workspace doesn't reflow on ready. */
 async function loadAndSelect(preview: PreviewState) {
   if (!panel.isOpen) panel.openSkeleton()
   await store.load(preview)
+
+  // A search result wins over the default first item.
+  if (openGoalId.value && store.goalById(openGoalId.value)) {
+    panel.openGoal(openGoalId.value)
+    return
+  }
+
   if (preview === 'loading' || !panel.isSkeleton) return
   if (store.status === 'ready' && store.visibleGoals.length > 0) {
     panel.openGoal(store.visibleGoals[0].id)
@@ -47,6 +60,15 @@ onMounted(() => loadAndSelect(previewFromQuery()))
 watch(
   () => route.query.preview,
   () => loadAndSelect(previewFromQuery()),
+)
+
+// A search result picked while already on this page opens the panel live.
+watch(
+  () => route.query.open,
+  (value) => {
+    const id = typeof value === 'string' && value ? value : null
+    if (id && store.status === 'ready' && store.goalById(id)) panel.openGoal(id)
+  },
 )
 
 const dialogOpen = ref(false)

@@ -3,6 +3,7 @@ import { RouterView } from 'vue-router'
 
 import PreviewToast from '@/components/shared/PreviewToast.vue'
 import FocusDock from '@/features/focus/components/FocusDock.vue'
+import SearchOverlay from '@/features/search/components/SearchOverlay.vue'
 
 import ContextPanel from './ContextPanel.vue'
 import SideNav from './SideNav.vue'
@@ -25,6 +26,7 @@ import TopBar from './TopBar.vue'
     <ContextPanel />
     <PreviewToast />
     <FocusDock />
+    <SearchOverlay />
   </div>
 </template>
 

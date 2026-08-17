@@ -33,6 +33,12 @@ function previewFromQuery(): PreviewState {
   return value === 'loading' || value === 'error' || value === 'empty' ? value : null
 }
 
+/** `?open=<id>` lands here from global search (spec: global-search AC-010). */
+const openProjectId = computed(() => {
+  const value = route.query.open
+  return typeof value === 'string' && value ? value : null
+})
+
 /** Lands the workspace with the first project's detail open. While loading,
  *  a skeleton reserves the panel so the workspace doesn't reflow on ready. */
 async function loadAndSelect(preview: PreviewState) {
@@ -40,6 +46,13 @@ async function loadAndSelect(preview: PreviewState) {
   await store.load(preview)
   // Goal titles on cards/detail come from the goals store — load it once.
   if (goalsStore.status === 'idle') void goalsStore.load()
+
+  // A search result wins over the default first item.
+  if (openProjectId.value && store.projectById(openProjectId.value)) {
+    panel.openProject(openProjectId.value)
+    return
+  }
+
   if (preview === 'loading' || !panel.isSkeleton) return
   if (store.status === 'ready' && store.visibleProjects.length > 0) {
     panel.openProject(store.visibleProjects[0].id)
@@ -52,6 +65,16 @@ onMounted(() => loadAndSelect(previewFromQuery()))
 watch(
   () => route.query.preview,
   () => loadAndSelect(previewFromQuery()),
+)
+
+// A search result picked while already on this page opens the panel live.
+watch(
+  () => route.query.open,
+  (value) => {
+    const id = typeof value === 'string' && value ? value : null
+    if (id && store.status === 'ready' && store.projectById(id))
+      panel.openProject(id)
+  },
 )
 
 const dialogOpen = ref(false)

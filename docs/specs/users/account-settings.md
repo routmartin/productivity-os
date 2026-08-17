@@ -1,7 +1,3 @@
-- [ ]
-
-* [ ]
-
 # Account Settings
 
 **Status:** approved
@@ -38,18 +34,27 @@ without any API or support interaction.
 
 - The signed-in user opens Settings from the navigation. The page shows
   their email and current timezone (from the login profile).
-- Changing the timezone selects an IANA timezone identifier. On success,
-  the saved profile and the in-memory session update immediately; the
-  Today page and date-bucketed views use the new timezone prospectively
-  (ADR-006: existing records keep their original dates).
-- Changing the password requires the current password and a new password
-  of at least 12 characters. On success the user receives confirmation
-  and is returned to the login screen (see Open Question 1).
+- Changing the timezone selects an IANA timezone identifier from a
+  searchable picker: the browser-detected local zone is pinned first,
+  followed by a short list of common zones, then the full IANA list
+  (from `Intl.supportedValuesOf('timeZone')`, grouped by region), each
+  entry showing its current UTC offset. On success, the saved profile
+  and the in-memory session update immediately; the Today page and
+  date-bucketed views use the new timezone prospectively (ADR-006:
+  existing records keep their original dates).
+- Changing the password requires the current password, a new password of
+  at least 12 characters, and a confirm field that must match the new
+  password (mismatch blocks submission; the confirm value is never sent
+  to the server). On success the app ends the session immediately and
+  redirects to the login screen, which shows a "password changed" banner
+  (see Resolved Question 1).
 - Wrong current password produces a clear inline error and does not end
   the session.
-- Invalid input (short new password, invalid timezone) produces inline
-  validation feedback before any request, and the server's structured
-  error is surfaced if a request still fails.
+- Invalid input produces inline validation feedback before any request:
+  a short new password or a mismatched confirm blocks submission, and a
+  timezone picker search that matches no zone (or an empty selection)
+  cannot be saved. The server's structured error is surfaced if a
+  request still fails (see Rule 5).
 - The page works without the backend in mock mode for design review.
 - Network or server failures surface the existing error state with a
   Retry action.
@@ -70,9 +75,12 @@ without any API or support interaction.
 4. A wrong current password maps to `401 invalid_credentials`; the UI
    shows the server's message inline (generic, revealing nothing about
    the account — per ADR-004, authentication failures are generic).
-5. Timezone values are IANA identifiers validated by the server
-   (`ZoneId.of`); an invalid value maps to `400 INVALID_TIMEZONE` and
-   the UI shows the server message without changing anything locally.
+5. The timezone picker only offers valid IANA identifiers, so invalid
+   values cannot be submitted through normal use; the server remains the
+   authority (`ZoneId.of`): a request that still carries an invalid
+   value maps to `400 INVALID_TIMEZONE` and the UI shows the server
+   message without changing anything locally (defense in depth against
+   stale lists or tampered requests).
 6. Timezone changes apply prospectively only (ADR-006 Decision 10):
    stored dates are never recomputed client-side, and the client sends
    no dates or times in the request.
@@ -102,6 +110,17 @@ without any API or support interaction.
 - The settings route already exists in the router (`/settings`,
   ComingSoonPage, `implemented: false`); this work implements it.
 
+## Page Layout
+
+The Settings page (`/settings`) shows two stacked sections:
+
+- **Profile** — email (read-only; email change is out of scope) and the
+  current timezone. The timezone is the only editable field.
+- **Password** — current password, new password, confirm new password.
+
+The page follows the "Calm Command Center" visual system and the
+existing form patterns (`LoginForm`, `NewGoalDialog`).
+
 ## Acceptance Criteria
 
 ### AC-001 — Change timezone persists
@@ -130,14 +149,15 @@ and the user remains signed in with the existing session.
 Given a signed-in user on the Settings page
 When they submit a valid password change with the correct current
 password
-Then they see a success confirmation and are returned to the login
-screen; the local session is cleared, and the old refresh token can no
-longer be used (server revoked it).
+Then the local session is cleared and the user is returned to the login
+screen, which shows a "password changed" success banner; the old refresh
+token can no longer be used (server revoked it).
 
 ### AC-005 — Client-side password validation
 
 Given a signed-in user on the Settings page
-When they enter a new password shorter than 12 characters
+When they enter a new password shorter than 12 characters, or a confirm
+value that does not match the new password
 Then the form blocks submission with inline validation feedback before
 any request is made.
 
@@ -213,21 +233,31 @@ forward, and existing recorded dates are unchanged.
   prospective application.
 - Backend `UserController` / `UserService` (verified contract).
 
-## Open Questions
+## Resolved Questions
 
-1. **Password-change UX (recommended: return to login).** The server
-   revokes all refresh tokens on password change, so the current session
-   ends the moment the short-lived access token expires and any later
-   401 would silently fail refresh. Options: (a) end the session
-   immediately after success (deterministic, recommended), or (b) keep
-   the user signed in until the next 401. Confirm (a).
-2. **Timezone picker scope.** Full IANA list with search (recommended,
-   ~600 entries) or a curated subset of common zones? The backend
-   accepts any valid IANA identifier.
-3. **Mock toggle name.** `VITE_USE_MOCK_SETTINGS` (new, recommended) or
-   reuse `VITE_USE_MOCK_AUTH` since settings share the user module?
+1. **Password-change UX:** end the session immediately after success and
+   redirect to `/login?password_changed=1`, where the login page shows a
+   "password changed" banner. Deterministic, and the confirmation
+   survives the redirect (no artificial delay on the Settings page).
+2. **Timezone picker:** full IANA list with search, backed by
+   `Intl.supportedValuesOf('timeZone')` (browser-native, always current,
+   no bundled list). The browser-detected local zone is pinned first, a
+   short common-zones group follows, then the full list grouped by
+   region, each entry showing its UTC offset. Browsers without
+   `Intl.supportedValuesOf` fall back to the detected local zone plus a
+   small static fallback list.
+3. **Mock toggle:** new `VITE_USE_MOCK_SETTINGS` (keeps the settings
+   mock independent of the auth mock), default on in development and off
+   in production.
 
 ## Change History
 
+- Open Questions 1–3 resolved (password-change UX: immediate session end
+  + login banner; timezone picker: `Intl.supportedValuesOf` full list
+  with common group and UTC offsets; mock toggle: `VITE_USE_MOCK_SETTINGS`
+  default on in dev). Added Page Layout, confirm-password rule,
+  defense-in-depth timezone validation (Rule 5), and the
+  `Intl.supportedValuesOf` fallback. Removed stale template artifacts.
+  Status stays approved.
 - Initial Draft created for the Account Settings page (Milestone 4
   route already reserved in the router).

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Approved
 
 ## Problem
 
@@ -51,8 +51,8 @@ I work.
 1. An account is identified by exactly one email address. Email uniqueness is
    case-insensitive.
 2. A password must be at least 12 characters. No composition rules (required
-   character classes) and no forced password rotation are imposed. (Proposed
-   values — see Open Questions.)
+   character classes) and no forced password rotation are imposed.
+   (Resolved — see Resolved Questions.)
 3. Passwords must be stored only as memory-hard password hashes. The hashing
    algorithm is an architecture decision (ADR-004).
 4. Authentication is by email and password only. No social or external login
@@ -76,10 +76,11 @@ I work.
 12. A user can only access their own account and their own domain data. There
     is no anonymous access to domain data.
 13. Repeated failed login attempts trigger temporary limitation of further
-    attempts. Exact thresholds are not product-specified (see Open Questions).
+    attempts. Exact thresholds are not product-specified (see Resolved
+    Questions).
 14. Registering with an already-registered email is rejected with feedback
-    that the email is unavailable. (See Open Questions for the enumeration
-    trade-off.)
+    that the email is unavailable. (See Resolved Questions for the
+    enumeration trade-off.)
 
 ## Constraints
 
@@ -258,6 +259,10 @@ then further attempts are temporarily rejected regardless of correctness.
 
 ## Change History
 
+- Promoted to Approved: an implementation exists (auth vertical slice,
+  plan 001), all rules are load-bearing in production code, and
+  `docs/specs/users/account-settings.md` (approved) depends on it for
+  account and password rules.
 - Resolved all 5 open questions: confirmed 12-char minimum password policy,
   409 EMAIL_TAKEN for duplicate registration (accepting enumeration trade-off),
   5-attempts/15-min rate limit with 15-min lockout, no auto-login after
