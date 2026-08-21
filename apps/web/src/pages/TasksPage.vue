@@ -21,6 +21,7 @@ import {
 import { useContextPanelStore } from '@/app/layouts/contextPanelStore'
 import EmptyState from '@/components/shared/EmptyState.vue'
 import ErrorState from '@/components/shared/ErrorState.vue'
+import SectionHeader from '@/components/shared/SectionHeader.vue'
 import SkeletonBlock from '@/components/shared/SkeletonBlock.vue'
 import SurfaceCard from '@/components/shared/SurfaceCard.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -195,6 +196,7 @@ interface ProjectGroup {
   name: string
   color: string | null
   tasks: Task[]
+  isToday: boolean
 }
 
 const projectGroups = computed<ProjectGroup[]>(() => {
@@ -210,12 +212,24 @@ const projectGroups = computed<ProjectGroup[]>(() => {
   for (const project of projectsStore.projects) {
     const tasks = byProject.get(project.id)
     if (tasks?.length) {
-      ordered.push({ key: project.id, name: project.name, color: project.color, tasks })
+      ordered.push({
+        key: project.id,
+        name: project.name,
+        color: project.color,
+        tasks,
+        isToday: tasks.some(t => toISODate(new Date(t.dueDate ?? '')) === todayISO.value),
+      })
       byProject.delete(project.id)
     }
   }
   for (const [key, tasks] of byProject) {
-    ordered.push({ key, name: 'No project', color: null, tasks })
+    ordered.push({
+      key,
+      name: 'No project',
+      color: null,
+      tasks,
+      isToday: tasks.some(t => toISODate(new Date(t.dueDate ?? '')) === todayISO.value),
+    })
   }
   return ordered
 })
@@ -299,40 +313,39 @@ function onUndo() {
 
 <template>
   <div class="tasks-page">
-    <!-- Hero header — spacious, matches Today workspace aesthetic (spec §16, §22) -->
-    <header class="hero">
-      <div class="hero-text">
-        <h1 class="hero-title">Tasks</h1>
-        <p class="hero-sub">Everything you're working on.</p>
+    <SectionHeader
+      title="Tasks"
+      :meta="store.searchQuery.length > 0 ? `${store.searchQuery.length} results` : undefined"
+    />
+
+    <!-- Search and new task -->
+    <div class="hero-actions">
+      <div class="search" :class="{ filled: store.searchQuery.length > 0 }">
+        <Search :size="16" :stroke-width="1.75" class="search-icon" />
+        <input
+          ref="searchInput"
+          :value="store.searchQuery"
+          type="text"
+          class="search-input"
+          placeholder="Search tasks…"
+          aria-label="Search tasks"
+          @input="store.setSearch(($event.target as HTMLInputElement).value)"
+        />
+        <button
+          v-if="store.searchQuery"
+          class="clear"
+          type="button"
+          aria-label="Clear search"
+          @click="onClearSearch"
+        >
+          <X :size="14" :stroke-width="2" />
+        </button>
       </div>
-      <div class="hero-actions">
-        <div class="search" :class="{ filled: store.searchQuery.length > 0 }">
-          <Search :size="16" :stroke-width="1.75" class="search-icon" />
-          <input
-            ref="searchInput"
-            :value="store.searchQuery"
-            type="text"
-            class="search-input"
-            placeholder="Search tasks…"
-            aria-label="Search tasks"
-            @input="store.setSearch(($event.target as HTMLInputElement).value)"
-          />
-          <button
-            v-if="store.searchQuery"
-            class="clear"
-            type="button"
-            aria-label="Clear search"
-            @click="onClearSearch"
-          >
-            <X :size="14" :stroke-width="2" />
-          </button>
-        </div>
-        <UiButton variant="primary" @click="dialogOpen = true">
-          <Plus :size="16" :stroke-width="2" />
-          New Task
-        </UiButton>
-      </div>
-    </header>
+      <UiButton variant="primary" @click="dialogOpen = true">
+        <Plus :size="16" :stroke-width="2" />
+        New Task
+      </UiButton>
+    </div>
 
     <!-- Toolbar: filters prominent, view controls subtle (spec §10: "Filters should not dominate") -->
     <div class="toolbar">
@@ -444,18 +457,11 @@ function onUndo() {
 
     <!-- List view (default) — lightweight rows grouped by date or project (spec §8) -->
     <TransitionGroup v-else-if="viewMode === 'list'" name="row" tag="div" class="groups">
-      <section v-for="group in groups" :key="group.key" class="group">
-        <header class="group-header">
-          <span
-            v-if="groupMode === 'project'"
-            class="group-dot"
-            :style="{ background: (group as ProjectGroup).color ?? 'var(--text-disabled)' }"
-            aria-hidden="true"
-          />
-          <h2 class="group-name">{{ groupMode === 'date' ? (group as DateGroup).dayLabel : (group as ProjectGroup).name }}</h2>
-          <span v-if="groupMode === 'date'" class="group-date">{{ (group as DateGroup).dateLabel }}</span>
-          <span class="group-count tnum">{{ group.tasks.length }}</span>
-        </header>
+      <section v-for="group in groups" :key="group.key" :class="{ today: group.isToday }" class="group">
+        <SectionHeader
+          :title="groupMode === 'date' ? (group as DateGroup).dayLabel : (group as ProjectGroup).name"
+          :meta="String(group.tasks.length)"
+        />
         <TransitionGroup name="row" tag="div" class="rows">
           <TaskListRow
             v-for="task in sortTasks(group.tasks)"
@@ -573,36 +579,12 @@ function onUndo() {
   gap: var(--space-6);
 }
 
-/* ---------- Hero header (spec §16: page hero is the largest type) ---------- */
-
-.hero {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-6);
-  margin-bottom: var(--space-2);
-}
-
-.hero-title {
-  font-size: var(--text-hero);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.12;
-  color: var(--text-primary);
-}
-
-.hero-sub {
-  margin-top: var(--space-3);
-  font-size: var(--text-lg);
-  color: var(--text-tertiary);
-}
+/* ---------- Search & actions ---------- */
 
 .hero-actions {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  flex-shrink: 0;
-  padding-bottom: var(--space-1);
 }
 
 .search {
@@ -734,53 +716,25 @@ function onUndo() {
 .group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-}
-
-.group-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 0 var(--space-2);
-  margin-bottom: var(--space-1);
-}
-
-.group-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
-}
-
-.group-name {
-  font-size: var(--text-xl);
-  font-weight: 650;
-  letter-spacing: -0.015em;
-  color: var(--text-primary);
-}
-
-.group-date {
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
-}
-
-.group-count {
-  display: inline-grid;
-  place-items: center;
-  min-width: 26px;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: var(--radius-full);
-  background: var(--surface-2);
+  padding: var(--space-6);
   border: 1px solid var(--border-subtle);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-tertiary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  min-width: 0;
+}
+
+.group.today {
+  border-color: var(--accent-border);
+}
+
+.group.today :deep(.section-header .title) {
+  color: var(--accent-strong);
 }
 
 .rows {
   display: flex;
   flex-direction: column;
+  gap: var(--space-1);
 }
 
 /* ---------- Grid (secondary view) — organized columns ---------- */
@@ -1160,11 +1114,16 @@ function onUndo() {
   position: absolute;
 }
 
-.toast-enter-active,
+.toast-enter-active {
+  transition:
+    opacity var(--motion-standard) var(--ease-out),
+    transform var(--motion-standard) var(--ease-out);
+}
+
 .toast-leave-active {
   transition:
-    opacity var(--duration-normal) var(--ease-out),
-    transform var(--duration-normal) var(--ease-out);
+    opacity var(--motion-fast) var(--ease-in),
+    transform var(--motion-fast) var(--ease-in);
 }
 
 .toast-enter-from,
@@ -1176,12 +1135,6 @@ function onUndo() {
 /* ---------- Responsive ---------- */
 
 @media (max-width: 900px) {
-  .hero {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-4);
-  }
-
   .hero-actions {
     justify-content: space-between;
   }

@@ -9,10 +9,13 @@ import ErrorState from '@/components/shared/ErrorState.vue'
 import FilterChips from '@/components/shared/FilterChips.vue'
 import SkeletonBlock from '@/components/shared/SkeletonBlock.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiDialog from '@/components/ui/UiDialog.vue'
 import type { PreviewState } from '@/features/planning/types'
 import { useGoalsStore } from '@/features/goals/store'
 import NewProjectDialog from '@/features/projects/components/NewProjectDialog.vue'
 import ProjectCard from '@/features/projects/components/ProjectCard.vue'
+import ProjectDetailPanel from '@/features/projects/components/ProjectDetailPanel.vue'
+import TaskDetailPanel from '@/features/tasks/components/TaskDetailPanel.vue'
 import {
   PROJECT_FILTER_LABELS,
   useProjectsStore,
@@ -39,25 +42,43 @@ const openProjectId = computed(() => {
   return typeof value === 'string' && value ? value : null
 })
 
-/** Lands the workspace with the first project's detail open. While loading,
- *  a skeleton reserves the panel so the workspace doesn't reflow on ready. */
-async function loadAndSelect(preview: PreviewState) {
-  if (!panel.isOpen) panel.openSkeleton()
-  await store.load(preview)
+/** Project whose detail dialog is open. Clicking a card opens it; clicking
+ *  the same card again toggles it closed. */
+const detailProjectId = ref<string | null>(null)
+
+/** Task detail dialog stacked above the project dialog. A task picked in
+ *  the project detail opens here instead of the side panel, which the
+ *  dialog overlay would otherwise hide. */
+const taskDialogId = ref<string | null>(null)
+
+watch(
+  () => panel.activeTaskId,
+  (taskId) => {
+    if (taskId && detailProjectId.value) taskDialogId.value = taskId
+  },
+)
+
+// Deleting a task closes its panel — mirror that by closing the overlay.
+watch(
+  () => panel.isOpen,
+  (open) => {
+    if (!open) taskDialogId.value = null
+  },
+)
+
+function closeTaskDialog() {
+  taskDialogId.value = null
+  panel.close()
+}
+
+function loadAndSelect(preview: PreviewState) {
+  void store.load(preview)
   // Goal titles on cards/detail come from the goals store — load it once.
   if (goalsStore.status === 'idle') void goalsStore.load()
 
-  // A search result wins over the default first item.
+  // A search result lands with its project detail open (no default selection).
   if (openProjectId.value && store.projectById(openProjectId.value)) {
-    panel.openProject(openProjectId.value)
-    return
-  }
-
-  if (preview === 'loading' || !panel.isSkeleton) return
-  if (store.status === 'ready' && store.visibleProjects.length > 0) {
-    panel.openProject(store.visibleProjects[0].id)
-  } else {
-    panel.close()
+    detailProjectId.value = openProjectId.value
   }
 }
 
@@ -67,13 +88,13 @@ watch(
   () => loadAndSelect(previewFromQuery()),
 )
 
-// A search result picked while already on this page opens the panel live.
+// A search result picked while already on this page opens the dialog live.
 watch(
   () => route.query.open,
   (value) => {
     const id = typeof value === 'string' && value ? value : null
     if (id && store.status === 'ready' && store.projectById(id))
-      panel.openProject(id)
+      detailProjectId.value = id
   },
 )
 
@@ -115,7 +136,7 @@ const emptyCopy = computed(() => {
 })
 
 function onSelectProject(projectId: string) {
-  panel.toggleProject(projectId)
+  detailProjectId.value = detailProjectId.value === projectId ? null : projectId
 }
 
 function onCreateProject(draft: NewProjectDraft) {
@@ -150,7 +171,7 @@ function onRetry() {
       @change="store.setFilter($event)"
     />
 
-    <!-- Loading — mirrors the header, filter chips, and card grid -->
+    <!-- Loading — mirrors the header and card grid -->
     <div v-if="isLoading" class="skeleton-page" aria-busy="true" aria-label="Loading projects">
       <div class="skeleton-header">
         <div class="skeleton-heading">
@@ -159,7 +180,6 @@ function onRetry() {
         </div>
         <SkeletonBlock height="44px" width="150px" rounded="md" />
       </div>
-      <SkeletonBlock height="38px" width="360px" rounded="full" />
       <div class="grid">
         <SkeletonBlock v-for="i in 4" :key="i" height="220px" rounded="lg" />
       </div>
@@ -199,12 +219,33 @@ function onRetry() {
         :key="project.id"
         :project="project"
         :stats="store.statsForProject(project.id)"
-        :active="project.id === panel.activeProjectId"
+        :active="project.id === detailProjectId"
         @select="onSelectProject"
       />
     </div>
 
     <NewProjectDialog :open="dialogOpen" @close="dialogOpen = false" @create="onCreateProject" />
+
+    <UiDialog
+      :open="detailProjectId !== null"
+      title="Project details"
+      size="lg"
+      @close="detailProjectId = null"
+    >
+      <ProjectDetailPanel
+        v-if="detailProjectId"
+        :project-id="detailProjectId"
+        @delete="detailProjectId = null"
+      />
+    </UiDialog>
+
+    <UiDialog
+      :open="taskDialogId !== null"
+      title="Task details"
+      @close="closeTaskDialog"
+    >
+      <TaskDetailPanel v-if="taskDialogId" :task-id="taskDialogId" />
+    </UiDialog>
   </div>
 </template>
 
@@ -242,6 +283,26 @@ function onRetry() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: var(--space-6);
+}
+
+/* Grid transitions — cards fade/rise in, retreat on removal, and glide when
+   the grid reorders (motion spec §11–12, §26). */
+.grid-move,
+.grid-enter-active,
+.grid-leave-active {
+  transition:
+    opacity var(--motion-standard) var(--ease-out),
+    transform var(--motion-standard) var(--ease-out);
+}
+
+.grid-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.grid-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 .empty-action {

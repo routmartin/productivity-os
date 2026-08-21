@@ -18,6 +18,8 @@ import NewProjectDialog from './NewProjectDialog.vue'
 
 const props = defineProps<{ projectId: string }>()
 
+const emit = defineEmits<{ delete: [] }>()
+
 const projects = useProjectsStore()
 const goals = useGoalsStore()
 const panel = useContextPanelStore()
@@ -57,7 +59,7 @@ function onUpdate(projectId: string, draft: Parameters<typeof projects.updatePro
 function onDelete() {
   if (!props.projectId) return
   projects.deleteProject(props.projectId)
-  panel.close()
+  emit('delete')
 }
 </script>
 

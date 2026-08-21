@@ -102,12 +102,14 @@ function onKeydown(event: KeyboardEvent) {
   cursor: pointer;
   transition:
     border-color var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out);
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
 }
 
 .goal-card:hover {
   border-color: var(--border-strong);
   background: var(--surface-2);
+  transform: translateY(-1px);
 }
 
 .goal-card.active {

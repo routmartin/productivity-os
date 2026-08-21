@@ -65,6 +65,7 @@ const emit = defineEmits<{ plan: [] }>()
   position: relative;
   z-index: 1;
   min-width: 0;
+  animation: briefing-enter var(--motion-standard) var(--ease-out) both;
 }
 
 .eyebrow {
@@ -109,6 +110,20 @@ const emit = defineEmits<{ plan: [] }>()
   height: 100%;
   min-height: 170px;
   flex-shrink: 0;
+  animation: briefing-enter var(--motion-standard) var(--ease-out) both;
+}
+
+/* AI content enters with a gentle rise + fade (motion spec §24) — the orb
+   stays static once settled, no continuous movement. */
+@keyframes briefing-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .orb-glow {

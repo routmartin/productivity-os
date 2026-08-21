@@ -57,7 +57,7 @@ withDefaults(
 }
 
 .ui-button:active:not(:disabled) {
-  transform: translateY(0.5px);
+  transform: translateY(0.5px) scale(0.985);
 }
 
 .ui-button:disabled {

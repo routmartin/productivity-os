@@ -185,7 +185,7 @@ function onRetry() {
     </EmptyState>
 
     <!-- List -->
-    <div v-else class="list">
+    <TransitionGroup v-else name="list" tag="div" class="list">
       <GoalCard
         v-for="goal in store.visibleGoals"
         :key="goal.id"
@@ -196,7 +196,7 @@ function onRetry() {
         :active="goal.id === panel.activeGoalId"
         @select="onSelectGoal"
       />
-    </div>
+    </TransitionGroup>
 
     <NewGoalDialog :open="dialogOpen" @close="dialogOpen = false" @create="onCreateGoal" />
   </div>
@@ -236,6 +236,26 @@ function onRetry() {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+}
+
+/* List transitions — items fade/rise in, retreat on removal, and glide when
+   the list reorders (motion spec §11–12). */
+.list-move,
+.list-enter-active,
+.list-leave-active {
+  transition:
+    opacity var(--motion-standard) var(--ease-out),
+    transform var(--motion-standard) var(--ease-out);
+}
+
+.list-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 .empty-action {

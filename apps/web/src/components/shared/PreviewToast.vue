@@ -38,11 +38,16 @@ import { previewMessage } from '@/lib/preview'
   color: var(--text-tertiary);
 }
 
-.toast-enter-active,
+.toast-enter-active {
+  transition:
+    opacity var(--motion-standard) var(--ease-out),
+    transform var(--motion-standard) var(--ease-out);
+}
+
 .toast-leave-active {
   transition:
-    opacity var(--duration-normal) var(--ease-out),
-    transform var(--duration-normal) var(--ease-out);
+    opacity var(--motion-fast) var(--ease-in),
+    transform var(--motion-fast) var(--ease-in);
 }
 
 .toast-enter-from,

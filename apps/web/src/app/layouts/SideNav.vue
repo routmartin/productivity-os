@@ -213,6 +213,7 @@ async function onLogout() {
 .nav-icon {
   flex-shrink: 0;
   color: var(--text-tertiary);
+  transition: color var(--duration-fast) var(--ease-out);
 }
 
 .nav-item:hover .nav-icon {

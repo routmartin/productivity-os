@@ -28,18 +28,11 @@ function previewFromQuery(): PreviewState {
   return value === 'loading' || value === 'error' || value === 'empty' ? value : null
 }
 
-/** Lands the workspace with the top priority's detail open. While loading,
- *  a skeleton reserves the panel so the workspace doesn't reflow on ready. */
+/** Lands the workspace with no auto-opened panel — Today stays quiet. */
 async function loadAndSelect(preview: PreviewState) {
-  if (!panel.isOpen) panel.openSkeleton()
   await today.load(preview)
-  if (preview === 'loading' || !panel.isSkeleton) return
-  const first = today.topThree[0]
-  if (today.status === 'ready' && first) {
-    panel.openTask(first.taskId)
-  } else {
-    panel.close()
-  }
+  if (preview === 'loading') return
+  panel.close()
 }
 
 onMounted(() => loadAndSelect(previewFromQuery()))

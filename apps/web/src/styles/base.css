@@ -134,16 +134,21 @@ ol {
   transform: translateY(6px);
 }
 
-.panel-enter-active,
+.panel-enter-active {
+  transition:
+    transform var(--motion-standard) var(--ease-out),
+    opacity var(--motion-standard) var(--ease-out);
+}
+
 .panel-leave-active {
   transition:
-    transform var(--duration-normal) var(--ease-out),
-    opacity var(--duration-normal) var(--ease-out);
+    transform var(--motion-fast) var(--ease-in),
+    opacity var(--motion-fast) var(--ease-in);
 }
 
 .panel-enter-from,
 .panel-leave-to {
-  transform: translateX(16px);
+  transform: translateX(28px);
   opacity: 0;
 }
 

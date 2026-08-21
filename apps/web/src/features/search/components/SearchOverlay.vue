@@ -374,16 +374,24 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKeydown))
   color: var(--text-tertiary);
 }
 
-.search-enter-active,
-.search-leave-active {
-  transition: opacity var(--duration-normal) var(--ease-out);
+.search-enter-active {
+  transition: opacity var(--motion-standard) var(--ease-out);
 }
 
-.search-enter-active .search-panel,
+.search-leave-active {
+  transition: opacity var(--motion-fast) var(--ease-in);
+}
+
+.search-enter-active .search-panel {
+  transition:
+    transform var(--motion-standard) var(--ease-out),
+    opacity var(--motion-standard) var(--ease-out);
+}
+
 .search-leave-active .search-panel {
   transition:
-    transform var(--duration-normal) var(--ease-out),
-    opacity var(--duration-normal) var(--ease-out);
+    transform var(--motion-fast) var(--ease-in),
+    opacity var(--motion-fast) var(--ease-in);
 }
 
 .search-enter-from,

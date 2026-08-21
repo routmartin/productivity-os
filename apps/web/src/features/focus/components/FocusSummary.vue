@@ -272,4 +272,18 @@ const trend = mockFocusTrend.deltaPercent;
     min-width: 0;
   }
 }
+
+/* Reduced motion: reveal stats immediately — the stagger delay must not
+   keep content hidden (motion spec §28). */
+@media (prefers-reduced-motion: reduce) {
+  .stat {
+    opacity: 1;
+    transform: none;
+    transition-delay: 0ms;
+  }
+
+  .summary-halo {
+    opacity: 1;
+  }
+}
 </style>

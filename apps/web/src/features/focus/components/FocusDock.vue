@@ -61,20 +61,22 @@ function onDone() {
       role="status"
     >
       <!-- Collapsed pill -->
-      <button
-        v-if="!expanded"
-        class="dock-pill"
-        :aria-label="`Focus session ${focusStore.state}, ${focusStore.formattedTime}. Expand focus timer.`"
-        @click="expanded = true"
-      >
-        <span class="dock-dot" aria-hidden="true"></span>
-        <span class="dock-time tnum">{{ focusStore.formattedTime }}</span>
-        <span class="dock-task">{{ focusStore.selectedTask?.title }}</span>
-        <ChevronUp :size="14" :stroke-width="2" aria-hidden="true" />
-      </button>
+      <Transition name="dock" mode="out-in" appear>
+        <button
+          v-if="!expanded"
+          key="pill"
+          class="dock-pill"
+          :aria-label="`Focus session ${focusStore.state}, ${focusStore.formattedTime}. Expand focus timer.`"
+          @click="expanded = true"
+        >
+          <span class="dock-dot" aria-hidden="true"></span>
+          <span class="dock-time tnum">{{ focusStore.formattedTime }}</span>
+          <span class="dock-task">{{ focusStore.selectedTask?.title }}</span>
+          <ChevronUp :size="14" :stroke-width="2" aria-hidden="true" />
+        </button>
 
-      <!-- Expanded dialog -->
-      <div v-else class="dock-panel">
+        <!-- Expanded dialog -->
+        <div v-else key="panel" class="dock-panel">
         <span class="dock-halo" aria-hidden="true"></span>
 
         <div class="dock-head">
@@ -152,6 +154,7 @@ function onDone() {
           </template>
         </div>
       </div>
+      </Transition>
     </div>
   </Teleport>
 </template>
@@ -387,5 +390,25 @@ function onDone() {
 
 .dock-btn.wide {
   width: 100%;
+}
+
+/* Expand/collapse transition — the dock grows out of the pill and
+   shrinks back into it (motion spec §22). */
+.dock-enter-active {
+  transition:
+    opacity var(--motion-standard) var(--ease-out),
+    transform var(--motion-standard) var(--ease-out);
+}
+
+.dock-leave-active {
+  transition:
+    opacity var(--motion-fast) var(--ease-in),
+    transform var(--motion-fast) var(--ease-in);
+}
+
+.dock-enter-from,
+.dock-leave-to {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
 }
 </style>

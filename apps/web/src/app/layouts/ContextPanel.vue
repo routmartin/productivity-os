@@ -86,6 +86,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           v-else-if="panel.content.kind === 'project'"
           :key="`project-${panel.content.projectId}`"
           :project-id="panel.content.projectId"
+          @delete="panel.close()"
         />
         <GoalDetailPanel
           v-else

@@ -93,10 +93,21 @@
   /* Shadows — restrained, panels separate via borders */
   --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.45);
 
-  /* Motion — subtle and quick */
+  /* Motion — subtle, fast, purposeful (motion spec §4–5, §32).
+   * ease-out for entering, ease-in for leaving, ease-in-out for state. */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --duration-fast: 140ms;
-  --duration-normal: 220ms;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Shared conceptual motion tokens — components reference these instead of
+     ad-hoc per-feature durations. */
+  --motion-fast: 140ms; /* micro interactions: hover, focus, press */
+  --motion-standard: 220ms; /* panels, dialogs, filters, list changes */
+  --motion-slow: 360ms; /* large transitions: Focus Mode, major workspaces */
+
+  /* Legacy aliases — kept so existing component styles stay valid. */
+  --duration-fast: var(--motion-fast);
+  --duration-normal: var(--motion-standard);
 
   /* Layout */
   --sidebar-width: 236px;
