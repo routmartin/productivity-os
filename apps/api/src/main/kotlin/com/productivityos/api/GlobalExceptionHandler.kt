@@ -1,11 +1,11 @@
 package com.productivityos.api
 
-import com.productivityos.task.TaskNotFoundException
-import com.productivityos.user.AuthenticationException
-import com.productivityos.user.DuplicateEmailException
-import com.productivityos.user.InvalidRefreshTokenException
-import com.productivityos.project.ProjectNotFoundException
-import com.productivityos.goal.GoalNotFoundException
+import com.productivityos.task.exception.TaskNotFoundException
+import com.productivityos.auth.exception.AuthenticationException
+import com.productivityos.auth.exception.DuplicateEmailException
+import com.productivityos.auth.exception.InvalidRefreshTokenException
+import com.productivityos.project.exception.ProjectNotFoundException
+import com.productivityos.goal.exception.GoalNotFoundException
 import org.slf4j.MDC
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
