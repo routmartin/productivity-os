@@ -1,0 +1,17 @@
+.git
+.gradle
+.kotlin
+build
+**/build
+.idea
+.vscode
+*.iml
+.DS_Store
+node_modules
+**/node_modules
+dist
+**/dist
+.opencode
+.cline
+.codex
+gpt

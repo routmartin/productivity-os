@@ -11,7 +11,15 @@
  * on failure the session-expired handler runs (clear + redirect to login).
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL;
+
+if (import.meta.env.PROD && !configuredBaseUrl) {
+  throw new Error(
+    "VITE_API_BASE_URL is required in production. Set it in the Cloudflare Pages build environment.",
+  );
+}
+
+const BASE_URL = (configuredBaseUrl ?? "/api/v1").replace(/\/+$/, "");
 
 export class ApiError extends Error {
   constructor(
