@@ -81,8 +81,12 @@ class RefreshTokenService(
                 current.revokedAt = clock.instant()
                 refreshTokenRepository.save(current)
             }
-            current = current.rotatedFrom?.let { rotatedFrom ->
-                refreshTokenRepository.findByUserIdAndRotatedFrom(current!!.userId, rotatedFrom)
+            // Walk to the token this one was rotated from. The previous
+            // lookup queried children of `rotatedFrom`, which returns the
+            // current token itself and loops forever when a rotated token
+            // is presented again.
+            current = current.rotatedFrom?.let { parentId ->
+                refreshTokenRepository.findById(parentId).orElse(null)
             }
         }
         var child = refreshTokenRepository.findByUserIdAndRotatedFrom(token.userId, token.id!!)

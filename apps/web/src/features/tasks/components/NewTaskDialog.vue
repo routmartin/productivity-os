@@ -180,7 +180,7 @@ function onSubmit() {
 
 <template>
   <UiDialog :open="open" :title="isEdit ? 'Edit Task' : 'New Task'" @close="emit('close')">
-    <form class="form" @submit.prevent="onSubmit">
+    <form id="new-task-form" class="form" @submit.prevent="onSubmit">
           <UiInput
             ref="titleInput"
             v-model="draft.title"
@@ -237,7 +237,13 @@ function onSubmit() {
         <UiButton variant="ghost" type="button" :disabled="isSubmitting" @click="emit('close')">
           Cancel
         </UiButton>
-        <UiButton variant="primary" type="submit" :loading="isSubmitting" :disabled="!draft.title.trim()">
+        <UiButton
+          variant="primary"
+          type="submit"
+          form="new-task-form"
+          :loading="isSubmitting"
+          :disabled="!draft.title.trim()"
+        >
           {{ isEdit ? 'Save changes' : 'Add task' }}
         </UiButton>
       </div>

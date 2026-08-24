@@ -45,5 +45,5 @@ app:
     cookie-same-site: ${COOKIE_SAME_SITE:Strict}
   jwt:
     secret: ${JWT_SECRET:this-is-a-dev-secret-at-least-256-bits-long-for-hmac-sha256}
-    access-token-ttl-minutes: ${JWT_ACCESS_TOKEN_TTL_MINUTES:15}
+    access-token-ttl-minutes: ${JWT_ACCESS_TOKEN_TTL_MINUTES:1}
     refresh-token-ttl-days: ${JWT_REFRESH_TOKEN_TTL_DAYS:30}
