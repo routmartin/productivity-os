@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CalendarDays, Check, Clock, FolderKanban, Inbox } from 'lucide-vue-next'
+import { CalendarDays, Check, Clock, FolderKanban, Inbox, Pin } from 'lucide-vue-next'
 
 import { formatShortDate, relativeTime } from '@/lib/utils/date'
 import { formatMinutes } from '@/lib/utils/duration'
 
-import { findProjectById } from '../mock'
+import { useProjectsStore } from '@/features/projects/store'
+import { useMock } from '@/lib/mock'
 import { useTasksStore } from '../store'
 import type { Task } from '../types'
-import TaskActionMenu from './TaskActionMenu.vue'
 import TaskPrioritySegments from './TaskPrioritySegments.vue'
 
 const props = withDefaults(
@@ -22,8 +22,21 @@ const props = withDefaults(
 const emit = defineEmits<{ select: [taskId: string] }>()
 
 const store = useTasksStore()
+const projectsStore = useProjectsStore()
 
-const project = computed(() => findProjectById(props.task.projectId))
+/** Real project from the projects store — never the mock list (real mode
+ *  would otherwise show seed names or nothing for real project links). */
+const project = computed(() =>
+  props.task.projectId
+    ? projectsStore.projectById(props.task.projectId)
+    : undefined,
+)
+
+/** Backend completes tasks only from IN_PROGRESS (task domain lifecycle);
+ *  mock mode keeps the design-review toggle + undo. */
+const canToggle = computed(
+  () => useMock('TASKS') || props.task.status === 'IN_PROGRESS',
+)
 
 /** Category pill tinted with the project color; quiet accent for plain inbox items. */
 const pillStyle = computed(() => {
@@ -54,6 +67,11 @@ function onToggle(event: MouseEvent) {
   event.stopPropagation()
   store.toggleTaskComplete(props.task.id)
 }
+
+function onPin(event: MouseEvent) {
+  event.stopPropagation()
+  store.togglePin(props.task.id)
+}
 </script>
 
 <template>
@@ -68,7 +86,16 @@ function onToggle(event: MouseEvent) {
   >
     <div class="card-top">
       <span class="category-pill" :style="pillStyle">{{ project?.name ?? 'Inbox' }}</span>
-      <TaskActionMenu :task="task" />
+      <button
+        class="pin"
+        :class="{ pinned: task.pinned }"
+        type="button"
+        :aria-label="task.pinned ? 'Unpin' : 'Pin to top'"
+        :title="task.pinned ? 'Unpin' : 'Pin to top'"
+        @click="onPin"
+      >
+        <Pin :size="13" :stroke-width="2" />
+      </button>
     </div>
 
     <h3 class="card-title">{{ task.title }}</h3>
@@ -98,6 +125,7 @@ function onToggle(event: MouseEvent) {
         :aria-checked="isCompleted"
         :aria-label="isCompleted ? `Reopen ${task.title}` : `Complete ${task.title}`"
         :title="isCompleted ? 'Reopen task' : 'Mark complete'"
+        :disabled="!canToggle"
         @click="onToggle"
       >
         <Check v-if="isCompleted" :size="11" :stroke-width="3" />
@@ -159,6 +187,27 @@ function onToggle(event: MouseEvent) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.pin {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--text-disabled);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.pin:hover {
+  color: var(--text-tertiary);
+}
+
+.pin.pinned {
+  color: var(--accent);
 }
 
 .card-title {

@@ -7,6 +7,7 @@ import type { PreviewState } from "@/features/planning/types";
 
 import { tasksApi } from "./api";
 import { taskResponseToTask } from "./api-types";
+import type { TaskResponse } from "./api-types";
 import { mockTasks } from "./mock";
 import type { NewTaskDraft, Task, TaskStatus } from "./types";
 
@@ -99,7 +100,7 @@ export const useTasksStore = defineStore("tasks", () => {
   };
 
   /** Tasks for the Tasks workspace list: filter + search applied,
-   * completed work sinks to the bottom. */
+   * completed work sinks to the bottom. Pinned tasks always float to top. */
   const visibleTasks = computed(() => {
     if (previewEmpty.value) return [];
     const statusOrder: Record<TaskStatus, number> = {
@@ -112,7 +113,11 @@ export const useTasksStore = defineStore("tasks", () => {
     return tasks.value
       .filter((task) => matchesFilter(task) && matchesSearch(task))
       .slice()
-      .sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+      .sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return statusOrder[a.status] - statusOrder[b.status];
+      });
   });
 
   const hasActiveSearch = computed(() => searchQuery.value.trim().length > 0);
@@ -196,6 +201,8 @@ export const useTasksStore = defineStore("tasks", () => {
 
   function addTask(draft: NewTaskDraft): Task | null {
     lastError.value = null;
+    /** UI-only creation destination (spec §12.1); undefined = Inbox. */
+    const destination = draft.destination ?? "INBOX";
 
     if (USE_MOCK) {
       const now = new Date().toISOString();
@@ -203,7 +210,7 @@ export const useTasksStore = defineStore("tasks", () => {
         id: nextLocalId(),
         title: draft.title,
         description: draft.description || null,
-        status: "INBOX",
+        status: destination,
         priority: draft.priority,
         energy: null,
         estimatedMinutes: draft.estimatedMinutes,
@@ -219,14 +226,25 @@ export const useTasksStore = defineStore("tasks", () => {
       return task;
     }
 
-    tasksApi
-      .create({
-        title: draft.title,
-        description: draft.description || null,
-        dueDate: draft.dueDate,
-        priority: draft.priority ?? undefined,
-        estimatedDurationMinutes: draft.estimatedMinutes,
-      })
+    // Real mode: create always yields INBOX (backend contract); the store
+    // chains sanctioned transitions per destination (Tasks & Inbox UI spec
+    // §12.1). Only the final server state enters the list — a mid-chain
+    // failure leaves the task visible in its actual lifecycle state.
+    let current: Promise<TaskResponse> = tasksApi.create({
+      title: draft.title,
+      description: draft.description || null,
+      dueDate: draft.dueDate,
+      priority: draft.priority ?? undefined,
+      estimatedDurationMinutes: draft.estimatedMinutes,
+    });
+    if (destination !== "INBOX") {
+      current = current.then((created) => tasksApi.plan(created.id));
+    }
+    if (destination === "IN_PROGRESS") {
+      current = current.then((planned) => tasksApi.start(planned.id));
+    }
+
+    current
       .then((created) => {
         tasks.value.unshift(taskResponseToTask(created));
       })
@@ -281,6 +299,90 @@ export const useTasksStore = defineStore("tasks", () => {
 
     tasksApi
       .start(taskId)
+      .then((updated) => {
+        const live = taskById(taskId);
+        if (live) Object.assign(live, taskResponseToTask(updated));
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+  }
+
+  /** One-click Start (Tasks & Inbox UI spec §15.1): resolves once the task
+   *  is IN_PROGRESS. INBOX chains the sanctioned plan → start transitions;
+   *  PLANNED starts directly; other statuses reject. Mock mode flips
+   *  locally. */
+  async function startTaskNow(taskId: string): Promise<void> {
+    const task = taskById(taskId);
+    if (!task || (task.status !== "INBOX" && task.status !== "PLANNED")) {
+      return;
+    }
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      task.status = "IN_PROGRESS";
+      task.updatedAt = new Date().toISOString();
+      return;
+    }
+
+    const chain: Promise<TaskResponse> =
+      task.status === "INBOX"
+        ? tasksApi.plan(taskId).then(() => tasksApi.start(taskId))
+        : tasksApi.start(taskId);
+
+    try {
+      const updated = await chain;
+      const live = taskById(taskId);
+      if (live) Object.assign(live, taskResponseToTask(updated));
+    } catch (error: unknown) {
+      lastError.value = errorMessage(error);
+    }
+  }
+
+  /** INBOX | PLANNED | IN_PROGRESS → CANCELLED (UI spec §15.3). */
+  function cancelTask(taskId: string): void {
+    const task = taskById(taskId);
+    if (
+      !task ||
+      (task.status !== "INBOX" &&
+        task.status !== "PLANNED" &&
+        task.status !== "IN_PROGRESS")
+    ) {
+      return;
+    }
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      task.status = "CANCELLED";
+      task.updatedAt = new Date().toISOString();
+      return;
+    }
+
+    tasksApi
+      .cancel(taskId)
+      .then((updated) => {
+        const live = taskById(taskId);
+        if (live) Object.assign(live, taskResponseToTask(updated));
+      })
+      .catch((error: unknown) => {
+        lastError.value = errorMessage(error);
+      });
+  }
+
+  /** CANCELLED → PLANNED (Task Management Rule 10, UI spec §15.3). */
+  function reopenTask(taskId: string): void {
+    const task = taskById(taskId);
+    if (!task || task.status !== "CANCELLED") return;
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      task.status = "PLANNED";
+      task.updatedAt = new Date().toISOString();
+      return;
+    }
+
+    tasksApi
+      .reopening(taskId)
       .then((updated) => {
         const live = taskById(taskId);
         if (live) Object.assign(live, taskResponseToTask(updated));
@@ -419,6 +521,14 @@ export const useTasksStore = defineStore("tasks", () => {
     return task;
   }
 
+  /** Toggle the pinned flag on a task (UI-only, no backend persistence yet). */
+  function togglePin(taskId: string): void {
+    const task = taskById(taskId);
+    if (!task) return;
+    task.pinned = !task.pinned;
+    task.updatedAt = new Date().toISOString();
+  }
+
   return {
     tasks,
     status,
@@ -438,11 +548,15 @@ export const useTasksStore = defineStore("tasks", () => {
     addTask,
     planTask,
     startTask,
+    startTaskNow,
+    cancelTask,
+    reopenTask,
     updateTask,
     deleteTask,
     toggleTaskComplete,
     undoLast,
     lastUndoable,
+    togglePin,
     clearError,
   };
 });

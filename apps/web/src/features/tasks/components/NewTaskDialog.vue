@@ -12,6 +12,8 @@ import { useMock } from '@/lib/mock'
 
 import type { NewTaskDraft, Priority, Task } from '../types'
 
+type Destination = NonNullable<NewTaskDraft['destination']>
+
 const props = defineProps<{ open: boolean; editing?: Task | null }>()
 
 const emit = defineEmits<{
@@ -40,6 +42,9 @@ const emptyDraft = (): NewTaskDraft => ({
 })
 
 const draft = reactive<NewTaskDraft>(emptyDraft())
+/** Creation destination (Tasks & Inbox UI spec §12.1) — create mode only;
+ *  the store chains sanctioned plan/start transitions after create. */
+const destination = ref<Destination>('INBOX')
 const isSubmitting = ref(false)
 const titleInput = ref<{ $el: HTMLElement } | null>(null)
 
@@ -99,6 +104,12 @@ const PRIORITIES: { value: Priority; label: string }[] = [
   { value: 'HIGH', label: 'High' },
 ]
 
+const DESTINATIONS: { value: Destination; label: string }[] = [
+  { value: 'INBOX', label: 'Inbox' },
+  { value: 'PLANNED', label: 'Plan today' },
+  { value: 'IN_PROGRESS', label: 'Start now' },
+]
+
 // Selects keep string values; map empty string to null on read.
 // Goal is a local form value only: on the backend a task reaches its goal
 // through its project, so the mock does not persist a task-level goal.
@@ -114,6 +125,7 @@ watch(
   async (isOpen) => {
     if (isOpen) {
       Object.assign(draft, emptyDraft())
+      destination.value = 'INBOX'
       projectValue.value = ''
       goalValue.value = ''
       dueValue.value = ''
@@ -165,12 +177,13 @@ function onSubmit() {
     recurrence: recurrenceValue.value || null,
   }
 
-  // Emits the draft; the tasks store performs the real API call.
+  // Emits the draft; the tasks store performs the real API call. Destination
+  // is a create-only concern — edits never touch lifecycle state.
   setTimeout(() => {
     if (props.editing) {
       emit('update', props.editing.id, payload)
     } else {
-      emit('create', payload)
+      emit('create', { ...payload, destination: destination.value })
     }
     emit('close')
   }, 400)
@@ -227,6 +240,25 @@ function onSubmit() {
           <div class="field-row">
             <UiSelect v-model="durationValue" label="Duration" :options="durationOptions" :disabled="isSubmitting" />
             <UiSelect v-if="mockMode" v-model="recurrenceValue" label="Repeat" :options="recurrenceOptions" :disabled="isSubmitting" />
+          </div>
+
+          <div v-if="!isEdit" class="field">
+            <span class="field-label">Add to</span>
+            <div class="priority-group" role="radiogroup" aria-label="Add to">
+              <button
+                v-for="option in DESTINATIONS"
+                :key="option.value"
+                type="button"
+                class="priority-option"
+                role="radio"
+                :aria-checked="destination === option.value"
+                :class="{ selected: destination === option.value }"
+                :disabled="isSubmitting"
+                @click="destination = option.value"
+              >
+                {{ option.label }}
+              </button>
+            </div>
           </div>
 
     </form>
@@ -305,6 +337,11 @@ function onSubmit() {
   background: var(--accent-soft);
   color: var(--accent-strong);
   font-weight: 500;
+}
+
+.priority-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .note {

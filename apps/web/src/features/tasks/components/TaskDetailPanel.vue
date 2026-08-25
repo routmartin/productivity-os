@@ -2,16 +2,21 @@
 import { computed, ref } from 'vue'
 import {
   CalendarDays,
+  CalendarPlus,
   CheckCircle2,
   CircleSlash,
   Clock,
   Flag,
   Folder,
+  Pin,
   Pencil,
+  Play,
+  RotateCcw,
   SearchX,
   Target,
   Timer,
   Trash2,
+  XCircle,
   Zap,
 } from 'lucide-vue-next'
 
@@ -19,10 +24,15 @@ import EmptyState from '@/components/shared/EmptyState.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiPill from '@/components/ui/UiPill.vue'
 import { useContextPanelStore } from '@/app/layouts/contextPanelStore'
+import { useRouter } from 'vue-router'
 import { formatLongDate, relativeTime } from '@/lib/utils/date'
 import { formatMinutes } from '@/lib/utils/duration'
 
-import { findProjectById, goalForTask } from '../mock'
+import { useFocusStore } from '@/features/focus/store'
+import { useGoalsStore } from '@/features/goals/store'
+import { useProjectsStore } from '@/features/projects/store'
+import { useTodayStore } from '@/features/planning/todayStore'
+import { useMock } from '@/lib/mock'
 import { useTasksStore } from '../store'
 import { ENERGY_LABELS, PRIORITY_LABELS, TASK_STATUS_LABELS } from '../types'
 import NewTaskDialog from './NewTaskDialog.vue'
@@ -31,14 +41,34 @@ import TaskStatusIcon from './TaskStatusIcon.vue'
 const props = defineProps<{ taskId: string }>()
 
 const store = useTasksStore()
+const projectsStore = useProjectsStore()
+const goalsStore = useGoalsStore()
+const focusStore = useFocusStore()
+const todayStore = useTodayStore()
+const router = useRouter()
 const panel = useContextPanelStore()
 
 const task = computed(() => store.taskById(props.taskId))
-const project = computed(() => findProjectById(task.value?.projectId ?? null))
-const goal = computed(() => (task.value ? goalForTask(task.value) : undefined))
+/** Real project/goal from their stores — never the mock lists (real mode
+ *  would otherwise show seed names or nothing for real links). */
+const project = computed(() =>
+  task.value?.projectId
+    ? projectsStore.projectById(task.value.projectId)
+    : undefined,
+)
+const goal = computed(() => {
+  const p = project.value
+  return p?.goalId ? goalsStore.goalById(p.goalId) : undefined
+})
+
+/** Backend completes tasks only from IN_PROGRESS (task domain lifecycle);
+ *  mock mode keeps the design-review toggle + undo. */
+const canToggle = computed(
+  () => useMock('TASKS') || task.value?.status === 'IN_PROGRESS',
+)
 
 const editOpen = ref(false)
-const confirmingDelete = ref(false)
+const confirmingAction = ref<'delete' | 'cancel' | null>(null)
 
 type PillTone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger'
 
@@ -72,24 +102,96 @@ const dueLabel = computed(() => {
   return formatLongDate(new Date(`${due}T00:00:00`))
 })
 
-/** Focus sessions belong to the Focus module — still preview only. */
 const previewNote = ref<string | null>(null)
 let noteTimer: ReturnType<typeof setTimeout> | undefined
 
-function showPreviewNote(action: string) {
-  previewNote.value = `${action} arrives with the Focus module in Milestone 2 — this preview is visual only.`
+function showNote(message: string) {
+  previewNote.value = message
   clearTimeout(noteTimer)
   noteTimer = setTimeout(() => (previewNote.value = null), 3200)
 }
 
-function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1]) {
-  store.updateTask(taskId, draft)
-  editOpen.value = false
+/** Focus sessions require an IN_PROGRESS task (focus spec Rule 4). One-click
+ *  Start (Tasks & Inbox UI spec §15.1): an active task not yet in progress is
+ *  started here, then the panel hands off to the Focus workspace instead of
+ *  dead-ending with a message. */
+const starting = ref(false)
+
+async function onStartFocus() {
+  const current = task.value
+  if (!current || starting.value) return
+  if (current.status === 'COMPLETED' || current.status === 'CANCELLED') {
+    showNote(
+      'This task is no longer active — reopen or restore it before focusing.',
+    )
+    return
+  }
+  starting.value = true
+  try {
+    if (current.status !== 'IN_PROGRESS') {
+      await store.startTaskNow(current.id)
+      if (store.lastError) return
+    }
+    focusStore.selectTask(current.id)
+    void router.push({ name: 'focus' })
+  } finally {
+    starting.value = false
+  }
+}
+
+function onPlan() {
+  const current = task.value
+  if (current) store.planTask(current.id)
+}
+
+function onStart() {
+  const current = task.value
+  if (current) void store.startTaskNow(current.id)
+}
+
+function onComplete() {
+  const current = task.value
+  if (current) store.toggleTaskComplete(current.id)
+}
+
+function onReopen() {
+  const current = task.value
+  if (current) store.reopenTask(current.id)
+}
+
+function onCancel() {
+  const current = task.value
+  if (current) {
+    store.cancelTask(current.id)
+    confirmingAction.value = null
+  }
+}
+
+function onPin() {
+  const current = task.value
+  if (current) store.togglePin(current.id)
+}
+
+const inTopThree = computed(() => task.value ? todayStore.isInTopThree(task.value.id) : false)
+
+function onAddToTopThree() {
+  const current = task.value
+  if (current) void todayStore.selectForTopThree(current.id)
+}
+
+function onRemoveFromTopThree() {
+  const current = task.value
+  if (current) void todayStore.removeFromTopThree(current.id)
 }
 
 function onDelete() {
   store.deleteTask(props.taskId)
   panel.close()
+}
+
+function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1]) {
+  store.updateTask(taskId, draft)
+  editOpen.value = false
 }
 </script>
 
@@ -138,34 +240,138 @@ function onDelete() {
     </dl>
 
     <div class="actions">
-      <UiButton variant="primary" full-width @click="showPreviewNote('Focus sessions')">
-        <Timer :size="15" :stroke-width="1.75" />
-        Start focus session
-      </UiButton>
       <UiButton
-        v-if="task.status !== 'COMPLETED'"
+        variant="primary"
+        full-width
+        :disabled="starting"
+        @click="onStartFocus"
+      >
+        <Timer :size="15" :stroke-width="1.75" />
+        {{ starting ? 'Starting…' : 'Start focus session' }}
+      </UiButton>
+
+      <UiButton
         variant="ghost"
         full-width
-        @click="store.toggleTaskComplete(task.id)"
+        @click="onPin"
+      >
+        <Pin :size="15" :stroke-width="1.75" />
+        {{ task.pinned ? 'Unpin' : 'Pin to top' }}
+      </UiButton>
+
+      <UiButton
+        v-if="!inTopThree"
+        variant="ghost"
+        full-width
+        :disabled="todayStore.topThree.length >= 3"
+        @click="onAddToTopThree"
+      >
+        <Flag :size="15" :stroke-width="1.75" />
+        Add to Top 3
+      </UiButton>
+
+      <UiButton
+        v-else
+        variant="ghost"
+        full-width
+        @click="onRemoveFromTopThree"
+      >
+        <Flag :size="15" :stroke-width="1.75" />
+        Remove from Top 3
+      </UiButton>
+
+      <UiButton
+        v-if="task.status === 'INBOX'"
+        variant="ghost"
+        full-width
+        @click="onPlan"
+      >
+        <CalendarPlus :size="15" :stroke-width="1.75" />
+        Plan for today
+      </UiButton>
+
+      <UiButton
+        v-if="task.status === 'INBOX' || task.status === 'PLANNED'"
+        variant="ghost"
+        full-width
+        @click="onStart"
+      >
+        <Play :size="15" :stroke-width="1.75" />
+        Start
+      </UiButton>
+
+      <UiButton
+        v-if="task.status === 'IN_PROGRESS'"
+        variant="ghost"
+        full-width
+        :disabled="!canToggle"
+        @click="onComplete"
       >
         <CheckCircle2 :size="15" :stroke-width="1.75" />
         Mark complete
       </UiButton>
-      <UiButton variant="ghost" full-width @click="editOpen = true">
+
+      <UiButton
+        v-if="task.status === 'CANCELLED'"
+        variant="ghost"
+        full-width
+        @click="onReopen"
+      >
+        <RotateCcw :size="15" :stroke-width="1.75" />
+        Reopen
+      </UiButton>
+
+      <UiButton
+        v-if="task.status !== 'COMPLETED'"
+        variant="ghost"
+        full-width
+        @click="editOpen = true"
+      >
         <Pencil :size="15" :stroke-width="1.75" />
         Edit task
       </UiButton>
-      <template v-if="!confirmingDelete">
-        <UiButton variant="ghost" full-width class="danger-btn" @click="confirmingDelete = true">
-          <Trash2 :size="15" :stroke-width="1.75" />
-          Delete task
-        </UiButton>
-      </template>
-      <template v-else>
+
+      <UiButton
+        v-if="task.status !== 'COMPLETED' && task.status !== 'CANCELLED'"
+        variant="ghost"
+        full-width
+        class="danger-btn"
+        @click="confirmingAction = 'cancel'"
+      >
+        <XCircle :size="15" :stroke-width="1.75" />
+        Cancel task
+      </UiButton>
+
+      <template v-if="confirmingAction === 'cancel'">
         <div class="confirm-box">
-          <p class="confirm-copy">Delete “{{ task.title }}”? This can't be undone.</p>
+          <p class="confirm-copy">Cancel "{{ task.title }}"? It moves to Cancelled and can be reopened later.</p>
           <div class="confirm-row">
-            <UiButton variant="ghost" size="sm" full-width @click="confirmingDelete = false">
+            <UiButton variant="ghost" size="sm" full-width @click="confirmingAction = null">
+              Keep it
+            </UiButton>
+            <UiButton variant="ghost" size="sm" full-width class="danger-btn" @click="onCancel">
+              Cancel task
+            </UiButton>
+          </div>
+        </div>
+      </template>
+
+      <UiButton
+        v-if="confirmingAction !== 'cancel' && task.status !== 'COMPLETED' && task.status !== 'CANCELLED'"
+        variant="ghost"
+        full-width
+        class="danger-btn"
+        @click="confirmingAction = 'delete'"
+      >
+        <Trash2 :size="15" :stroke-width="1.75" />
+        Delete task
+      </UiButton>
+
+      <template v-if="confirmingAction === 'delete'">
+        <div class="confirm-box">
+          <p class="confirm-copy">Delete "{{ task.title }}"? This can't be undone.</p>
+          <div class="confirm-row">
+            <UiButton variant="ghost" size="sm" full-width @click="confirmingAction = null">
               Cancel
             </UiButton>
             <UiButton variant="ghost" size="sm" full-width class="danger-btn" @click="onDelete">
@@ -174,6 +380,7 @@ function onDelete() {
           </div>
         </div>
       </template>
+
       <Transition name="fade">
         <p v-if="previewNote" class="preview-note" role="status">
           <CircleSlash :size="13" :stroke-width="1.75" />

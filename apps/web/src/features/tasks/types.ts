@@ -31,6 +31,7 @@ export interface Task {
   updatedAt: string;
   scheduledTime?: string | null;
   recurrence?: string | null;
+  pinned?: boolean;
 }
 
 /** Canonical Project and Goal types live in their own features; tasks
@@ -66,4 +67,9 @@ export interface NewTaskDraft {
   estimatedMinutes: number | null;
   scheduledTime?: string | null;
   recurrence?: string | null;
+  /** UI-only (Tasks & Inbox UI spec §12.1): where a created task should
+   * land. The backend create always yields INBOX; the store chains the
+   * sanctioned plan/start transitions per destination. Undefined = INBOX.
+   * Never sent to the API. */
+  destination?: "INBOX" | "PLANNED" | "IN_PROGRESS";
 }

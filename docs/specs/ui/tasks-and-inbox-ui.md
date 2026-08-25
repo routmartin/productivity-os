@@ -237,10 +237,29 @@ The creation interface should initially contain:
 - Optional priority.
 - Optional due date.
 - Optional duration.
+- Destination: Inbox, Plan for today, or Start now (see 12.1).
 
 The first visual milestone may use mock submission.
 
 The interface should be designed so the real Task API can be connected later.
+
+### 12.1 Creation destination (amended)
+
+Creation always requests the backend create operation first; the resulting
+task starts in Inbox. The destination choice then chains sanctioned
+lifecycle transitions, using the same rules as Section 15.1:
+
+- **Inbox** (default): no further transitions. Quick capture is unchanged.
+- **Plan for today**: the UI chains `plan` (Inbox → Planned) after create.
+- **Start now**: the UI chains `plan`, then `start`
+  (Inbox → Planned → In Progress) after create.
+
+The choice appears only when creating a task, never when editing. If a
+chained transition fails, the task remains visible in its actual lifecycle
+state and the error is surfaced — the task must never be silently lost.
+
+The destination is a UI-only concern; no initial-status field is added to
+the backend create contract.
 
 ## 13. Quick Capture
 
@@ -341,15 +360,62 @@ Potential actions:
 - Plan.
 - Start.
 - Complete.
+- Cancel.
+- Reopen.
 - Delete.
 - Restore.
 - Move to project.
 - Change priority.
 - Edit task.
 
+### 15.3 Cancel and Reopen (amended)
+
+A task in any active state — Inbox, Planned, or In Progress — can be
+cancelled from the UI. Cancelling is a deliberate action and must use a
+confirmation step, but it must not require deleting the task: "stop working
+on this" and "delete this" are distinct operations.
+
+The backend `cancellation` endpoint is the only path to Cancelled; the UI
+requests it and renders the result. A Cancelled task remains visible with
+reduced emphasis (consistent with Completed treatment) and exposes a
+**Reopen** action, which requests the backend `reopening` transition
+(Cancelled → Planned).
+
+Restore of deleted tasks stays out of scope for this milestone
+(Section 17).
+
+### 15.1 One-click Start (amended)
+
+Starting work on a task must be a single, obvious action available wherever
+the task appears: the task row/card action menu and the task detail panel.
+
+A single **Start** action means "I am working on this now":
+
+- On a Planned task, Start requests the backend `start` transition
+  (Planned → In Progress).
+- On an Inbox task, Start is still one click for the user. The UI requests
+  the sanctioned backend transitions in sequence (`plan`, then `start`) as
+  one user-initiated operation. The intermediate Planned state is never
+  shown as a separate required step.
+- The Start action must not be buried so that the primary path to working
+  on a task requires opening a context menu twice.
+
+The task detail panel's primary action follows the same rule:
+
+- If the task is active but not In Progress (Inbox or Planned), pressing
+  **Start focus session** first moves the task to In Progress using the
+  chaining above, then proceeds to focus. It must not dead-end with only a
+  message telling the user to start the task elsewhere.
+- Only Completed or Cancelled tasks are ineligible, and the panel should
+  communicate why.
+
+### 15.2 Backend authority
+
 The UI must not implement lifecycle transitions independently.
 
-It should request the operation and respond to the backend result.
+It should request the operation and respond to the backend result. Chained
+operations use only existing backend transition endpoints; no client-side
+state invention.
 
 ## 16. Completed Tasks
 
@@ -589,3 +655,15 @@ upfront architecture decisions.
 ## 30. Change History
 
 - Initial Draft created for the Tasks and Inbox frontend experience.
+- Amended per human request to simplify starting work: added Section 15.1
+  "One-click Start" — a single Start action on Inbox/Planned tasks (UI chains
+  the sanctioned plan → start transitions), and the detail panel's
+  "Start focus session" starts the task instead of dead-ending with a message.
+- Amended per human request to allow creating tasks directly into Planned or
+  In Progress: added Section 12.1 "Creation destination" — New Task dialog
+  gains an Inbox / Plan for today / Start now choice; UI chains sanctioned
+  transitions after create; backend create contract unchanged.
+- Amended to wire up Cancel and Reopen: added Section 15.3 — Cancel available
+  on Inbox/Planned/In Progress tasks with confirmation (uses the backend
+  cancellation endpoint), Cancelled tasks expose Reopen (backend reopening
+  endpoint). Previously these endpoints had no UI path at all.

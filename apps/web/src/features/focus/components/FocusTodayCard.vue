@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { ArrowRight, AudioLines, TrendingUp } from 'lucide-vue-next'
 
 import SectionHeader from '@/components/shared/SectionHeader.vue'
 
-import { mockFocusTrend } from '../mock'
 import { useFocusStore } from '../store'
 
 /** "Focus Today" — the right-rail focus surface from the approved reference:
@@ -13,9 +13,26 @@ const store = useFocusStore()
 /* Ring geometry — a restrained visualization, not the hero of the panel. */
 const R = 54
 const CIRCUMFERENCE = 2 * Math.PI * R
-/** Share of the daily focus capacity already logged (mock trend baseline). */
-const RING_PROGRESS = 0.68
-const dashOffset = CIRCUMFERENCE * (1 - RING_PROGRESS)
+/** Daily focus capacity used for the ring (4h, same as FocusSummary). */
+const DAILY_CAPACITY_MINUTES = 4 * 60
+
+const totalMinutes = computed(() => {
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return Math.floor(
+    store.sessionHistory
+      .filter((s) => new Date(s.startedAt) >= todayStart)
+      .reduce((sum, s) => sum + s.durationSeconds, 0) / 60,
+  )
+})
+
+const progress = computed(() =>
+  Math.min(totalMinutes.value / DAILY_CAPACITY_MINUTES, 1),
+)
+
+const dashOffset = computed(() => CIRCUMFERENCE * (1 - progress.value))
+
+const trend = store.trendDeltaPercent
 </script>
 
 <template>
@@ -33,9 +50,9 @@ const dashOffset = CIRCUMFERENCE * (1 - RING_PROGRESS)
       <div class="stats">
         <span class="value tnum">{{ store.todaySummary.formatted }}</span>
         <span class="label">Total focused time</span>
-        <span class="trend">
+        <span v-if="trend !== null" class="trend">
           <TrendingUp :size="14" :stroke-width="2" />
-          {{ mockFocusTrend.deltaPercent }}% vs yesterday
+          {{ trend > 0 ? "+" : "" }}{{ trend }}% vs yesterday
         </span>
       </div>
 

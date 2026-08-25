@@ -155,7 +155,7 @@ function onRetry() {
         <EmptyState
           :icon="ListChecks"
           title="Nothing to focus on yet."
-          description="Create or plan a task first."
+          description="Start a task to make it focusable."
           compact
         >
           <RouterLink :to="{ name: 'tasks' }" class="empty-link">
@@ -252,6 +252,9 @@ function onRetry() {
             </UiButton>
           </div>
         </Transition>
+        <p v-if="focusStore.lastError" class="focus-error" role="alert">
+          {{ focusStore.lastError }}
+        </p>
 
         <!-- Today's focus summary -->
         <FocusSummary />
@@ -568,6 +571,17 @@ function onRetry() {
 
 .start-btn {
   flex-shrink: 0;
+}
+
+.focus-error {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgba(242, 112, 122, 0.3);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: var(--text-sm);
+  line-height: 1.4;
 }
 
 

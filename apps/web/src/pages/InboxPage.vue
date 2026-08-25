@@ -13,6 +13,7 @@ import InboxTaskCard from '@/features/tasks/components/InboxTaskCard.vue'
 import QuickCapture from '@/features/tasks/components/QuickCapture.vue'
 import { useTasksStore } from '@/features/tasks/store'
 import type { Task } from '@/features/tasks/types'
+import { useMock } from '@/lib/mock'
 import { showPreviewNote } from '@/lib/preview'
 
 const route = useRoute()
@@ -85,7 +86,11 @@ const captureRef = ref<InstanceType<typeof QuickCapture> | null>(null)
 
 function onCapture(title: string) {
   store.addInboxTask(title)
-  showPreviewNote('Captured locally — it will sync once the Task API is connected.')
+  // Real mode persists through POST /api/v1/tasks; the preview note only
+  // applies to design-review (mock) builds.
+  if (useMock('TASKS')) {
+    showPreviewNote('Captured locally — it will sync once the Task API is connected.')
+  }
 }
 
 function onAddNew() {
@@ -115,6 +120,10 @@ function onRetry() {
     </header>
 
     <QuickCapture ref="captureRef" @capture="onCapture" />
+
+    <p v-if="store.lastError" class="capture-error" role="alert">
+      {{ store.lastError }}
+    </p>
 
     <!-- Toolbar: recency tabs with counts (left) + actions (right) -->
     <div class="toolbar">
@@ -283,6 +292,16 @@ function onRetry() {
   align-items: center;
   gap: var(--space-3);
   flex-shrink: 0;
+}
+
+.capture-error {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgba(242, 112, 122, 0.3);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: var(--text-sm);
+  line-height: 1.4;
 }
 
 /* ---------- Card grid (reference: uniform white cards, 4-up on desktop) ---------- */

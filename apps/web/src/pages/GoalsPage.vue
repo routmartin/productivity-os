@@ -18,6 +18,7 @@ import {
 } from '@/features/goals/store'
 import type { NewGoalDraft } from '@/features/goals/types'
 import type { PreviewState } from '@/features/planning/types'
+import { useMock } from '@/lib/mock'
 import { showPreviewNote } from '@/lib/preview'
 
 const route = useRoute()
@@ -114,7 +115,9 @@ function onSelectGoal(goalId: string) {
 
 function onCreateGoal(draft: NewGoalDraft) {
   store.addGoal(draft)
-  showPreviewNote('Goal created locally — it will sync once the Goal API is connected.')
+  if (useMock('GOALS')) {
+    showPreviewNote('Goal created locally — it will sync once the Goal API is connected.')
+  }
 }
 
 function onRetry() {

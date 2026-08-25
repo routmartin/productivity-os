@@ -35,6 +35,7 @@ import TaskPrioritySegments from '@/features/tasks/components/TaskPrioritySegmen
 import { useProjectsStore } from '@/features/projects/store'
 import { useTasksStore } from '@/features/tasks/store'
 import type { Task } from '@/features/tasks/types'
+import { useMock } from '@/lib/mock'
 import { showPreviewNote } from '@/lib/preview'
 
 const route = useRoute()
@@ -267,7 +268,17 @@ function onClearSearch() {
 
 function onCreateTask(draft: Parameters<typeof store.addTask>[0]) {
   store.addTask(draft)
-  showPreviewNote('Task captured locally — it will sync once the Task API is connected.')
+  // Real mode persists through POST /api/v1/tasks; the preview note only
+  // applies to design-review (mock) builds.
+  if (useMock('TASKS')) {
+    showPreviewNote('Task captured locally — it will sync once the Task API is connected.')
+  }
+}
+
+/** The backend completes tasks only from IN_PROGRESS (task domain
+ *  lifecycle); mock mode keeps the design-review toggle + undo. */
+function canToggleComplete(task: Task): boolean {
+  return useMock('TASKS') || task.status === 'IN_PROGRESS'
 }
 
 function onRetry() {
@@ -522,6 +533,7 @@ function onUndo() {
               role="checkbox"
               :aria-checked="task.status === 'COMPLETED'"
               :aria-label="task.status === 'COMPLETED' ? `Reopen ${task.title}` : `Complete ${task.title}`"
+              :disabled="!canToggleComplete(task)"
               @click.stop="store.toggleTaskComplete(task.id)"
             >
               <Check v-if="task.status === 'COMPLETED'" :size="11" :stroke-width="3" />

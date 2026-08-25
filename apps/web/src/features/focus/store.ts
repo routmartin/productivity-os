@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
+import { ApiError } from "@/lib/api/client";
 import { errorMessage } from "@/lib/api/errorMessages";
 import { useGoalsStore } from "@/features/goals/store";
 import { useProjectsStore } from "@/features/projects/store";
@@ -34,7 +35,11 @@ export const useFocusStore = defineStore("focus", () => {
   const state = ref<FocusState>("idle");
   const selectedTaskId = ref<string | null>(null);
   const elapsedSeconds = ref(0);
-  const sessionHistory = ref<FocusSessionRecord[]>([...mockFocusHistory]);
+  /** Real mode starts empty — mock seed data only for design review
+   *  (spec Rule 8); otherwise every user would see fake focus stats. */
+  const sessionHistory = ref<FocusSessionRecord[]>(
+    USE_MOCK ? [...mockFocusHistory] : [],
+  );
   /** Id of the server-side active session (real mode). */
   const activeSessionId = ref<string | null>(null);
   /** Last failed mutation message (null when none). */
@@ -95,7 +100,10 @@ export const useFocusStore = defineStore("focus", () => {
 
   const eligibleTasks = computed<Task[]>(() => {
     return tasksStore.tasks.filter(
-      (t) => t.status === "IN_PROGRESS" || t.status === "PLANNED",
+      // Focus spec Rule 4 / AC-003: only IN_PROGRESS tasks may start a
+      // session. Showing PLANNED tasks here makes Start Focus fail with a
+      // backend 409 — the selector must match the contract.
+      (t) => t.status === "IN_PROGRESS",
     );
   });
 
@@ -134,6 +142,29 @@ export const useFocusStore = defineStore("focus", () => {
     };
   });
 
+  /** Day-over-day trend from real history (replaces the mock 22% figure
+   *  that was shown to every user). Null when there is no yesterday
+   *  baseline, so the UI can hide the claim instead of inventing one. */
+  const trendDeltaPercent = computed<number | null>(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(todayStart.getDate() - 1);
+
+    const totalFor = (from: Date, to: Date) =>
+      sessionHistory.value
+        .filter((s) => {
+          const at = new Date(s.startedAt);
+          return at >= from && at < to;
+        })
+        .reduce((sum, s) => sum + s.durationSeconds, 0);
+
+    const yesterday = totalFor(yesterdayStart, todayStart);
+    const today = totalFor(todayStart, new Date());
+    if (yesterday <= 0) return null;
+    return Math.round(((today - yesterday) / yesterday) * 100);
+  });
+
   /**
    * Load the recorded history and resume an active session after a page
    * reload (spec edge case). Mock mode keeps the seeded history.
@@ -150,7 +181,11 @@ export const useFocusStore = defineStore("focus", () => {
       const [history, activeSession] = await Promise.all([
         focusApi.history(),
         // 404 with an empty body means "no active session" — not an error.
-        focusApi.active().catch(() => null),
+        // Any other failure (network, 500) must surface, not be swallowed.
+        focusApi.active().catch((error: unknown) => {
+          if (error instanceof ApiError && error.status === 404) return null;
+          throw error;
+        }),
       ]);
 
       sessionHistory.value = history.map(recordFromResponse);
@@ -286,6 +321,7 @@ export const useFocusStore = defineStore("focus", () => {
     eligibleTasks,
     recentTasks,
     todaySummary,
+    trendDeltaPercent,
     lastError,
     load,
     selectTask,

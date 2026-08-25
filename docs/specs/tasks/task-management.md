@@ -354,13 +354,18 @@ then the transition is rejected until the task is restored.
 
 ## Resolved Questions
 
-- **"Inbox" as lifecycle state vs project-less membership:** These are distinct but aligned concepts. "Inbox" lifecycle state means "captured, not yet planned." "Inbox membership" means "no project." A task created inside a project starts in the INBOX lifecycle state — project membership does not auto-advance the lifecycle. The user must explicitly plan the task (INBOX → PLANNED).
+- **"Inbox" as lifecycle state vs project-less membership:** These are distinct but aligned concepts. "Inbox" lifecycle state means "captured, not yet planned." "Inbox membership" means "no project." A task created inside a project starts in the INBOX lifecycle state — project membership does not auto-advance the lifecycle. The user must explicitly plan the task (INBOX → PLANNED). *(Clarified: "explicitly" means user-initiated. A single explicit user action, such as one-click Start in the UI, may chain the sanctioned INBOX → PLANNED → IN_PROGRESS transitions through the existing endpoints; the domain lifecycle and endpoint set are unchanged. See Tasks & Inbox UI spec Section 15.1.)*
 - **Direct project-to-project transfer:** A task may move directly from one project to another without passing through unassigned/Inbox. The assign-project endpoint handles this directly.
 - **Priority and energy value domains, estimated duration units:** Priority: `LOW`, `MEDIUM`, `HIGH`. Energy: `LOW`, `MEDIUM`, `HIGH`. Estimated duration: integer minutes.
 - **Due dates and timezone:** Due dates are calendar dates stored as-is (`LocalDate`). No timezone conversion is applied — a due date of "2026-08-15" means August 15th regardless of timezone. Past due dates are allowed and are informational.
 - **Multi-device synchronization:** Tasks are server-persisted via REST API. Multi-device sync works automatically. Concurrent edits resolve with last-write-wins based on server receipt time, consistent with Daily Top 3 Constraint 3.
 
 ## Change History
+
+- Clarified the Inbox lifecycle resolution: a single user-initiated action may
+  chain INBOX → PLANNED → IN_PROGRESS via existing endpoints (one-click Start,
+  see Tasks & Inbox UI spec Section 15.1). Lifecycle states, allowed
+  transitions, and endpoints unchanged.
 
 - Resolved all 5 open questions: Inbox lifecycle vs membership distinction,
   direct project-to-project transfer, priority/energy value domains (LOW/MEDIUM/HIGH),

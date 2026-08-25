@@ -42,6 +42,14 @@ kill:
 build:
 	./gradlew :apps:api:compileKotlin :apps:api:compileTestKotlin
 
+# Release: build + push + deploy the API to Cloud Run, then health-check it.
+deploy-api:
+	./scripts/deploy-api.sh
+
+# Validate the deploy configuration without building.
+deploy-check:
+	./scripts/deploy-api.sh --check
+
 test: db-up
 	./gradlew :apps:api:test
 

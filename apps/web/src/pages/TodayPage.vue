@@ -10,6 +10,7 @@ import FocusTipCard from '@/features/ai/components/FocusTipCard.vue'
 import { mockBriefing } from '@/features/ai/mock'
 import DailySummaryCard from '@/features/focus/components/DailySummaryCard.vue'
 import FocusTodayCard from '@/features/focus/components/FocusTodayCard.vue'
+import { useFocusStore } from '@/features/focus/store'
 import CalendarRail from '@/features/planning/components/CalendarRail.vue'
 import ScheduleTimeline from '@/features/planning/components/ScheduleTimeline.vue'
 import TopThreeSection from '@/features/planning/components/TopThreeSection.vue'
@@ -20,6 +21,7 @@ import { showPreviewNote } from '@/lib/preview'
 
 const route = useRoute()
 const today = useTodayStore()
+const focusStore = useFocusStore()
 const panel = useContextPanelStore()
 
 /** `?preview=loading|error|empty` forces a UI state for design review. */
@@ -31,6 +33,9 @@ function previewFromQuery(): PreviewState {
 /** Lands the workspace with no auto-opened panel — Today stays quiet. */
 async function loadAndSelect(preview: PreviewState) {
   await today.load(preview)
+  // Focus Today / Daily Summary read real session history — without this
+  // load, a fresh user would see the mock 2h47m seed data on the rail.
+  await focusStore.load()
   if (preview === 'loading') return
   panel.close()
 }

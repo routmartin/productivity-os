@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from "vue";
 import { AudioLines, Clock, Layers, Timer, TrendingUp } from "lucide-vue-next";
 
-import { mockFocusTrend } from "@/features/focus/mock";
 import { useFocusStore } from "@/features/focus/store";
 
 const store = useFocusStore();
@@ -36,7 +35,7 @@ const progress = computed(() =>
 
 const dashOffset = computed(() => CIRCUMFERENCE * (1 - progress.value));
 
-const trend = mockFocusTrend.deltaPercent;
+const trend = store.trendDeltaPercent;
 </script>
 
 <template>
@@ -73,9 +72,9 @@ const trend = mockFocusTrend.deltaPercent;
       <div class="hero-stats">
         <span class="hero-label">Today's Focus</span>
         <span class="hero-value tnum">{{ store.todaySummary.formatted }}</span>
-        <span class="hero-trend">
+        <span v-if="trend !== null" class="hero-trend">
           <TrendingUp :size="14" :stroke-width="2" aria-hidden="true" />
-          {{ trend }}% vs yesterday
+          {{ trend > 0 ? "+" : "" }}{{ trend }}% vs yesterday
         </span>
       </div>
     </div>

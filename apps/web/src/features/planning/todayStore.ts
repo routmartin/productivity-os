@@ -10,6 +10,7 @@ import type { Task } from "@/features/tasks/types";
 import { planningApi, todayISODate } from "./api";
 import {
   topThreeResponseToEntry,
+  type TopThreeResponse,
 } from "./api-types";
 import { mockDailyPlan, mockSchedule, mockTopThree } from "./mock";
 import { mockTasks } from "@/features/tasks/mock";
@@ -25,7 +26,9 @@ function delay(ms: number): Promise<void> {
 
 const EMPTY_PLAN: DailyPlanSummary = {
   plannedMinutes: 0,
-  focusCapacityMinutes: mockDailyPlan.focusCapacityMinutes,
+  // Backend default capacity is 6 hours when no row exists
+  // (DailyPlanService.getCapacity) — not mock data.
+  focusCapacityMinutes: 6 * 60,
   focusCompletedMinutes: 0,
 };
 
@@ -188,6 +191,72 @@ export const useTodayStore = defineStore("today", () => {
     }
   }
 
+  /** Selection IDs per task — needed for remove (backend key). */
+  const selectionIds = ref<Map<string, string>>(new Map());
+
+  function isInTopThree(taskId: string): boolean {
+    return topThree.value.some((e) => e.taskId === taskId);
+  }
+
+  /** Add a task to today's Top 3 (first free slot). */
+  async function selectForTopThree(taskId: string): Promise<void> {
+    if (topThree.value.length >= 3) return;
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      const pos = ([1, 2, 3] as const).find(
+        (p) => !topThree.value.some((e) => e.position === p),
+      );
+      if (pos) topThree.value.push({ taskId, position: pos });
+      return;
+    }
+
+    try {
+      const date = todayISODate();
+      const response: TopThreeResponse = await planningApi.select(date, { taskId });
+      selectionIds.value.set(response.id, taskId);
+      const entry = topThreeResponseToEntry(response);
+      if (entry) {
+        topThree.value = [...topThree.value, entry];
+      }
+    } catch (error) {
+      lastError.value = errorMessage(error);
+    }
+  }
+
+  /** Remove a task from today's Top 3. */
+  async function removeFromTopThree(taskId: string): Promise<void> {
+    lastError.value = null;
+
+    if (USE_MOCK) {
+      topThree.value = topThree.value.filter((e) => e.taskId !== taskId);
+      return;
+    }
+
+    try {
+      const date = todayISODate();
+      // Find the selectionId for this taskId
+      let foundId: string | undefined;
+      for (const [sid, tid] of selectionIds.value) {
+        if (tid === taskId) { foundId = sid; break; }
+      }
+      // If not in our map, find from current topThree entries
+      if (!foundId) {
+        // Re-fetch to get selection IDs
+        const responses = await planningApi.topThree(date);
+        for (const r of responses) {
+          if (r.taskId === taskId) { foundId = r.id; break; }
+        }
+      }
+      if (!foundId) return;
+      await planningApi.remove(date, foundId);
+      selectionIds.value.delete(foundId);
+      topThree.value = topThree.value.filter((e) => e.taskId !== taskId);
+    } catch (error) {
+      lastError.value = errorMessage(error);
+    }
+  }
+
   return {
     status,
     topThree,
@@ -201,5 +270,8 @@ export const useTodayStore = defineStore("today", () => {
     lastError,
     load,
     clearError,
+    isInTopThree,
+    selectForTopThree,
+    removeFromTopThree,
   };
 });

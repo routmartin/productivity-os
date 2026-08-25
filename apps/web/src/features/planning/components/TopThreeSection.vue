@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArrowRight, CalendarCheck2, Check, Flag } from 'lucide-vue-next'
+import { ArrowRight, CalendarCheck2, Check, Flag, X } from 'lucide-vue-next'
 
 import EmptyState from '@/components/shared/EmptyState.vue'
 import SectionHeader from '@/components/shared/SectionHeader.vue'
@@ -8,6 +8,7 @@ import { useProjectsStore } from '@/features/projects/store'
 import { useTasksStore } from '@/features/tasks/store'
 import type { Priority, Task } from '@/features/tasks/types'
 
+import { useTodayStore } from '../todayStore'
 import type { TopThreeEntry } from '../types'
 
 const props = defineProps<{
@@ -19,6 +20,7 @@ const emit = defineEmits<{ select: [taskId: string] }>()
 
 const tasksStore = useTasksStore()
 const projectsStore = useProjectsStore()
+const todayStore = useTodayStore()
 
 interface PriorityRow {
   position: number
@@ -52,6 +54,11 @@ function onKeydown(event: KeyboardEvent, taskId: string) {
     event.preventDefault()
     emit('select', taskId)
   }
+}
+
+function onRemove(event: MouseEvent, taskId: string) {
+  event.stopPropagation()
+  void todayStore.removeFromTopThree(taskId)
 }
 </script>
 
@@ -100,6 +107,16 @@ function onKeydown(event: KeyboardEvent, taskId: string) {
         >
           <Check v-if="row.task.status === 'COMPLETED'" :size="13" :stroke-width="2.5" />
         </span>
+
+        <button
+          class="remove-btn"
+          type="button"
+          aria-label="Remove from Top 3"
+          title="Remove from Top 3"
+          @click="onRemove($event, row.task.id)"
+        >
+          <X :size="14" :stroke-width="2" />
+        </button>
       </li>
     </ol>
 
@@ -263,5 +280,30 @@ function onKeydown(event: KeyboardEvent, taskId: string) {
 .complete-circle.checked {
   border-color: var(--success);
   background: var(--success);
+}
+
+.remove-btn {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--text-disabled);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.row:hover .remove-btn {
+  opacity: 1;
+}
+
+.remove-btn:hover {
+  color: var(--danger);
 }
 </style>

@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CalendarDays, Check, Clock, Repeat } from 'lucide-vue-next'
+import { CalendarDays, Check, Clock, Pin, Repeat } from 'lucide-vue-next'
 
 import UiPill from '@/components/ui/UiPill.vue'
 import { formatShortDate, formatClockTime, relativeTime } from '@/lib/utils/date'
 import { formatMinutes } from '@/lib/utils/duration'
 
-import { findProjectById } from '../mock'
+import { useProjectsStore } from '@/features/projects/store'
+import { useMock } from '@/lib/mock'
 import { useTasksStore } from '../store'
 import type { Task, TaskStatus } from '../types'
-import TaskActionMenu from './TaskActionMenu.vue'
 import TaskPrioritySegments from './TaskPrioritySegments.vue'
 
 const props = withDefaults(
@@ -27,8 +27,14 @@ const props = withDefaults(
 const emit = defineEmits<{ select: [taskId: string] }>()
 
 const store = useTasksStore()
+const projectsStore = useProjectsStore()
 
-const project = computed(() => findProjectById(props.task.projectId))
+/** Real project from the projects store — never the mock list. */
+const project = computed(() =>
+  props.task.projectId
+    ? projectsStore.projectById(props.task.projectId)
+    : undefined,
+)
 
 const subtitle = computed(() => {
   if (props.capturedStyle) {
@@ -39,6 +45,12 @@ const subtitle = computed(() => {
 })
 
 const isCompleted = computed(() => props.task.status === 'COMPLETED')
+
+/** Backend completes tasks only from IN_PROGRESS; mock mode keeps the
+ *  design-review toggle + undo. */
+const canToggle = computed(
+  () => useMock('TASKS') || props.task.status === 'IN_PROGRESS',
+)
 
 type PillTone = 'neutral' | 'accent' | 'info' | 'success' | 'warning'
 
@@ -73,6 +85,11 @@ function onToggle(event: MouseEvent) {
   event.stopPropagation()
   store.toggleTaskComplete(props.task.id)
 }
+
+function onPin(event: MouseEvent) {
+  event.stopPropagation()
+  store.togglePin(props.task.id)
+}
 </script>
 
 <template>
@@ -93,9 +110,21 @@ function onToggle(event: MouseEvent) {
       :aria-checked="isCompleted"
       :aria-label="isCompleted ? `Reopen ${task.title}` : `Complete ${task.title}`"
       :title="isCompleted ? 'Reopen task' : 'Mark complete'"
+      :disabled="!canToggle"
       @click="onToggle"
     >
       <Check v-if="isCompleted" :size="11" :stroke-width="3" />
+    </button>
+
+    <button
+      class="pin"
+      :class="{ pinned: task.pinned }"
+      type="button"
+      :aria-label="task.pinned ? `Unpin ${task.title}` : `Pin ${task.title}`"
+      :title="task.pinned ? 'Unpin' : 'Pin to top'"
+      @click="onPin"
+    >
+      <Pin :size="13" :stroke-width="2" />
     </button>
 
     <span class="body">
@@ -122,7 +151,6 @@ function onToggle(event: MouseEvent) {
         <Clock :size="13" :stroke-width="1.75" />
         {{ formatMinutes(task.estimatedMinutes) }}
       </span>
-      <TaskActionMenu :task="task" />
     </span>
   </div>
 </template>
@@ -182,6 +210,36 @@ function onToggle(event: MouseEvent) {
 
 .task-list-row:hover .check.checked {
   border-color: var(--success);
+}
+
+.pin {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--text-disabled);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.pin:hover {
+  color: var(--text-tertiary);
+}
+
+.pin.pinned {
+  color: var(--accent);
+}
+
+.task-list-row:hover .pin {
+  color: var(--text-tertiary);
+}
+
+.task-list-row:hover .pin.pinned {
+  color: var(--accent);
 }
 
 .status {
