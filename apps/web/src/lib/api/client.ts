@@ -64,10 +64,11 @@ interface RefreshResponseBody {
   accessToken?: string;
 }
 
-/** Auth endpoints never trigger a refresh attempt (login 401 = bad
- *  credentials, not an expired token; refresh 401 = session over). */
-function isAuthPath(path: string): boolean {
-  return path.startsWith("/auth/");
+/** Endpoints that never trigger a refresh attempt:
+ *  - /auth/* (login 401 = bad credentials; refresh 401 = session over)
+ *  - /users/password (401 = wrong current password, spec account-settings AC-003) */
+function isNonRefreshablePath(path: string): boolean {
+  return path.startsWith("/auth/") || path === "/users/password";
 }
 
 let refreshPromise: Promise<boolean> | null = null;
@@ -134,7 +135,7 @@ async function request<T>(
 
   // Expired access token — try one silent refresh, then retry once
   // (spec Rule 6).
-  if (response.status === 401 && !isAuthPath(path) && !isRetry) {
+  if (response.status === 401 && !isNonRefreshablePath(path) && !isRetry) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       return request<T>(method, path, body, true);
