@@ -15,18 +15,24 @@ import java.net.URI
 import com.productivityos.auth.dto.LoginRequest
 import com.productivityos.auth.dto.LoginResponse
 import com.productivityos.auth.dto.RegisterRequest
+import com.productivityos.auth.dto.QrChallengeResponse
+import com.productivityos.auth.dto.QrExchangeRequest
 import com.productivityos.auth.service.LoginService
 import com.productivityos.auth.service.RefreshTokenService
 import com.productivityos.auth.service.RegistrationService
+import com.productivityos.auth.service.QrAuthService
+import com.productivityos.api.CurrentUser
 import com.productivityos.user.dto.UserResponse
 
 @RestController
-@Tag(name = "Auth", description = "Register, login, refresh, logout")
+@Tag(name = "Auth", description = "Register, login, refresh, logout, QR authentication")
 @RequestMapping("/api/v1/auth")
 class AuthController(
     private val registrationService: RegistrationService,
     private val loginService: LoginService,
     private val refreshTokenService: RefreshTokenService,
+    private val qrAuthService: QrAuthService,
+    private val currentUser: CurrentUser,
     @Value("\${app.auth.cookie-same-site}") private val cookieSameSite: String,
     @Value("\${app.auth.cookie-secure:false}") private val cookieSecure: Boolean
 ) {
@@ -87,6 +93,35 @@ class AuthController(
         return ResponseEntity.noContent()
             .header(org.springframework.http.HttpHeaders.SET_COOKIE, clearedCookie.toString())
             .build()
+    }
+
+    @PostMapping("/qr/challenge")
+    fun createQrChallenge(): ResponseEntity<QrChallengeResponse> {
+        val challenge = qrAuthService.createChallenge(currentUser.id())
+        return ResponseEntity.ok(
+            QrChallengeResponse(
+                challenge = challenge.challenge,
+                expiresAt = challenge.expiresAt
+            )
+        )
+    }
+
+    @PostMapping("/qr/exchange")
+    fun exchangeQrChallenge(
+        @Valid @RequestBody request: QrExchangeRequest,
+        httpRequest: HttpServletRequest
+    ): ResponseEntity<LoginResponse> {
+        val result = qrAuthService.exchange(request.challenge)
+        val refreshCookie = buildRefreshCookie(result.refreshToken, httpRequest.isSecure)
+
+        return ResponseEntity.ok()
+            .header(org.springframework.http.HttpHeaders.SET_COOKIE, refreshCookie.toString())
+            .body(
+                LoginResponse(
+                    accessToken = result.accessToken,
+                    user = UserResponse.from(result.user)
+                )
+            )
     }
 
     private fun buildRefreshCookie(token: String, isHttps: Boolean = false): ResponseCookie {
