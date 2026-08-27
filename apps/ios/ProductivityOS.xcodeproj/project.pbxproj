@@ -7,9 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		75757C9F304019F100D52519 /* QRAuthenticationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75757C9E304019F100D52519 /* QRAuthenticationService.swift */; };
-		75757CA130401A6800D52519 /* QRConfirmationView 2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75757CA030401A6800D52519 /* QRConfirmationView 2.swift */; };
-		75757CA330401A8700D52519 /* QRScannerView 2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75757CA230401A8700D52519 /* QRScannerView 2.swift */; };
 		AA0000012C7F000100000001 /* ProductivityOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000012C7F000100000001 /* ProductivityOSApp.swift */; };
 		AA0000022C7F000100000001 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000022C7F000100000001 /* AppColors.swift */; };
 		AA0000032C7F000100000001 /* AppTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000032C7F000100000001 /* AppTypography.swift */; };
@@ -54,12 +51,12 @@
 		AA00002A2C7F000100000001 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00002B2C7F000100000001 /* LoginView.swift */; };
 		AA00002B2C7F000100000001 /* AppMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00002C2C7F000100000001 /* AppMotion.swift */; };
 		AA00002C2C7F000100000001 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00002D2C7F000100000001 /* Haptics.swift */; };
+		AA00002D2C7F000100000001 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00002E2C7F000100000001 /* QRScannerView.swift */; };
+		AA00002E2C7F000100000001 /* QRConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00002F2C7F000100000001 /* QRConfirmationView.swift */; };
+		AA00002F2C7F000100000001 /* QRAuthenticationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000302C7F000100000001 /* QRAuthenticationService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		75757C9E304019F100D52519 /* QRAuthenticationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRAuthenticationService.swift; sourceTree = "<group>"; };
-		75757CA030401A6800D52519 /* QRConfirmationView 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "QRConfirmationView 2.swift"; sourceTree = "<group>"; };
-		75757CA230401A8700D52519 /* QRScannerView 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "QRScannerView 2.swift"; sourceTree = "<group>"; };
 		BB0000012C7F000100000001 /* ProductivityOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductivityOSApp.swift; sourceTree = "<group>"; };
 		BB0000022C7F000100000001 /* AppColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
 		BB0000032C7F000100000001 /* AppTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTypography.swift; sourceTree = "<group>"; };
@@ -105,6 +102,9 @@
 		BB00002B2C7F000100000001 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		BB00002C2C7F000100000001 /* AppMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMotion.swift; sourceTree = "<group>"; };
 		BB00002D2C7F000100000001 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		BB00002E2C7F000100000001 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		BB00002F2C7F000100000001 /* QRConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRConfirmationView.swift; sourceTree = "<group>"; };
+		BB0000302C7F000100000001 /* QRAuthenticationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRAuthenticationService.swift; sourceTree = "<group>"; };
 		CC0000012C7F000100000001 /* ProductivityOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProductivityOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -319,6 +319,7 @@
 				BB0000272C7F000100000001 /* TaskService.swift */,
 				BB0000282C7F000100000001 /* FocusService.swift */,
 				BB0000292C7F000100000001 /* TopThreeService.swift */,
+				BB0000302C7F000100000001 /* QRAuthenticationService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -327,9 +328,8 @@
 			isa = PBXGroup;
 			children = (
 				BB00002B2C7F000100000001 /* LoginView.swift */,
-				75757C9E304019F100D52519 /* QRAuthenticationService.swift */,
-				75757CA030401A6800D52519 /* QRConfirmationView 2.swift */,
-				75757CA230401A8700D52519 /* QRScannerView 2.swift */,
+				BB00002E2C7F000100000001 /* QRScannerView.swift */,
+				BB00002F2C7F000100000001 /* QRConfirmationView.swift */,
 			);
 			path = Authentication;
 			sourceTree = "<group>";
@@ -430,13 +430,11 @@
 				AA00001A2C7F000100000001 /* TasksView.swift in Sources */,
 				AA00001B2C7F000100000001 /* ProfileView.swift in Sources */,
 				AA00001C2C7F000100000001 /* MainTabView.swift in Sources */,
-				75757CA130401A6800D52519 /* QRConfirmationView 2.swift in Sources */,
 				AA00001D2C7F000100000001 /* User.swift in Sources */,
 				AA00001E2C7F000100000001 /* Task.swift in Sources */,
 				AA00001F2C7F000100000001 /* TopThree.swift in Sources */,
 				AA0000202C7F000100000001 /* FocusDuration.swift in Sources */,
 				AA0000212C7F000100000001 /* FocusSession.swift in Sources */,
-				75757C9F304019F100D52519 /* QRAuthenticationService.swift in Sources */,
 				AA0000222C7F000100000001 /* FocusSessionState.swift in Sources */,
 				AA0000232C7F000100000001 /* APIDTOs.swift in Sources */,
 				AA0000242C7F000100000001 /* APIStateView.swift in Sources */,
@@ -445,8 +443,10 @@
 				AA0000272C7F000100000001 /* FocusService.swift in Sources */,
 				AA0000282C7F000100000001 /* TopThreeService.swift in Sources */,
 				AA0000292C7F000100000001 /* TasksViewModel.swift in Sources */,
-				75757CA330401A8700D52519 /* QRScannerView 2.swift in Sources */,
 				AA00002A2C7F000100000001 /* LoginView.swift in Sources */,
+				AA00002D2C7F000100000001 /* QRScannerView.swift in Sources */,
+				AA00002E2C7F000100000001 /* QRConfirmationView.swift in Sources */,
+				AA00002F2C7F000100000001 /* QRAuthenticationService.swift in Sources */,
 				AA00002B2C7F000100000001 /* AppMotion.swift in Sources */,
 				AA00002C2C7F000100000001 /* Haptics.swift in Sources */,
 			);
