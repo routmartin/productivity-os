@@ -14,7 +14,7 @@ public struct APIConfiguration: Sendable {
             case .staging:
                 return URL(string: "https://staging-api.productivityos.internal")!
             case .production:
-                return URL(string: "https://api.productivityos.com")!
+                return URL(string: "https://productivity-os-api-osgp6pzxba-as.a.run.app")!
             }
         }
     }
@@ -24,7 +24,7 @@ public struct APIConfiguration: Sendable {
     public let apiVersion: String
     
     public init(
-        environment: Environment = .development,
+        environment: Environment = .production,
         customBaseURL: URL? = nil,
         apiVersion: String = "v1"
     ) {

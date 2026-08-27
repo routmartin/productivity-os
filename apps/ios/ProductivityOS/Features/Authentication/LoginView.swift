@@ -173,7 +173,7 @@ public struct LoginView: View {
                             challengeToExchange = nil
                         }
                     )
-                    .presentationDetents([PresentationDetent.medium])
+                    .presentationDetents([.medium])
                 }
             }
         }

@@ -12,6 +12,7 @@ public struct QRScannerView: View {
     
     @State private var isScanning = true
     @State private var permissionStatus: AVAuthorizationStatus = .notDetermined
+    @State private var initializationError: String?
     
     public init(onCodeScanned: @escaping (String) -> Void, onCancel: @escaping () -> Void) {
         self.onCodeScanned = onCodeScanned
@@ -24,9 +25,30 @@ public struct QRScannerView: View {
                 AppColors.canvas.ignoresSafeArea()
                 
                 #if os(iOS)
-                if permissionStatus == .authorized {
-                    ScannerCoordinatorView(isScanning: $isScanning, onCodeScanned: handleScannedCode)
-                        .ignoresSafeArea()
+                if let error = initializationError {
+                    VStack(spacing: AppSpacing.lg) {
+                        Image(systemName: "camera.badge.ellipsis")
+                            .font(.system(size: 48))
+                            .foregroundStyle(AppColors.textSecondary)
+                        
+                        Text("Camera Error")
+                            .font(AppTypography.headline)
+                        
+                        Text(error)
+                            .font(AppTypography.body)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, AppSpacing.xl)
+                    }
+                } else if permissionStatus == .authorized {
+                    ScannerCoordinatorView(
+                        isScanning: $isScanning,
+                        onCodeScanned: handleScannedCode,
+                        onInitializationError: { error in
+                            self.initializationError = error
+                        }
+                    )
+                    .ignoresSafeArea()
                     
                     // Scanner Overlay
                     VStack {
@@ -113,8 +135,12 @@ public struct QRScannerView: View {
     }
     
     private func checkPermission() {
-        permissionStatus = AVCaptureDevice.authorizationStatus(for: .video)
-        if permissionStatus == .notDetermined {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        DispatchQueue.main.async {
+            self.permissionStatus = status
+        }
+        
+        if status == .notDetermined {
             AVCaptureDevice.requestAccess(for: .video) { granted in
                 DispatchQueue.main.async {
                     self.permissionStatus = granted ? .authorized : .denied
@@ -134,6 +160,7 @@ public struct QRScannerView: View {
 struct ScannerCoordinatorView: UIViewControllerRepresentable {
     @Binding var isScanning: Bool
     let onCodeScanned: (String) -> Void
+    let onInitializationError: (String) -> Void
     
     func makeUIViewController(context: Context) -> ScannerViewController {
         let controller = ScannerViewController()
@@ -150,24 +177,31 @@ struct ScannerCoordinatorView: UIViewControllerRepresentable {
     }
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(onCodeScanned: onCodeScanned)
+        Coordinator(onCodeScanned: onCodeScanned, onInitializationError: onInitializationError)
     }
     
     class Coordinator: NSObject, ScannerViewControllerDelegate {
         let onCodeScanned: (String) -> Void
+        let onInitializationError: (String) -> Void
         
-        init(onCodeScanned: @escaping (String) -> Void) {
+        init(onCodeScanned: @escaping (String) -> Void, onInitializationError: @escaping (String) -> Void) {
             self.onCodeScanned = onCodeScanned
+            self.onInitializationError = onInitializationError
         }
         
         func didScanCode(_ code: String) {
             onCodeScanned(code)
+        }
+        
+        func didFailInitialization(error: String) {
+            onInitializationError(error)
         }
     }
 }
 
 protocol ScannerViewControllerDelegate: AnyObject {
     func didScanCode(_ code: String)
+    func didFailInitialization(error: String)
 }
 
 class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
@@ -181,18 +215,23 @@ class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDel
         view.backgroundColor = .black
         captureSession = AVCaptureSession()
         
-        guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else { return }
+        guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else {
+            delegate?.didFailInitialization(error: "No camera found on this device. The scanner requires physical camera hardware.")
+            return
+        }
         let videoInput: AVCaptureDeviceInput
         
         do {
             videoInput = try AVCaptureDeviceInput(device: videoCaptureDevice)
         } catch {
+            delegate?.didFailInitialization(error: "Unable to access the camera: \(error.localizedDescription)")
             return
         }
         
         if captureSession.canAddInput(videoInput) {
             captureSession.addInput(videoInput)
         } else {
+            delegate?.didFailInitialization(error: "Unable to add camera input to the capture session.")
             return
         }
         
@@ -204,6 +243,7 @@ class ScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDel
             metadataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
             metadataOutput.metadataObjectTypes = [.qr]
         } else {
+            delegate?.didFailInitialization(error: "Unable to add QR detection to the capture session.")
             return
         }
         
