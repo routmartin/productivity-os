@@ -7,6 +7,9 @@ import Observation
 /// - start  → POST /focus   (records taskId + configured duration)
 /// - end    → POST /focus/{id}/end (on complete or cancel)
 /// Pause/resume has no server contract and stays purely local.
+///
+/// The session is only marked `.completed` after the backend confirms the
+/// end call (spec §13); until then the clock freezes and a retry is offered.
 @Observable
 public final class FocusSessionViewModel {
     public var sessionState: FocusSessionState
@@ -17,11 +20,15 @@ public final class FocusSessionViewModel {
     /// Server-side sync feedback (never blocks the local timer).
     public var syncErrorMessage: String?
 
+    /// True between the Complete action and backend confirmation.
+    public private(set) var isCompleting: Bool = false
+
     // UI ticker reference for smooth clock re-renders
     public var currentDate: Date = Date()
 
-    private var serverSession: FocusSession?
+    var serverSession: FocusSession?
     private var pendingEndSessionID: UUID?
+    private var completionDate: Date?
     private var syncTask: Task<Void, Never>?
     private var timerTask: Task<Void, Never>?
 
@@ -47,10 +54,18 @@ public final class FocusSessionViewModel {
         sessionState.progress(at: currentDate)
     }
 
+    /// True when a fixed-duration session has reached zero.
+    /// Evaluated against the wall clock, not the display reference date.
+    public var hasReachedZero: Bool {
+        guard !sessionState.configuredDuration.isUnlimited else { return false }
+        return (sessionState.remainingSeconds(at: Date()) ?? 1) <= 0
+    }
+
     // MARK: - Flow transitions
 
     public func startFocus() {
         sessionState.start(task: selectedTask, duration: selectedDuration, at: Date())
+        currentDate = Date()
         startLocalTicker()
         syncTask = Task { [weak self] in await self?.syncStart() }
     }
@@ -58,18 +73,25 @@ public final class FocusSessionViewModel {
     public func pauseFocus() {
         // No server pause contract — local-only state transition.
         sessionState.pause(at: Date())
+        currentDate = Date()
         stopLocalTicker()
     }
 
     public func resumeFocus() {
         sessionState.resume(at: Date())
+        currentDate = Date()
         startLocalTicker()
     }
 
+    /// Begins completion: freezes the clock, confirms with the backend, and
+    /// only then marks the session completed locally.
     public func completeFocus() {
-        sessionState.complete(at: Date())
+        guard !isCompleting else { return }
+        guard sessionState.state == .running || sessionState.state == .paused else { return }
+        isCompleting = true
+        completionDate = Date()
         stopLocalTicker()
-        syncTask = Task { [weak self] in await self?.syncEnd() }
+        syncTask = Task { [weak self] in await self?.confirmCompletion() }
     }
 
     public func cancelFocus() {
@@ -83,14 +105,18 @@ public final class FocusSessionViewModel {
         sessionState.reset()
         serverSession = nil
         pendingEndSessionID = nil
+        completionDate = nil
         syncErrorMessage = nil
+        isCompleting = false
         stopLocalTicker()
     }
 
     /// Re-evaluates time-dependent display after backgrounding / foregrounding.
     /// Accuracy comes from wall-clock timestamps, not ticker ticks.
     public func refreshClock() {
+        guard sessionState.state == .running else { return }
         currentDate = Date()
+        autoCompleteAtZero()
     }
 
     // MARK: - Session restoration (app relaunch / background)
@@ -126,7 +152,7 @@ public final class FocusSessionViewModel {
         guard !isSyncInFlight else { return }
         syncTask = Task { [weak self] in
             if self?.pendingEndSessionID != nil {
-                await self?.syncEnd()
+                await self?.confirmCompletion()
             } else if self?.serverSession == nil, self?.sessionState.state == .running || self?.sessionState.state == .paused {
                 await self?.syncStart()
             }
@@ -156,6 +182,27 @@ public final class FocusSessionViewModel {
         }
     }
 
+    /// Confirms completion with the backend; marks `.completed` only on success.
+    func confirmCompletion() async {
+        let endedAt = completionDate ?? Date()
+        do {
+            if let session = serverSession {
+                _ = try await focusService.end(id: session.id)
+                serverSession = nil
+            }
+            pendingEndSessionID = nil
+            syncErrorMessage = nil
+            isCompleting = false
+            sessionState.complete(at: endedAt)
+        } catch {
+            // Backend did not confirm — keep the session unclaimed and retryable.
+            pendingEndSessionID = serverSession?.id
+            isCompleting = false
+            syncErrorMessage = Self.userMessage(for: error)
+            startLocalTicker()
+        }
+    }
+
     func syncEnd() async {
         guard let session = serverSession else {
             // Never started on the server (offline start or no task) — nothing to end.
@@ -173,6 +220,16 @@ public final class FocusSessionViewModel {
         }
     }
 
+    // MARK: - Natural completion
+
+    /// Fixed-duration sessions complete themselves when the timestamp math
+    /// reaches zero (spec §14). Suppressed while an end-call failure is
+    /// pending so failures surface to the user instead of retry-looping.
+    private func autoCompleteAtZero() {
+        guard sessionState.state == .running, pendingEndSessionID == nil, hasReachedZero else { return }
+        completeFocus()
+    }
+
     // MARK: - Lightweight Local Ticker
     // The UI ticker only updates the view state for smooth seconds display.
     // The source of truth remains the underlying timestamp calculations.
@@ -182,7 +239,9 @@ public final class FocusSessionViewModel {
         timerTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s refresh
-                self?.currentDate = Date()
+                guard let self, self.sessionState.state == .running else { continue }
+                self.currentDate = Date()
+                self.autoCompleteAtZero()
             }
         }
     }

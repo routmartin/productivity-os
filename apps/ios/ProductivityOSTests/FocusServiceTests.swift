@@ -124,8 +124,8 @@ final class FocusViewModelSyncTests: XCTestCase {
         await viewModel.syncStart()
 
         viewModel.completeFocus()
-        XCTAssertEqual(viewModel.sessionState.state, .completed)
-        // completeFocus spawns its own end-sync task.
+        // Completion is marked only after the backend confirms the end call.
+        await waitUntil { [viewModel] in viewModel?.sessionState.state == .completed }
         await waitUntil { [mock] in mock.recordedRequests.count >= 2 }
 
         let paths = mock.recordedRequests.map(\.path)

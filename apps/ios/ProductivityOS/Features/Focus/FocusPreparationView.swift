@@ -167,6 +167,7 @@ public struct FocusPreparationView: View {
 
                 // MARK: - Primary Action Button
                 AppButton(title: "Start Focus", icon: "play.fill", style: .primary) {
+                    Haptics.light()
                     withAnimation(.easeInOut(duration: 0.4)) {
                         viewModel.startFocus()
                     }

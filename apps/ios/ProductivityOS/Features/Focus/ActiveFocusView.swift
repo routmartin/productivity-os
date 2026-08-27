@@ -2,9 +2,11 @@ import SwiftUI
 
 /// Active Focus Hero View matching `focsu-flow.png` (Running & Paused states)
 public struct ActiveFocusView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hasAppeared = false
     @Bindable var viewModel: FocusSessionViewModel
     private let onMinimize: () -> Void
-    
+
     public init(
         viewModel: FocusSessionViewModel,
         onMinimize: @escaping () -> Void = {}
@@ -12,27 +14,28 @@ public struct ActiveFocusView: View {
         self.viewModel = viewModel
         self.onMinimize = onMinimize
     }
-    
+
     private var isPaused: Bool {
         viewModel.sessionState.state == .paused
     }
-    
+
     public var body: some View {
         ZStack {
             // Deep navy focus canvas
             AppColors.focusCanvas
                 .ignoresSafeArea()
-            
+
             VStack(spacing: AppSpacing.md) {
                 // MARK: - Top Navigation Bar
                 topBar
-                
+
                 // Mode Badge Pill
                 modeBadgePill
 
                 // Server sync feedback (never blocks the local timer)
                 if let syncError = viewModel.syncErrorMessage {
                     syncBanner(message: syncError)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
                 Spacer(minLength: 8)
@@ -62,7 +65,15 @@ public struct ActiveFocusView: View {
                 Spacer(minLength: 8)
                 
                 // MARK: - Control Buttons (Pause/Resume, Stop, Complete)
-                controlButtonsRow
+                if viewModel.isCompleting {
+                    // Completion is being confirmed with the backend.
+                    ProgressView()
+                        .tint(.white.opacity(0.8))
+                        .frame(height: 90)
+                        .accessibilityLabel("Saving your session")
+                } else {
+                    controlButtonsRow
+                }
                 
                 // MARK: - Ambient Sound Player Card
                 ambiencePlayerCard
@@ -70,11 +81,19 @@ public struct ActiveFocusView: View {
             }
             .padding(.horizontal, AppSpacing.lg)
             .padding(.top, AppSpacing.xs)
+            // Connected Preparation -> Active entrance (spec §9, 300-500ms).
+            .opacity(hasAppeared ? 1 : 0)
+            .scaleEffect(hasAppeared || reduceMotion ? 1 : 0.96)
+            .animation(reduceMotion ? nil : AppMotion.large, value: hasAppeared)
+            .onAppear {
+                hasAppeared = true
+            }
+            .animation(reduceMotion ? nil : AppMotion.standard, value: viewModel.syncErrorMessage != nil)
         }
     }
-    
+
     // MARK: - Subviews
-    
+
     private var topBar: some View {
         HStack {
             Button(action: onMinimize) {
@@ -121,6 +140,7 @@ public struct ActiveFocusView: View {
             }
             .font(AppTypography.captionSmall)
             .fontWeight(.bold)
+            .accessibilityLabel("Retry saving session")
         }
         .foregroundStyle(.white.opacity(0.85))
         .padding(.horizontal, AppSpacing.sm)
@@ -150,6 +170,7 @@ public struct ActiveFocusView: View {
         .background(Color.white.opacity(0.1))
         .foregroundStyle(.white)
         .clipShape(Capsule())
+        .accessibilityLabel(isPaused ? "Session paused" : "Focus session running")
     }
     
     private var controlButtonsRow: some View {
@@ -161,6 +182,7 @@ public struct ActiveFocusView: View {
                     label: "Resume",
                     isPrimary: true
                 ) {
+                    Haptics.light()
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         viewModel.resumeFocus()
                     }
@@ -171,32 +193,29 @@ public struct ActiveFocusView: View {
                     label: "Pause",
                     isPrimary: false
                 ) {
+                    Haptics.light()
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         viewModel.pauseFocus()
                     }
                 }
             }
-            
+
             // 2. Stop Button
             controlAction(
                 icon: "square.fill",
                 label: "Stop",
                 isPrimary: false
             ) {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    viewModel.cancelFocus()
-                }
+                viewModel.cancelFocus()
             }
-            
+
             // 3. Complete Button
             controlAction(
                 icon: "flag.fill",
                 label: "Complete",
                 isPrimary: false
             ) {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    viewModel.completeFocus()
-                }
+                viewModel.completeFocus()
             }
         }
     }

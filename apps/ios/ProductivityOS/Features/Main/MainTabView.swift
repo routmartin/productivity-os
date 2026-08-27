@@ -107,7 +107,9 @@ public struct MainTabView: View {
             )
         ) {
             FocusCompletionView(
-                focusedDurationSeconds: focusViewModel.sessionState.elapsedSeconds()
+                focusedDurationSeconds: focusViewModel.sessionState.elapsedSeconds(),
+                taskTitle: focusViewModel.selectedTask?.title,
+                projectName: focusViewModel.selectedTask?.projectName ?? "Productivity OS"
             ) {
                 focusViewModel.resetToPreparing()
                 isShowingFocusSheet = false
