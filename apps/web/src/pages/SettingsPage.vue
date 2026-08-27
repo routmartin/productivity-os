@@ -209,7 +209,7 @@ async function savePassword() {
             <h3>Scan with Productivity OS</h3>
             <p>Open the app on your iPhone and tap <strong>Scan QR</strong>.</p>
             <p class="expiry-note">Expires in 2 minutes.</p>
-            <UiButton variant="secondary" size="sm" @click="generateQr">
+            <UiButton variant="subtle" size="sm" @click="generateQr">
               Refresh QR
             </UiButton>
           </div>
