@@ -54,6 +54,7 @@
 		AA00002D2C7F000100000001 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00002E2C7F000100000001 /* QRScannerView.swift */; };
 		AA00002E2C7F000100000001 /* QRConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00002F2C7F000100000001 /* QRConfirmationView.swift */; };
 		AA00002F2C7F000100000001 /* QRAuthenticationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000302C7F000100000001 /* QRAuthenticationService.swift */; };
+		AA0000302C7F000100000001 /* NetworkLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000312C7F000100000001 /* NetworkLogger.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -105,6 +106,7 @@
 		BB00002E2C7F000100000001 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
 		BB00002F2C7F000100000001 /* QRConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRConfirmationView.swift; sourceTree = "<group>"; };
 		BB0000302C7F000100000001 /* QRAuthenticationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRAuthenticationService.swift; sourceTree = "<group>"; };
+		BB0000312C7F000100000001 /* NetworkLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkLogger.swift; sourceTree = "<group>"; };
 		CC0000012C7F000100000001 /* ProductivityOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProductivityOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -231,6 +233,7 @@
 				BB00000F2C7F000100000001 /* Endpoint.swift */,
 				BB0000102C7F000100000001 /* APIClient.swift */,
 				BB0000242C7F000100000001 /* APIDTOs.swift */,
+				BB0000312C7F000100000001 /* NetworkLogger.swift */,
 			);
 			path = Networking;
 			sourceTree = "<group>";
@@ -418,6 +421,7 @@
 				AA00000E2C7F000100000001 /* APIError.swift in Sources */,
 				AA00000F2C7F000100000001 /* Endpoint.swift in Sources */,
 				AA0000102C7F000100000001 /* APIClient.swift in Sources */,
+				AA0000302C7F000100000001 /* NetworkLogger.swift in Sources */,
 				AA0000112C7F000100000001 /* KeychainManager.swift in Sources */,
 				AA0000122C7F000100000001 /* AuthSession.swift in Sources */,
 				AA0000132C7F000100000001 /* SampleData.swift in Sources */,

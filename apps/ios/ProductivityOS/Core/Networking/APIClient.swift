@@ -147,16 +147,22 @@ public final class APIClient: APIRequesting, @unchecked Sendable {
             }
         }
 
+        NetworkLogger.log(request: request)
+
         let data: Data, response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
         } catch {
+            NetworkLogger.log(error: error, url: request.url)
             throw APIError.networkError(error.localizedDescription)
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.unknown
         }
+        
+        NetworkLogger.log(response: httpResponse, data: data)
+        
         return (data, httpResponse)
     }
 

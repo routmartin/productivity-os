@@ -23,6 +23,7 @@ public final class QRAuthenticationService: Sendable {
     
     /// Exchanges a scanned QR challenge for a full session.
     public func authenticate(challenge: String) async throws {
+        os_log(.debug, log: .default, "🔐 Starting QR authentication exchange for challenge: %{private}@", challenge)
         let request = QrExchangeRequest(challenge: challenge)
         let body = try APIClient.encodedBody(request)
         

@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 
 /// Authentication entry point: sign in, with an inline toggle to create an
 /// account (backend requires a password of at least 12 characters).
@@ -156,6 +157,7 @@ public struct LoginView: View {
                 case .scanner:
                     QRScannerView(
                         onCodeScanned: { code in
+                            os_log(.debug, log: .default, "📸 Scanner detected code: %{private}@", code)
                             if let challenge = qrAuthService.parseChallenge(from: code) {
                                 activeSheet = nil
                                 // Delay slightly to allow scanner to dismiss before showing confirmation

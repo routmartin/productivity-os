@@ -14,7 +14,7 @@ public struct APIConfiguration: Sendable {
             case .staging:
                 return URL(string: "https://staging-api.productivityos.internal")!
             case .production:
-                return URL(string: "https://productivity-os-api-osgp6pzxba-as.a.run.app")!
+                return URL(string: "https://productivity-os-api-13985383455.asia-southeast1.run.app")!
             }
         }
     }
