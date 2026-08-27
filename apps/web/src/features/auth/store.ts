@@ -94,6 +94,16 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  /** Update the access token in memory and in the persisted session after a
+   *  successful silent refresh (api-integration AC-006). */
+  function setAccessToken(token: string): void {
+    accessToken.value = token;
+    const session = loadSession();
+    if (session) {
+      saveSession({ ...session, accessToken: token });
+    }
+  }
+
   /** End the local session without calling the logout endpoint — used after
    *  a password change, where the server already revoked every refresh
    *  token (spec Rule 3). */
@@ -115,6 +125,7 @@ export const useAuthStore = defineStore("auth", () => {
     register,
     logout,
     setTimezone,
+    setAccessToken,
     endSession,
   };
 });

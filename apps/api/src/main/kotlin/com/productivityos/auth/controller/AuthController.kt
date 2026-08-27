@@ -15,19 +15,26 @@ import java.net.URI
 import com.productivityos.auth.dto.LoginRequest
 import com.productivityos.auth.dto.LoginResponse
 import com.productivityos.auth.dto.RegisterRequest
+import com.productivityos.auth.dto.QrChallengeResponse
+import com.productivityos.auth.dto.QrExchangeRequest
 import com.productivityos.auth.service.LoginService
 import com.productivityos.auth.service.RefreshTokenService
 import com.productivityos.auth.service.RegistrationService
+import com.productivityos.auth.service.QrAuthService
+import com.productivityos.api.CurrentUser
 import com.productivityos.user.dto.UserResponse
 
 @RestController
-@Tag(name = "Auth", description = "Register, login, refresh, logout")
+@Tag(name = "Auth", description = "Register, login, refresh, logout, QR authentication")
 @RequestMapping("/api/v1/auth")
 class AuthController(
     private val registrationService: RegistrationService,
     private val loginService: LoginService,
     private val refreshTokenService: RefreshTokenService,
-    @Value("\${app.auth.cookie-same-site}") private val cookieSameSite: String
+    private val qrAuthService: QrAuthService,
+    private val currentUser: CurrentUser,
+    @Value("\${app.auth.cookie-same-site}") private val cookieSameSite: String,
+    @Value("\${app.auth.cookie-secure:false}") private val cookieSecure: Boolean
 ) {
 
     @PostMapping("/register")
@@ -39,9 +46,12 @@ class AuthController(
     }
 
     @PostMapping("/login")
-    fun login(@Valid @RequestBody request: LoginRequest): ResponseEntity<LoginResponse> {
+    fun login(
+        @Valid @RequestBody request: LoginRequest,
+        httpRequest: HttpServletRequest
+    ): ResponseEntity<LoginResponse> {
         val result = loginService.login(request)
-        val refreshCookie = buildRefreshCookie(result.refreshToken)
+        val refreshCookie = buildRefreshCookie(result.refreshToken, httpRequest.isSecure)
 
         return ResponseEntity.ok()
             .header(org.springframework.http.HttpHeaders.SET_COOKIE, refreshCookie.toString())
@@ -59,7 +69,7 @@ class AuthController(
             ?: return ResponseEntity.status(401).build()
 
         val pair = refreshTokenService.refresh(refreshToken)
-        val refreshCookie = buildRefreshCookie(pair.refreshToken)
+        val refreshCookie = buildRefreshCookie(pair.refreshToken, request.isSecure)
 
         return ResponseEntity.ok()
             .header(org.springframework.http.HttpHeaders.SET_COOKIE, refreshCookie.toString())
@@ -72,9 +82,10 @@ class AuthController(
         if (refreshToken != null) {
             refreshTokenService.logout(refreshToken)
         }
+        val secureFlag = cookieSecure || cookieSameSite.equals("None", ignoreCase = true) || request.isSecure
         val clearedCookie = ResponseCookie.from("refresh_token", "")
             .httpOnly(true)
-            .secure(true)
+            .secure(secureFlag)
             .sameSite(cookieSameSite)
             .path("/api/v1/auth")
             .maxAge(0)
@@ -84,10 +95,40 @@ class AuthController(
             .build()
     }
 
-    private fun buildRefreshCookie(token: String): ResponseCookie {
+    @PostMapping("/qr/challenge")
+    fun createQrChallenge(): ResponseEntity<QrChallengeResponse> {
+        val challenge = qrAuthService.createChallenge(currentUser.id())
+        return ResponseEntity.ok(
+            QrChallengeResponse(
+                challenge = challenge.challenge,
+                expiresAt = challenge.expiresAt
+            )
+        )
+    }
+
+    @PostMapping("/qr/exchange")
+    fun exchangeQrChallenge(
+        @Valid @RequestBody request: QrExchangeRequest,
+        httpRequest: HttpServletRequest
+    ): ResponseEntity<LoginResponse> {
+        val result = qrAuthService.exchange(request.challenge)
+        val refreshCookie = buildRefreshCookie(result.refreshToken, httpRequest.isSecure)
+
+        return ResponseEntity.ok()
+            .header(org.springframework.http.HttpHeaders.SET_COOKIE, refreshCookie.toString())
+            .body(
+                LoginResponse(
+                    accessToken = result.accessToken,
+                    user = UserResponse.from(result.user)
+                )
+            )
+    }
+
+    private fun buildRefreshCookie(token: String, isHttps: Boolean = false): ResponseCookie {
+        val secureFlag = cookieSecure || cookieSameSite.equals("None", ignoreCase = true) || isHttps
         return ResponseCookie.from("refresh_token", token)
             .httpOnly(true)
-            .secure(true)
+            .secure(secureFlag)
             .sameSite(cookieSameSite)
             .path("/api/v1/auth")
             .maxAge(30 * 86400)

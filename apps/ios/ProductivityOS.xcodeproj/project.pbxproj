@@ -1,0 +1,603 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		75757C9F304019F100D52519 /* QRAuthenticationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75757C9E304019F100D52519 /* QRAuthenticationService.swift */; };
+		75757CA130401A6800D52519 /* QRConfirmationView 2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75757CA030401A6800D52519 /* QRConfirmationView 2.swift */; };
+		75757CA330401A8700D52519 /* QRScannerView 2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75757CA230401A8700D52519 /* QRScannerView 2.swift */; };
+		AA0000012C7F000100000001 /* ProductivityOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000012C7F000100000001 /* ProductivityOSApp.swift */; };
+		AA0000022C7F000100000001 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000022C7F000100000001 /* AppColors.swift */; };
+		AA0000032C7F000100000001 /* AppTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000032C7F000100000001 /* AppTypography.swift */; };
+		AA0000042C7F000100000001 /* AppSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000042C7F000100000001 /* AppSpacing.swift */; };
+		AA0000052C7F000100000001 /* AppCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000052C7F000100000001 /* AppCard.swift */; };
+		AA0000062C7F000100000001 /* AppButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000062C7F000100000001 /* AppButton.swift */; };
+		AA0000072C7F000100000001 /* TaskRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000072C7F000100000001 /* TaskRowView.swift */; };
+		AA0000082C7F000100000001 /* SectionHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000082C7F000100000001 /* SectionHeaderView.swift */; };
+		AA0000092C7F000100000001 /* FocusClockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000092C7F000100000001 /* FocusClockView.swift */; };
+		AA00000A2C7F000100000001 /* CustomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000A2C7F000100000001 /* CustomTabBar.swift */; };
+		AA00000B2C7F000100000001 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000B2C7F000100000001 /* Color+Hex.swift */; };
+		AA00000C2C7F000100000001 /* View+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000C2C7F000100000001 /* View+Extensions.swift */; };
+		AA00000D2C7F000100000001 /* APIConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000D2C7F000100000001 /* APIConfiguration.swift */; };
+		AA00000E2C7F000100000001 /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000E2C7F000100000001 /* APIError.swift */; };
+		AA00000F2C7F000100000001 /* Endpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000F2C7F000100000001 /* Endpoint.swift */; };
+		AA0000102C7F000100000001 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000102C7F000100000001 /* APIClient.swift */; };
+		AA0000112C7F000100000001 /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000112C7F000100000001 /* KeychainManager.swift */; };
+		AA0000122C7F000100000001 /* AuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000122C7F000100000001 /* AuthSession.swift */; };
+		AA0000132C7F000100000001 /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000132C7F000100000001 /* SampleData.swift */; };
+		AA0000142C7F000100000001 /* TodayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000142C7F000100000001 /* TodayViewModel.swift */; };
+		AA0000152C7F000100000001 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000152C7F000100000001 /* TodayView.swift */; };
+		AA0000162C7F000100000001 /* FocusSessionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000162C7F000100000001 /* FocusSessionViewModel.swift */; };
+		AA0000172C7F000100000001 /* FocusPreparationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000172C7F000100000001 /* FocusPreparationView.swift */; };
+		AA0000182C7F000100000001 /* ActiveFocusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000182C7F000100000001 /* ActiveFocusView.swift */; };
+		AA0000192C7F000100000001 /* FocusCompletionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000192C7F000100000001 /* FocusCompletionView.swift */; };
+		AA00001A2C7F000100000001 /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00001A2C7F000100000001 /* TasksView.swift */; };
+		AA00001B2C7F000100000001 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00001B2C7F000100000001 /* ProfileView.swift */; };
+		AA00001C2C7F000100000001 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00001C2C7F000100000001 /* MainTabView.swift */; };
+		AA00001D2C7F000100000001 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00001D2C7F000100000001 /* User.swift */; };
+		AA00001E2C7F000100000001 /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00001E2C7F000100000001 /* Task.swift */; };
+		AA00001F2C7F000100000001 /* TopThree.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00001F2C7F000100000001 /* TopThree.swift */; };
+		AA0000202C7F000100000001 /* FocusDuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000202C7F000100000001 /* FocusDuration.swift */; };
+		AA0000212C7F000100000001 /* FocusSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000212C7F000100000001 /* FocusSession.swift */; };
+		AA0000222C7F000100000001 /* FocusSessionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000222C7F000100000001 /* FocusSessionState.swift */; };
+		AA0000232C7F000100000001 /* APIDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000242C7F000100000001 /* APIDTOs.swift */; };
+		AA0000242C7F000100000001 /* APIStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000252C7F000100000001 /* APIStateView.swift */; };
+		AA0000252C7F000100000001 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000262C7F000100000001 /* AuthService.swift */; };
+		AA0000262C7F000100000001 /* TaskService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000272C7F000100000001 /* TaskService.swift */; };
+		AA0000272C7F000100000001 /* FocusService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000282C7F000100000001 /* FocusService.swift */; };
+		AA0000282C7F000100000001 /* TopThreeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000292C7F000100000001 /* TopThreeService.swift */; };
+		AA0000292C7F000100000001 /* TasksViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00002A2C7F000100000001 /* TasksViewModel.swift */; };
+		AA00002A2C7F000100000001 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00002B2C7F000100000001 /* LoginView.swift */; };
+		AA00002B2C7F000100000001 /* AppMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00002C2C7F000100000001 /* AppMotion.swift */; };
+		AA00002C2C7F000100000001 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00002D2C7F000100000001 /* Haptics.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		75757C9E304019F100D52519 /* QRAuthenticationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRAuthenticationService.swift; sourceTree = "<group>"; };
+		75757CA030401A6800D52519 /* QRConfirmationView 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "QRConfirmationView 2.swift"; sourceTree = "<group>"; };
+		75757CA230401A8700D52519 /* QRScannerView 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "QRScannerView 2.swift"; sourceTree = "<group>"; };
+		BB0000012C7F000100000001 /* ProductivityOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductivityOSApp.swift; sourceTree = "<group>"; };
+		BB0000022C7F000100000001 /* AppColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
+		BB0000032C7F000100000001 /* AppTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTypography.swift; sourceTree = "<group>"; };
+		BB0000042C7F000100000001 /* AppSpacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSpacing.swift; sourceTree = "<group>"; };
+		BB0000052C7F000100000001 /* AppCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCard.swift; sourceTree = "<group>"; };
+		BB0000062C7F000100000001 /* AppButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppButton.swift; sourceTree = "<group>"; };
+		BB0000072C7F000100000001 /* TaskRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowView.swift; sourceTree = "<group>"; };
+		BB0000082C7F000100000001 /* SectionHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionHeaderView.swift; sourceTree = "<group>"; };
+		BB0000092C7F000100000001 /* FocusClockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusClockView.swift; sourceTree = "<group>"; };
+		BB00000A2C7F000100000001 /* CustomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTabBar.swift; sourceTree = "<group>"; };
+		BB00000B2C7F000100000001 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
+		BB00000C2C7F000100000001 /* View+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Extensions.swift"; sourceTree = "<group>"; };
+		BB00000D2C7F000100000001 /* APIConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfiguration.swift; sourceTree = "<group>"; };
+		BB00000E2C7F000100000001 /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
+		BB00000F2C7F000100000001 /* Endpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Endpoint.swift; sourceTree = "<group>"; };
+		BB0000102C7F000100000001 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		BB0000112C7F000100000001 /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
+		BB0000122C7F000100000001 /* AuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSession.swift; sourceTree = "<group>"; };
+		BB0000132C7F000100000001 /* SampleData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleData.swift; sourceTree = "<group>"; };
+		BB0000142C7F000100000001 /* TodayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewModel.swift; sourceTree = "<group>"; };
+		BB0000152C7F000100000001 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		BB0000162C7F000100000001 /* FocusSessionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusSessionViewModel.swift; sourceTree = "<group>"; };
+		BB0000172C7F000100000001 /* FocusPreparationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusPreparationView.swift; sourceTree = "<group>"; };
+		BB0000182C7F000100000001 /* ActiveFocusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveFocusView.swift; sourceTree = "<group>"; };
+		BB0000192C7F000100000001 /* FocusCompletionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusCompletionView.swift; sourceTree = "<group>"; };
+		BB00001A2C7F000100000001 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
+		BB00001B2C7F000100000001 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		BB00001C2C7F000100000001 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		BB00001D2C7F000100000001 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
+		BB00001E2C7F000100000001 /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
+		BB00001F2C7F000100000001 /* TopThree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopThree.swift; sourceTree = "<group>"; };
+		BB0000202C7F000100000001 /* FocusDuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusDuration.swift; sourceTree = "<group>"; };
+		BB0000212C7F000100000001 /* FocusSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusSession.swift; sourceTree = "<group>"; };
+		BB0000222C7F000100000001 /* FocusSessionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusSessionState.swift; sourceTree = "<group>"; };
+		BB0000232C7F000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		BB0000242C7F000100000001 /* APIDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIDTOs.swift; sourceTree = "<group>"; };
+		BB0000252C7F000100000001 /* APIStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIStateView.swift; sourceTree = "<group>"; };
+		BB0000262C7F000100000001 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		BB0000272C7F000100000001 /* TaskService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskService.swift; sourceTree = "<group>"; };
+		BB0000282C7F000100000001 /* FocusService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusService.swift; sourceTree = "<group>"; };
+		BB0000292C7F000100000001 /* TopThreeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopThreeService.swift; sourceTree = "<group>"; };
+		BB00002A2C7F000100000001 /* TasksViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksViewModel.swift; sourceTree = "<group>"; };
+		BB00002B2C7F000100000001 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		BB00002C2C7F000100000001 /* AppMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMotion.swift; sourceTree = "<group>"; };
+		BB00002D2C7F000100000001 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		CC0000012C7F000100000001 /* ProductivityOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProductivityOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DD0000012C7F000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		EE0000012C7F000100000001 = {
+			isa = PBXGroup;
+			children = (
+				EE0000022C7F000100000001 /* ProductivityOS */,
+				EE0000092C7F000100000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EE0000022C7F000100000001 /* ProductivityOS */ = {
+			isa = PBXGroup;
+			children = (
+				EE0000032C7F000100000001 /* App */,
+				EE0000042C7F000100000001 /* Core */,
+				EE0000052C7F000100000001 /* Features */,
+				EE0000062C7F000100000001 /* Models */,
+				EE0000072C7F000100000001 /* Resources */,
+			);
+			path = ProductivityOS;
+			sourceTree = "<group>";
+		};
+		EE0000032C7F000100000001 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000012C7F000100000001 /* ProductivityOSApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		EE0000042C7F000100000001 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				EE0000082C7F000100000001 /* DesignSystem */,
+				EE00000A2C7F000100000001 /* Extensions */,
+				EE00000B2C7F000100000001 /* Networking */,
+				EE00000C2C7F000100000001 /* Authentication */,
+				EE0000142C7F000100000001 /* Services */,
+				EE00000D2C7F000100000001 /* Utilities */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		EE0000052C7F000100000001 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				EE00000F2C7F000100000001 /* Main */,
+				EE0000102C7F000100000001 /* Today */,
+				EE0000112C7F000100000001 /* Focus */,
+				EE0000122C7F000100000001 /* Tasks */,
+				EE0000132C7F000100000001 /* Profile */,
+				EE0000152C7F000100000001 /* Authentication */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		EE0000062C7F000100000001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				BB00001D2C7F000100000001 /* User.swift */,
+				BB00001E2C7F000100000001 /* Task.swift */,
+				BB00001F2C7F000100000001 /* TopThree.swift */,
+				BB0000202C7F000100000001 /* FocusDuration.swift */,
+				BB0000212C7F000100000001 /* FocusSession.swift */,
+				BB0000222C7F000100000001 /* FocusSessionState.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		EE0000072C7F000100000001 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000232C7F000100000001 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		EE0000082C7F000100000001 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000022C7F000100000001 /* AppColors.swift */,
+				BB0000032C7F000100000001 /* AppTypography.swift */,
+				BB0000042C7F000100000001 /* AppSpacing.swift */,
+				BB00002C2C7F000100000001 /* AppMotion.swift */,
+				EE00000E2C7F000100000001 /* Components */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		EE0000092C7F000100000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CC0000012C7F000100000001 /* ProductivityOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		EE00000A2C7F000100000001 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				BB00000B2C7F000100000001 /* Color+Hex.swift */,
+				BB00000C2C7F000100000001 /* View+Extensions.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		EE00000B2C7F000100000001 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				BB00000D2C7F000100000001 /* APIConfiguration.swift */,
+				BB00000E2C7F000100000001 /* APIError.swift */,
+				BB00000F2C7F000100000001 /* Endpoint.swift */,
+				BB0000102C7F000100000001 /* APIClient.swift */,
+				BB0000242C7F000100000001 /* APIDTOs.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		EE00000C2C7F000100000001 /* Authentication */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000112C7F000100000001 /* KeychainManager.swift */,
+				BB0000122C7F000100000001 /* AuthSession.swift */,
+			);
+			path = Authentication;
+			sourceTree = "<group>";
+		};
+		EE00000D2C7F000100000001 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000132C7F000100000001 /* SampleData.swift */,
+				BB00002D2C7F000100000001 /* Haptics.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		EE00000E2C7F000100000001 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000052C7F000100000001 /* AppCard.swift */,
+				BB0000062C7F000100000001 /* AppButton.swift */,
+				BB0000072C7F000100000001 /* TaskRowView.swift */,
+				BB0000082C7F000100000001 /* SectionHeaderView.swift */,
+				BB0000092C7F000100000001 /* FocusClockView.swift */,
+				BB00000A2C7F000100000001 /* CustomTabBar.swift */,
+				BB0000252C7F000100000001 /* APIStateView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		EE00000F2C7F000100000001 /* Main */ = {
+			isa = PBXGroup;
+			children = (
+				BB00001C2C7F000100000001 /* MainTabView.swift */,
+			);
+			path = Main;
+			sourceTree = "<group>";
+		};
+		EE0000102C7F000100000001 /* Today */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000142C7F000100000001 /* TodayViewModel.swift */,
+				BB0000152C7F000100000001 /* TodayView.swift */,
+			);
+			path = Today;
+			sourceTree = "<group>";
+		};
+		EE0000112C7F000100000001 /* Focus */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000162C7F000100000001 /* FocusSessionViewModel.swift */,
+				BB0000172C7F000100000001 /* FocusPreparationView.swift */,
+				BB0000182C7F000100000001 /* ActiveFocusView.swift */,
+				BB0000192C7F000100000001 /* FocusCompletionView.swift */,
+			);
+			path = Focus;
+			sourceTree = "<group>";
+		};
+		EE0000122C7F000100000001 /* Tasks */ = {
+			isa = PBXGroup;
+			children = (
+				BB00001A2C7F000100000001 /* TasksView.swift */,
+				BB00002A2C7F000100000001 /* TasksViewModel.swift */,
+			);
+			path = Tasks;
+			sourceTree = "<group>";
+		};
+		EE0000132C7F000100000001 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				BB00001B2C7F000100000001 /* ProfileView.swift */,
+			);
+			path = Profile;
+			sourceTree = "<group>";
+		};
+		EE0000142C7F000100000001 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000262C7F000100000001 /* AuthService.swift */,
+				BB0000272C7F000100000001 /* TaskService.swift */,
+				BB0000282C7F000100000001 /* FocusService.swift */,
+				BB0000292C7F000100000001 /* TopThreeService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		EE0000152C7F000100000001 /* Authentication */ = {
+			isa = PBXGroup;
+			children = (
+				BB00002B2C7F000100000001 /* LoginView.swift */,
+				75757C9E304019F100D52519 /* QRAuthenticationService.swift */,
+				75757CA030401A6800D52519 /* QRConfirmationView 2.swift */,
+				75757CA230401A8700D52519 /* QRScannerView 2.swift */,
+			);
+			path = Authentication;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FF0000012C7F000100000001 /* ProductivityOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = GG0000012C7F000100000001 /* Build configuration list for PBXNativeTarget "ProductivityOS" */;
+			buildPhases = (
+				HH0000012C7F000100000001 /* Sources */,
+				DD0000012C7F000100000001 /* Frameworks */,
+				II0000012C7F000100000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ProductivityOS;
+			productName = ProductivityOS;
+			productReference = CC0000012C7F000100000001 /* ProductivityOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		JJ0000012C7F000100000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					FF0000012C7F000100000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = KK0000012C7F000100000001 /* Build configuration list for PBXProject "ProductivityOS" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = EE0000012C7F000100000001;
+			productRefGroup = EE0000092C7F000100000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FF0000012C7F000100000001 /* ProductivityOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		II0000012C7F000100000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		HH0000012C7F000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0000012C7F000100000001 /* ProductivityOSApp.swift in Sources */,
+				AA0000022C7F000100000001 /* AppColors.swift in Sources */,
+				AA0000032C7F000100000001 /* AppTypography.swift in Sources */,
+				AA0000042C7F000100000001 /* AppSpacing.swift in Sources */,
+				AA0000052C7F000100000001 /* AppCard.swift in Sources */,
+				AA0000062C7F000100000001 /* AppButton.swift in Sources */,
+				AA0000072C7F000100000001 /* TaskRowView.swift in Sources */,
+				AA0000082C7F000100000001 /* SectionHeaderView.swift in Sources */,
+				AA0000092C7F000100000001 /* FocusClockView.swift in Sources */,
+				AA00000A2C7F000100000001 /* CustomTabBar.swift in Sources */,
+				AA00000B2C7F000100000001 /* Color+Hex.swift in Sources */,
+				AA00000C2C7F000100000001 /* View+Extensions.swift in Sources */,
+				AA00000D2C7F000100000001 /* APIConfiguration.swift in Sources */,
+				AA00000E2C7F000100000001 /* APIError.swift in Sources */,
+				AA00000F2C7F000100000001 /* Endpoint.swift in Sources */,
+				AA0000102C7F000100000001 /* APIClient.swift in Sources */,
+				AA0000112C7F000100000001 /* KeychainManager.swift in Sources */,
+				AA0000122C7F000100000001 /* AuthSession.swift in Sources */,
+				AA0000132C7F000100000001 /* SampleData.swift in Sources */,
+				AA0000142C7F000100000001 /* TodayViewModel.swift in Sources */,
+				AA0000152C7F000100000001 /* TodayView.swift in Sources */,
+				AA0000162C7F000100000001 /* FocusSessionViewModel.swift in Sources */,
+				AA0000172C7F000100000001 /* FocusPreparationView.swift in Sources */,
+				AA0000182C7F000100000001 /* ActiveFocusView.swift in Sources */,
+				AA0000192C7F000100000001 /* FocusCompletionView.swift in Sources */,
+				AA00001A2C7F000100000001 /* TasksView.swift in Sources */,
+				AA00001B2C7F000100000001 /* ProfileView.swift in Sources */,
+				AA00001C2C7F000100000001 /* MainTabView.swift in Sources */,
+				75757CA130401A6800D52519 /* QRConfirmationView 2.swift in Sources */,
+				AA00001D2C7F000100000001 /* User.swift in Sources */,
+				AA00001E2C7F000100000001 /* Task.swift in Sources */,
+				AA00001F2C7F000100000001 /* TopThree.swift in Sources */,
+				AA0000202C7F000100000001 /* FocusDuration.swift in Sources */,
+				AA0000212C7F000100000001 /* FocusSession.swift in Sources */,
+				75757C9F304019F100D52519 /* QRAuthenticationService.swift in Sources */,
+				AA0000222C7F000100000001 /* FocusSessionState.swift in Sources */,
+				AA0000232C7F000100000001 /* APIDTOs.swift in Sources */,
+				AA0000242C7F000100000001 /* APIStateView.swift in Sources */,
+				AA0000252C7F000100000001 /* AuthService.swift in Sources */,
+				AA0000262C7F000100000001 /* TaskService.swift in Sources */,
+				AA0000272C7F000100000001 /* FocusService.swift in Sources */,
+				AA0000282C7F000100000001 /* TopThreeService.swift in Sources */,
+				AA0000292C7F000100000001 /* TasksViewModel.swift in Sources */,
+				75757CA330401A8700D52519 /* QRScannerView 2.swift in Sources */,
+				AA00002A2C7F000100000001 /* LoginView.swift in Sources */,
+				AA00002B2C7F000100000001 /* AppMotion.swift in Sources */,
+				AA00002C2C7F000100000001 /* Haptics.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		LL0000012C7F000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDEFINED_VARIABLES = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		LL0000022C7F000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDEFINED_VARIABLES = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		MM0000012C7F000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ProductivityOS/Resources/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.productivityos.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		MM0000022C7F000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ProductivityOS/Resources/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.productivityos.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		GG0000012C7F000100000001 /* Build configuration list for PBXNativeTarget "ProductivityOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				MM0000012C7F000100000001 /* Debug */,
+				MM0000022C7F000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		KK0000012C7F000100000001 /* Build configuration list for PBXProject "ProductivityOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				LL0000012C7F000100000001 /* Debug */,
+				LL0000022C7F000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = JJ0000012C7F000100000001 /* Project object */;
+}

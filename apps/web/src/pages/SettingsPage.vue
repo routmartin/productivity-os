@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { AlertCircle, CheckCircle2 } from 'lucide-vue-next'
+import { AlertCircle, CheckCircle2, Smartphone, Loader2 } from 'lucide-vue-next'
 
 import SurfaceCard from '@/components/shared/SurfaceCard.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiInput from '@/components/ui/UiInput.vue'
 
+import { apiClient } from '@/lib/api/client'
 import { useAuthStore } from '@/features/auth/store'
 import TimezonePicker from '@/features/settings/components/TimezonePicker.vue'
 import { useSettingsStore } from '@/features/settings/store'
@@ -18,6 +19,37 @@ const MIN_PASSWORD_LENGTH = 12
 const router = useRouter()
 const auth = useAuthStore()
 const settings = useSettingsStore()
+
+// ——— QR Authentication ———
+
+const qrChallenge = ref<string | null>(null)
+const qrExpiresAt = ref<string | null>(null)
+const isLoadingQr = ref(false)
+const qrError = ref<string | null>(null)
+
+async function generateQr() {
+  isLoadingQr.value = true
+  qrError.value = null
+  try {
+    const res = await apiClient.auth.createQrChallenge()
+    qrChallenge.value = res.challenge
+    qrExpiresAt.value = res.expiresAt
+  } catch (err: any) {
+    qrError.value = err.message || 'Failed to generate QR code.'
+  } finally {
+    isLoadingQr.value = false
+  }
+}
+
+const qrUrl = computed(() => {
+  if (!qrChallenge.value) return ''
+  return `productivityos://auth?challenge=${qrChallenge.value}`
+})
+
+const qrImageUrl = computed(() => {
+  if (!qrUrl.value) return ''
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl.value)}`
+})
 
 // ——— Profile / timezone ———
 
@@ -151,6 +183,42 @@ async function savePassword() {
         >
           Save timezone
         </UiButton>
+      </div>
+    </SurfaceCard>
+
+    <SurfaceCard title="Connect iPhone">
+      <div class="qr-section">
+        <div v-if="!qrChallenge && !isLoadingQr" class="qr-placeholder">
+          <Smartphone :size="48" class="icon" />
+          <p>Securely connect your iPhone to your Productivity OS account.</p>
+          <UiButton variant="primary" @click="generateQr">
+            Generate Login QR
+          </UiButton>
+        </div>
+
+        <div v-else-if="isLoadingQr" class="qr-loading">
+          <Loader2 :size="32" class="spin" />
+          <p>Generating secure challenge...</p>
+        </div>
+
+        <div v-else-if="qrChallenge" class="qr-display">
+          <div class="qr-code-wrapper">
+            <img :src="qrImageUrl" alt="Authentication QR Code" class="qr-image" />
+          </div>
+          <div class="qr-info">
+            <h3>Scan with Productivity OS</h3>
+            <p>Open the app on your iPhone and tap <strong>Scan QR</strong>.</p>
+            <p class="expiry-note">Expires in 2 minutes.</p>
+            <UiButton variant="secondary" size="sm" @click="generateQr">
+              Refresh QR
+            </UiButton>
+          </div>
+        </div>
+
+        <div v-if="qrError" class="qr-error">
+          <AlertCircle :size="16" />
+          <span>{{ qrError }}</span>
+        </div>
       </div>
     </SurfaceCard>
 
@@ -311,6 +379,81 @@ async function savePassword() {
   font-size: var(--text-xs);
   color: var(--text-disabled);
   max-width: 360px;
+}
+
+.qr-section {
+  padding: var(--space-4) 0;
+}
+
+.qr-placeholder, .qr-loading, .qr-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-4);
+}
+
+.qr-placeholder .icon {
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+.qr-placeholder p {
+  color: var(--text-secondary);
+  max-width: 300px;
+}
+
+.qr-loading {
+  color: var(--text-tertiary);
+  padding: var(--space-8) 0;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.qr-code-wrapper {
+  padding: var(--space-4);
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.qr-image {
+  display: block;
+}
+
+.qr-info h3 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.qr-info p {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.expiry-note {
+  font-size: var(--text-xs) !important;
+  color: var(--text-disabled) !important;
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.qr-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  color: var(--danger);
+  font-size: var(--text-sm);
+  justify-content: center;
 }
 
 @media (max-width: 640px) {
