@@ -33,6 +33,7 @@ public enum AppEndpoint: Endpoint {
     // Auth (/api/v1/auth)
     case register(body: Data)
     case login(body: Data)
+    case qrExchange(body: Data)
     case refresh
     case logout
 
@@ -54,6 +55,8 @@ public enum AppEndpoint: Endpoint {
             return "/api/v1/auth/register"
         case .login:
             return "/api/v1/auth/login"
+        case .qrExchange:
+            return "/api/v1/auth/qr/exchange"
         case .refresh:
             return "/api/v1/auth/refresh"
         case .logout:
@@ -78,7 +81,7 @@ public enum AppEndpoint: Endpoint {
 
     public var method: HTTPMethod {
         switch self {
-        case .register, .login, .refresh, .logout,
+        case .register, .login, .qrExchange, .refresh, .logout,
              .startFocusSession, .endFocusSession:
             return .post
         case .listTasks, .getDailyTopThree, .getActiveFocusSession, .listFocusSessions:
@@ -88,7 +91,7 @@ public enum AppEndpoint: Endpoint {
 
     public var body: Data? {
         switch self {
-        case .register(let data), .login(let data), .startFocusSession(let data):
+        case .register(let data), .login(let data), .qrExchange(let data), .startFocusSession(let data):
             return data
         default:
             return nil
@@ -97,7 +100,7 @@ public enum AppEndpoint: Endpoint {
 
     public var isAuthEndpoint: Bool {
         switch self {
-        case .register, .login, .refresh, .logout:
+        case .register, .login, .qrExchange, .refresh, .logout:
             return true
         default:
             return false
