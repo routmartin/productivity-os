@@ -169,4 +169,7 @@ export const apiClient = {
   post: <T>(path: string, body?: unknown) => request<T>("POST", path, body),
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, body),
   delete: <T>(path: string) => request<T>("DELETE", path),
+  auth: {
+    createQrChallenge: () => request<{ challenge: string; expiresAt: string }>("POST", "/auth/qr/challenge"),
+  },
 };
