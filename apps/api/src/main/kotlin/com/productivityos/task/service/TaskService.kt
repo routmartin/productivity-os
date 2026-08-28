@@ -52,6 +52,35 @@ class TaskService(
             .map { TaskResponse.from(it) }
     }
 
+    /**
+     * Completed (terminal) tasks for the current user, newest completion
+     * first. The page is the user's task history; the frontend mirrors it
+     * for the project detail "History" section and the tasks page
+     * "Completed" filter.
+     */
+    @Transactional(readOnly = true)
+    fun listCompleted(page: Int, size: Int): List<TaskResponse> {
+        val pageable = PageRequest.of(page, size)
+        return taskRepository.findCompletedByUserId(currentUser.id(), pageable)
+            .content
+            .map { TaskResponse.from(it) }
+    }
+
+    /**
+     * All non-deleted tasks belonging to a project (any lifecycle state).
+     * Used by the project detail panel to render the full task set
+     * (active, completed, cancelled) so the project page lists every task
+     * within it (Project Management AC-005, AC-011).
+     */
+    @Transactional(readOnly = true)
+    fun listForProject(projectId: UUID, userId: UUID): List<TaskResponse> {
+        val project = projectRepository.findById(projectId).orElse(null)
+            ?: throw NoSuchElementException("Project not found: $projectId")
+        require(project.userId == userId) { "Project does not belong to the current user" }
+        return taskRepository.findByProjectIdAndUserId(projectId, userId)
+            .map { TaskResponse.from(it) }
+    }
+
     fun plan(taskId: UUID, userId: UUID): TaskResponse {
         val entity = loadOwned(taskId, userId)
         entity.toDomain().plan()

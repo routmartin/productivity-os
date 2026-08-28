@@ -5,14 +5,20 @@ public struct ActiveFocusView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hasAppeared = false
     @Bindable var viewModel: FocusSessionViewModel
+    private let projectsViewModel: ProjectsViewModel
     private let onMinimize: () -> Void
+    private let onDismiss: () -> Void
 
     public init(
         viewModel: FocusSessionViewModel,
-        onMinimize: @escaping () -> Void = {}
+        projectsViewModel: ProjectsViewModel = ProjectsViewModel(),
+        onMinimize: @escaping () -> Void = {},
+        onDismiss: @escaping () -> Void = {}
     ) {
         self.viewModel = viewModel
+        self.projectsViewModel = projectsViewModel
         self.onMinimize = onMinimize
+        self.onDismiss = onDismiss
     }
 
     private var isPaused: Bool {
@@ -37,7 +43,19 @@ public struct ActiveFocusView: View {
                     syncBanner(message: syncError)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
+                
+                Spacer()
 
+                // MARK: - Focus Title (above timer)
+                VStack(spacing: 4) {
+                    Text(viewModel.selectedTask?.title ?? "Finish authentication")
+                        .font(AppTypography.title)
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                }
+                .padding(.horizontal, AppSpacing.lg)
+    
                 Spacer(minLength: 8)
                 
                 // MARK: - Hero Focus Clock
@@ -45,7 +63,7 @@ public struct ActiveFocusView: View {
                     progress: viewModel.timerProgress,
                     timerText: viewModel.timerDisplayText,
                     taskTitle: viewModel.selectedTask?.title ?? "Finish authentication",
-                    projectName: viewModel.selectedTask?.projectName ?? "Productivity OS",
+                    projectName: viewModel.selectedTask.map { projectsViewModel.projectName(for: $0) } ?? nil,
                     durationLabel: viewModel.selectedDuration.subtitle,
                     isPaused: isPaused,
                     variant: .hero
@@ -75,10 +93,9 @@ public struct ActiveFocusView: View {
                     controlButtonsRow
                 }
                 
-                // MARK: - Ambient Sound Player Card
-                ambiencePlayerCard
-                    .padding(.bottom, AppSpacing.sm)
+                Spacer()
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal, AppSpacing.lg)
             .padding(.top, AppSpacing.xs)
             // Connected Preparation -> Active entrance (spec §9, 300-500ms).
@@ -96,14 +113,6 @@ public struct ActiveFocusView: View {
 
     private var topBar: some View {
         HStack {
-            Button(action: onMinimize) {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(AppColors.focusControlBackground)
-                    .clipShape(Circle())
-            }
             
             Spacer()
             
@@ -114,10 +123,8 @@ public struct ActiveFocusView: View {
             
             Spacer()
             
-            Button {
-                // Ambience menu action
-            } label: {
-                Image(systemName: "music.note")
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 40, height: 40)
@@ -251,50 +258,7 @@ public struct ActiveFocusView: View {
         .buttonStyle(ScaleButtonStyle())
     }
     
-    private var ambiencePlayerCard: some View {
-        HStack(spacing: AppSpacing.sm) {
-            // Ambience thumbnail
-            ZStack {
-                RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous)
-                    .fill(Color(hex: "29235C"))
-                    .frame(width: 44, height: 44)
-                
-                Image(systemName: "waveform")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(AppColors.primary)
-            }
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Focus Ambience")
-                    .font(AppTypography.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                
-                Text("Lo-Fi • Rain")
-                    .font(AppTypography.captionSmall)
-                    .foregroundStyle(.white.opacity(0.6))
-            }
-            
-            Spacer()
-            
-            Button {
-                // Play / Pause ambient track
-            } label: {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 32, height: 32)
-                    .background(Color.white.opacity(0.12))
-                    .clipShape(Circle())
-            }
-        }
-        .padding(AppSpacing.sm)
-        .focusCardStyle(
-            backgroundColor: AppColors.focusSurface,
-            borderColor: AppColors.focusSurfaceBorder,
-            cornerRadius: AppRadius.lg
-        )
-    }
+
 }
 
 #Preview("Running Focus") {
@@ -312,3 +276,4 @@ public struct ActiveFocusView: View {
         )
     )
 }
+

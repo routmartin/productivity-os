@@ -43,6 +43,21 @@ class TaskController(
         return taskService.listActive(page, size)
     }
 
+    /**
+     * Completed (terminal) task history for the current user, newest
+     * completion first. Excludes soft-deleted rows. Mirrors the
+     * `findActiveByUserId` page/size contract so the tasks page
+     * "Completed" filter and project history sections share the same
+     * pagination shape.
+     */
+    @GetMapping("/completed")
+    fun listCompleted(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "50") size: Int
+    ): List<TaskResponse> {
+        return taskService.listCompleted(page, size)
+    }
+
     @PostMapping("/{id}/plan")
     fun plan(@PathVariable id: UUID): TaskResponse {
         return taskService.plan(id, currentUser.id())

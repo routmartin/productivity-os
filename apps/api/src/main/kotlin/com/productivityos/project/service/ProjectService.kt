@@ -1,5 +1,6 @@
 package com.productivityos.project.service
 
+import com.productivityos.task.dto.TaskResponse
 import com.productivityos.task.persistence.TaskRepository
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
@@ -44,6 +45,19 @@ class ProjectService(
     @Transactional(readOnly = true)
     fun getById(projectId: UUID, userId: UUID): ProjectResponse {
         return ProjectResponse.from(loadOwned(projectId, userId))
+    }
+
+    /**
+     * All non-deleted tasks belonging to a project (any lifecycle state).
+     * Project-scoped read used by the project detail panel; lives here so
+     * the project module owns the relationship surface (Project
+     * Management AC-005, AC-011).
+     */
+    @Transactional(readOnly = true)
+    fun listTasks(projectId: UUID, userId: UUID): List<TaskResponse> {
+        loadOwned(projectId, userId)
+        return taskRepository.findByProjectIdAndUserId(projectId, userId)
+            .map { TaskResponse.from(it) }
     }
 
     fun activate(projectId: UUID, userId: UUID): ProjectResponse {

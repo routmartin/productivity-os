@@ -1,6 +1,7 @@
 package com.productivityos.project.controller
 
 import com.productivityos.api.CurrentUser
+import com.productivityos.task.dto.TaskResponse
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -41,6 +42,17 @@ class ProjectController(
     @GetMapping("/{id}")
     fun get(@PathVariable id: UUID): ProjectResponse {
         return projectService.getById(id, currentUser.id())
+    }
+
+    /**
+     * All non-deleted tasks belonging to a project (any lifecycle state).
+     * Newest capture first; the project detail panel renders the full set
+     * across Active / History / Cancelled sections (Project Management
+     * AC-005, AC-011).
+     */
+    @GetMapping("/{id}/tasks")
+    fun listTasks(@PathVariable id: UUID): List<TaskResponse> {
+        return projectService.listTasks(id, currentUser.id())
     }
 
     @PutMapping("/{id}")

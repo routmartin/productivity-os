@@ -29,6 +29,7 @@ public struct MainTabView: View {
             Tab(AppTab.focus.rawValue, systemImage: AppTab.focus.iconName, value: AppTab.focus, role: .search) {
                 FocusPreparationView(
                     viewModel: focusViewModel,
+                    projectsViewModel: projectsViewModel,
                     onDismiss: {
                         selectedTab = .today
                     }
@@ -49,7 +50,7 @@ public struct MainTabView: View {
                 ProfileView()
             }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
+        .tabBarMinimizeIfSupported()
         #if os(iOS)
         .fullScreenCover(
             isPresented: Binding(
@@ -65,7 +66,11 @@ public struct MainTabView: View {
         ) {
             ActiveFocusView(
                 viewModel: focusViewModel,
-                onMinimize: {}
+                projectsViewModel: projectsViewModel,
+                onMinimize: {},
+                onDismiss: {
+                    focusViewModel.cancelFocus()
+                }
             )
         }
         #else
@@ -83,13 +88,18 @@ public struct MainTabView: View {
         ) {
             ActiveFocusView(
                 viewModel: focusViewModel,
-                onMinimize: {}
+                projectsViewModel: projectsViewModel,
+                onMinimize: {},
+                onDismiss: {
+                    focusViewModel.cancelFocus()
+                }
             )
         }
         #endif
         .sheet(isPresented: $isShowingFocusSheet) {
             FocusPreparationView(
                 viewModel: focusViewModel,
+                projectsViewModel: projectsViewModel,
                 onDismiss: {
                     isShowingFocusSheet = false
                 }
@@ -104,7 +114,7 @@ public struct MainTabView: View {
             FocusCompletionView(
                 focusedDurationSeconds: focusViewModel.sessionState.elapsedSeconds(),
                 taskTitle: focusViewModel.selectedTask?.title,
-                projectName: focusViewModel.selectedTask?.projectName ?? "Productivity OS"
+                projectName: focusViewModel.selectedTask.map { projectsViewModel.projectName(for: $0) } ?? nil
             ) {
                 focusViewModel.resetToPreparing()
                 isShowingFocusSheet = false
@@ -123,4 +133,17 @@ public struct MainTabView: View {
 
 #Preview {
     MainTabView()
+}
+
+/// Availability-safe wrapper for `tabBarMinimizeBehavior`, which is only
+/// declared on macOS 26+. Keeps the iOS behavior identical.
+private extension View {
+    @ViewBuilder
+    func tabBarMinimizeIfSupported() -> some View {
+        if #available(macOS 26.0, *) {
+            self.tabBarMinimizeBehavior(.onScrollDown)
+        } else {
+            self
+        }
+    }
 }

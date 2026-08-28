@@ -3,14 +3,22 @@ import SwiftUI
 /// Focus Preparation View matching `1. FOCUS PREPARATION` in `focsu-flow.png`
 public struct FocusPreparationView: View {
     @Bindable var viewModel: FocusSessionViewModel
+    private let projectsViewModel: ProjectsViewModel
     private let onDismiss: () -> Void
-    
+
     public init(
         viewModel: FocusSessionViewModel,
+        projectsViewModel: ProjectsViewModel = ProjectsViewModel(),
         onDismiss: @escaping () -> Void = {}
     ) {
         self.viewModel = viewModel
+        self.projectsViewModel = projectsViewModel
         self.onDismiss = onDismiss
+    }
+
+    private var resolvedProjectName: String? {
+        guard let task = viewModel.selectedTask else { return nil }
+        return projectsViewModel.projectName(for: task)
     }
     
     public var body: some View {
@@ -51,7 +59,7 @@ public struct FocusPreparationView: View {
                     if let task = viewModel.selectedTask {
                         TaskRowView(
                             title: task.title,
-                            projectName: task.projectName ?? "Productivity OS",
+                            projectName: projectsViewModel.projectName(for: task),
                             priority: task.priority ?? .high,
                             iconName: "flag.fill"
                         )
@@ -70,7 +78,7 @@ public struct FocusPreparationView: View {
                         metadataRow(
                             icon: "folder",
                             label: "Project",
-                            value: viewModel.selectedTask?.projectName ?? "Productivity OS"
+                            value: resolvedProjectName ?? "—"
                         )
                     }
                     .appCardStyle(cornerRadius: AppRadius.md)

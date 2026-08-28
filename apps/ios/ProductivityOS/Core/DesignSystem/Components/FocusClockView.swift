@@ -131,15 +131,8 @@ public struct FocusClockView: View {
                 .animation(reduceMotion ? nil : AppMotion.standard, value: isPaused)
 
             // Center info
-            VStack(spacing: AppSpacing.xs) {
-                if let taskTitle {
-                    Text(taskTitle)
-                        .font(AppTypography.headline)
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .padding(.horizontal, AppSpacing.lg)
-                }
+            VStack(spacing: AppSpacing.lg,) {
+                
 
                 if let projectName {
                     HStack(spacing: 4) {
@@ -158,7 +151,7 @@ public struct FocusClockView: View {
                     .foregroundStyle(.white)
                     .contentTransition(reduceMotion ? .identity : .numericText())
                     .animation(reduceMotion ? nil : AppMotion.standard, value: timerText)
-
+   
                 // Duration Mode Pill
                 if let durationLabel {
                     HStack(spacing: 4) {
@@ -173,6 +166,7 @@ public struct FocusClockView: View {
                     .background(Color.white.opacity(0.1))
                     .foregroundStyle(.white.opacity(0.85))
                     .clipShape(Capsule())
+                    
                 }
             }
             .frame(width: 210)
