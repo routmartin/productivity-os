@@ -3,13 +3,16 @@ import SwiftUI
 /// Today View matching `today.png` approved visual reference
 public struct TodayView: View {
     @State private var viewModel = TodayViewModel()
+    @State private var projectsViewModel: ProjectsViewModel
     private let onStartFocus: (TaskItem?) -> Void
     private let onSelectTask: (TaskItem) -> Void
-    
+
     public init(
+        projectsViewModel: ProjectsViewModel = ProjectsViewModel(),
         onStartFocus: @escaping (TaskItem?) -> Void = { _ in },
         onSelectTask: @escaping (TaskItem) -> Void = { _ in }
     ) {
+        _projectsViewModel = State(initialValue: projectsViewModel)
         self.onStartFocus = onStartFocus
         self.onSelectTask = onSelectTask
     }
@@ -40,6 +43,7 @@ public struct TodayView: View {
             .background(AppColors.canvas.ignoresSafeArea())
             .task {
                 await viewModel.loadData()
+                await projectsViewModel.loadProjects()
             }
         }
     }
@@ -176,7 +180,7 @@ public struct TodayView: View {
                     TaskRowView(
                         position: index + 1,
                         title: task.title,
-                        projectName: task.projectName ?? "Productivity OS",
+                        projectName: projectsViewModel.projectName(for: task) ?? "—",
                         priority: task.priority ?? .medium,
                         iconName: iconName
                     ) {

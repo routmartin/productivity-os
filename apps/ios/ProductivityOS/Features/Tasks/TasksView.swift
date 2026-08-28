@@ -3,13 +3,16 @@ import SwiftUI
 /// Tasks browsing view backed by the real tasks API.
 public struct TasksView: View {
     @State private var viewModel: TasksViewModel
+    @State private var projectsViewModel: ProjectsViewModel
     private let onSelectTask: (TaskItem) -> Void
 
     public init(
         apiClient: APIRequesting = APIClient.shared,
+        projectsViewModel: ProjectsViewModel = ProjectsViewModel(),
         onSelectTask: @escaping (TaskItem) -> Void = { _ in }
     ) {
         _viewModel = State(initialValue: TasksViewModel(apiClient: apiClient))
+        _projectsViewModel = State(initialValue: projectsViewModel)
         self.onSelectTask = onSelectTask
     }
 
@@ -55,7 +58,7 @@ public struct TasksView: View {
                         ForEach(viewModel.filteredTasks) { task in
                             TaskRowView(
                                 title: task.title,
-                                projectName: task.projectName ?? "Productivity OS",
+                                projectName: projectsViewModel.projectName(for: task) ?? "—",
                                 priority: task.priority ?? .medium,
                                 iconName: "checklist"
                             ) {
@@ -74,6 +77,7 @@ public struct TasksView: View {
                 if case .idle = viewModel.loadState {
                     await viewModel.loadTasks()
                 }
+                await projectsViewModel.loadProjects()
             }
             .refreshable {
                 await viewModel.loadTasks()
