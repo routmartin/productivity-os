@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 /// Focus Preparation View matching `1. FOCUS PREPARATION` in `focsu-flow.png`
 public struct FocusPreparationView: View {
@@ -154,6 +155,15 @@ public struct FocusPreparationView: View {
                     Toggle("", isOn: $viewModel.isDoNotDisturbEnabled)
                         .labelsHidden()
                         .tint(AppColors.primary)
+                        .onChange(of: viewModel.isDoNotDisturbEnabled) { enabled in
+                            if enabled {
+                                UNUserNotificationCenter.current().requestAuthorization(
+                                    options: [.alert, .sound, .badge]
+                                ) { granted, error in
+                                    // OS authorization handled; real interruption level applies on granted authorization
+                                }
+                            }
+                        }
                 }
                 .padding(AppSpacing.md)
                 .appCardStyle(cornerRadius: AppRadius.lg)
