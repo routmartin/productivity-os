@@ -1,57 +1,56 @@
 import SwiftUI
 
-/// Main coordinator view with custom bottom bar and Focus mode presentation
+/// Main coordinator view with iOS 26 Liquid Glass tab bar.
 public struct MainTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: AppTab = .today
     @State private var focusViewModel = FocusSessionViewModel()
+    @State private var projectsViewModel = ProjectsViewModel()
     @State private var isShowingFocusSheet = false
 
     public init() {}
 
     public var body: some View {
-        ZStack(alignment: .bottom) {
-            // Main tab switch
-            Group {
-                switch selectedTab {
-                case .today:
-                    TodayView(
-                        onStartFocus: { task in
-                            focusViewModel.selectedTask = task
-                            isShowingFocusSheet = true
-                        },
-                        onSelectTask: { task in
-                            focusViewModel.selectedTask = task
-                            isShowingFocusSheet = true
-                        }
-                    )
-                case .focus:
-                    FocusPreparationView(
-                        viewModel: focusViewModel,
-                        onDismiss: {
-                            selectedTab = .today
-                        }
-                    )
-                case .tasks:
-                    TasksView(
-                        onSelectTask: { task in
-                            focusViewModel.selectedTask = task
-                            isShowingFocusSheet = true
-                        }
-                    )
-                case .me:
-                    ProfileView()
-                }
+        TabView(selection: $selectedTab) {
+            Tab(AppTab.today.rawValue, systemImage: AppTab.today.iconName, value: AppTab.today) {
+                TodayView(
+                    projectsViewModel: projectsViewModel,
+                    onStartFocus: { task in
+                        focusViewModel.selectedTask = task
+                        isShowingFocusSheet = true
+                    },
+                    onSelectTask: { task in
+                        focusViewModel.selectedTask = task
+                        isShowingFocusSheet = true
+                    }
+                )
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Custom bottom tab navigation (hidden during active focus session)
-            if focusViewModel.sessionState.state != .running && focusViewModel.sessionState.state != .paused {
-                CustomTabBar(selectedTab: $selectedTab)
+            Tab(AppTab.focus.rawValue, systemImage: AppTab.focus.iconName, value: AppTab.focus, role: .search) {
+                FocusPreparationView(
+                    viewModel: focusViewModel,
+                    onDismiss: {
+                        selectedTab = .today
+                    }
+                )
+            }
+
+            Tab(AppTab.tasks.rawValue, systemImage: AppTab.tasks.iconName, value: AppTab.tasks) {
+                TasksView(
+                    projectsViewModel: projectsViewModel,
+                    onSelectTask: { task in
+                        focusViewModel.selectedTask = task
+                        isShowingFocusSheet = true
+                    }
+                )
+            }
+
+            Tab(AppTab.me.rawValue, systemImage: AppTab.me.iconName, value: AppTab.me) {
+                ProfileView()
             }
         }
+        .tabBarMinimizeBehavior(.onScrollDown)
         #if os(iOS)
-        // Active / Paused full-screen Focus Environment
         .fullScreenCover(
             isPresented: Binding(
                 get: {
@@ -66,9 +65,7 @@ public struct MainTabView: View {
         ) {
             ActiveFocusView(
                 viewModel: focusViewModel,
-                onMinimize: {
-                    // Minimize sheet while keeping timer running
-                }
+                onMinimize: {}
             )
         }
         #else
@@ -90,7 +87,6 @@ public struct MainTabView: View {
             )
         }
         #endif
-        // Focus Preparation sheet
         .sheet(isPresented: $isShowingFocusSheet) {
             FocusPreparationView(
                 viewModel: focusViewModel,
@@ -99,7 +95,6 @@ public struct MainTabView: View {
                 }
             )
         }
-        // Focus Completed calm screen
         .sheet(
             isPresented: Binding(
                 get: { focusViewModel.sessionState.state == .completed },
@@ -115,12 +110,9 @@ public struct MainTabView: View {
                 isShowingFocusSheet = false
             }
         }
-        // Restore an in-progress server session on launch.
         .task {
             await focusViewModel.restoreActiveSession()
         }
-        // Timer accuracy across background/foreground comes from wall-clock
-        // timestamps; foregrounding just re-renders with the current time.
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 focusViewModel.refreshClock()

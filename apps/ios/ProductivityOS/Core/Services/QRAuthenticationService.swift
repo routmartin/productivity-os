@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 /// DTO for QR Authentication exchange
 public struct QrExchangeRequest: Encodable {
