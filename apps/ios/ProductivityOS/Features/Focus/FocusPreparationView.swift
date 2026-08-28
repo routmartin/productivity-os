@@ -157,10 +157,10 @@ public struct FocusPreparationView: View {
                         .tint(AppColors.primary)
                         .onChange(of: viewModel.isDoNotDisturbEnabled) { enabled in
                             if enabled {
-                                UNUserNotificationCenter.current().requestAuthorization(
-                                    options: [.alert, .sound, .badge]
-                                ) { granted, error in
-                                    // OS authorization handled; real interruption level applies on granted authorization
+                                // Apple does not expose a public API to toggle system DND programmatically.
+                                // Open OS Focus settings so the user can enable it directly.
+                                if let url = URL(string: "App-Prefs:root=DO_NOT_DISTURB") ?? URL(string: "prefs:root=DO_NOT_DISTURB") {
+                                    UIApplication.shared.open(url)
                                 }
                             }
                         }
