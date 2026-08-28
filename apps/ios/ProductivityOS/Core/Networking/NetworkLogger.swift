@@ -24,6 +24,9 @@ public final class NetworkLogger: Sendable {
         }
         
         log.debug("📡 [OUT] \(method) \(url)\(headerString)\(bodyString)")
+        Task { @MainActor in
+            APILogStore.shared.append(requestMethod: method, url: url, responseStatus: nil, bodyPreview: bodyString)
+        }
     }
     
     public static func log(response: HTTPURLResponse, data: Data) {
@@ -36,11 +39,17 @@ public final class NetworkLogger: Sendable {
         }
         
         log.debug("✅ [IN] \(status) \(url)\(bodyString)")
+        Task { @MainActor in
+            APILogStore.shared.append(requestMethod: "RESPONSE", url: url, responseStatus: status, bodyPreview: bodyString)
+        }
     }
     
     public static func log(error: Error, url: URL?) {
         let urlString = url?.absoluteString ?? "Unknown URL"
         log.error("❌ [ERROR] \(urlString): \(error.localizedDescription)")
+        Task { @MainActor in
+            APILogStore.shared.append(requestMethod: "ERROR", url: urlString, responseStatus: nil, bodyPreview: error.localizedDescription)
+        }
     }
     
     // MARK: - Privacy

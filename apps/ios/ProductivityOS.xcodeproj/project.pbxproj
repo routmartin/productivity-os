@@ -58,6 +58,7 @@
 		AA0000312C7F000100000001 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000322C7F000100000001 /* Project.swift */; };
 		AA0000322C7F000100000001 /* ProjectService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000332C7F000100000001 /* ProjectService.swift */; };
 		AA0000332C7F000100000001 /* ProjectsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000342C7F000100000001 /* ProjectsViewModel.swift */; };
+		AA0000342C7F000100000001 /* APILogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000352C7F000100000001 /* APILogStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -113,6 +114,7 @@
 		BB0000322C7F000100000001 /* Project.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
 		BB0000332C7F000100000001 /* ProjectService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectService.swift; sourceTree = "<group>"; };
 		BB0000342C7F000100000001 /* ProjectsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsViewModel.swift; sourceTree = "<group>"; };
+		BB0000352C7F000100000001 /* APILogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APILogStore.swift; sourceTree = "<group>"; };
 		CC0000012C7F000100000001 /* ProductivityOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProductivityOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -242,6 +244,7 @@
 				BB0000102C7F000100000001 /* APIClient.swift */,
 				BB0000242C7F000100000001 /* APIDTOs.swift */,
 				BB0000312C7F000100000001 /* NetworkLogger.swift */,
+				BB0000352C7F000100000001 /* APILogStore.swift */,
 			);
 			path = Networking;
 			sourceTree = "<group>";
@@ -473,6 +476,7 @@
 				AA0000312C7F000100000001 /* Project.swift in Sources */,
 				AA0000322C7F000100000001 /* ProjectService.swift in Sources */,
 				AA0000332C7F000100000001 /* ProjectsViewModel.swift in Sources */,
+				AA0000342C7F000100000001 /* APILogStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
