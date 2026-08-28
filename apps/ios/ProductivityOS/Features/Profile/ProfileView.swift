@@ -3,19 +3,9 @@ import SwiftUI
 /// Profile view with theme switching and developer tools
 public struct ProfileView: View {
     @State private var authSession = AuthSession.shared
-    @AppStorage("selectedTheme") private var selectedTheme: String = "system"
-    @State private var showThemePicker = false
     @State private var showDevLog = false
 
     public init() {}
-
-    var themeBinding: ColorScheme? {
-        switch selectedTheme {
-        case "light": return .light
-        case "dark": return .dark
-        default: return nil
-        }
-    }
 
     public var body: some View {
         NavigationStack {
@@ -57,7 +47,7 @@ public struct ProfileView: View {
                         VStack(spacing: 0) {
                             settingRow(icon: "bell.badge", title: "Notifications", value: "Enabled")
                             Divider().background(AppColors.surfaceBorder)
-                            themeSettingRow()
+                            settingRow(icon: "moon.fill", title: "Appearance", value: "Light")
                             Divider().background(AppColors.surfaceBorder)
                             settingRow(icon: "waveform", title: "Focus Sounds", value: "Lo-Fi")
                         }
@@ -90,10 +80,7 @@ public struct ProfileView: View {
             }
             .background(AppColors.canvas.ignoresSafeArea())
             .navigationTitle("Me")
-            .preferredColorScheme(themeBinding)
-            .sheet(isPresented: $showThemePicker) {
-                themePickerSheet()
-            }
+            .preferredColorScheme(.light)
             .sheet(isPresented: $showDevLog) {
                 DevAPIRequestLogView()
             }
@@ -101,35 +88,6 @@ public struct ProfileView: View {
     }
 
     // MARK: - Rows
-
-    private func themeSettingRow() -> some View {
-        Button {
-            showThemePicker = true
-        } label: {
-            HStack {
-                Image(systemName: "moon.fill")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(AppColors.primary)
-                    .frame(width: 28)
-
-                Text("Appearance")
-                    .font(AppTypography.subheadline)
-                    .foregroundStyle(AppColors.textPrimary)
-
-                Spacer()
-
-                Text(selectedTheme.capitalized)
-                    .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.textSecondary)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppColors.textTertiary)
-            }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, AppSpacing.sm + 2)
-        }
-    }
 
     private func developerRow(icon: String, title: String, value: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -183,46 +141,6 @@ public struct ProfileView: View {
         .padding(.vertical, AppSpacing.sm + 2)
     }
 
-    // MARK: - Theme Picker
-
-    @ViewBuilder
-    private func themePickerSheet() -> some View {
-        NavigationStack {
-            List {
-                Section("Theme") {
-                    themeOptionRow(label: "System", value: "system")
-                    themeOptionRow(label: "Light", value: "light")
-                    themeOptionRow(label: "Dark", value: "dark")
-                }
-            }
-            .navigationTitle("Appearance")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { showThemePicker = false }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-
-    private func themeOptionRow(label: String, value: String) -> some View {
-        Button {
-            selectedTheme = value
-            showThemePicker = false
-        } label: {
-            HStack {
-                Text(label)
-                    .font(AppTypography.body)
-                    .foregroundStyle(AppColors.textPrimary)
-                Spacer()
-                if selectedTheme == value {
-                    Image(systemName: "checkmark")
-                        .foregroundStyle(AppColors.primary)
-                }
-            }
-            .padding(.vertical, 4)
-        }
-    }
 }
 
 // MARK: - Developer Log View
