@@ -81,7 +81,7 @@ public struct TaskItem: Identifiable, Codable, Hashable, Sendable {
         completedAt: Date? = nil,
         deletedAt: Date? = nil,
         projectId: UUID? = nil,
-        projectName: String? = "Productivity OS",
+        projectName: String? = nil,
         createdAt: Date? = nil,
         updatedAt: Date? = nil
     ) {

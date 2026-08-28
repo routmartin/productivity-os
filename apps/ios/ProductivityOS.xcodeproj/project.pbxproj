@@ -55,6 +55,9 @@
 		AA00002E2C7F000100000001 /* QRConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00002F2C7F000100000001 /* QRConfirmationView.swift */; };
 		AA00002F2C7F000100000001 /* QRAuthenticationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000302C7F000100000001 /* QRAuthenticationService.swift */; };
 		AA0000302C7F000100000001 /* NetworkLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000312C7F000100000001 /* NetworkLogger.swift */; };
+		AA0000312C7F000100000001 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000322C7F000100000001 /* Project.swift */; };
+		AA0000322C7F000100000001 /* ProjectService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000332C7F000100000001 /* ProjectService.swift */; };
+		AA0000332C7F000100000001 /* ProjectsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000342C7F000100000001 /* ProjectsViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -107,6 +110,9 @@
 		BB00002F2C7F000100000001 /* QRConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRConfirmationView.swift; sourceTree = "<group>"; };
 		BB0000302C7F000100000001 /* QRAuthenticationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRAuthenticationService.swift; sourceTree = "<group>"; };
 		BB0000312C7F000100000001 /* NetworkLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkLogger.swift; sourceTree = "<group>"; };
+		BB0000322C7F000100000001 /* Project.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
+		BB0000332C7F000100000001 /* ProjectService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectService.swift; sourceTree = "<group>"; };
+		BB0000342C7F000100000001 /* ProjectsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsViewModel.swift; sourceTree = "<group>"; };
 		CC0000012C7F000100000001 /* ProductivityOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProductivityOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -171,23 +177,25 @@
 				EE0000122C7F000100000001 /* Tasks */,
 				EE0000132C7F000100000001 /* Profile */,
 				EE0000152C7F000100000001 /* Authentication */,
+				EE0000162C7F000100000001 /* Projects */,
 			);
 			path = Features;
 			sourceTree = "<group>";
 		};
-		EE0000062C7F000100000001 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				BB00001D2C7F000100000001 /* User.swift */,
-				BB00001E2C7F000100000001 /* Task.swift */,
-				BB00001F2C7F000100000001 /* TopThree.swift */,
-				BB0000202C7F000100000001 /* FocusDuration.swift */,
-				BB0000212C7F000100000001 /* FocusSession.swift */,
-				BB0000222C7F000100000001 /* FocusSessionState.swift */,
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
+			EE0000062C7F000100000001 /* Models */ = {
+				isa = PBXGroup;
+				children = (
+					BB00001D2C7F000100000001 /* User.swift */,
+					BB00001E2C7F000100000001 /* Task.swift */,
+					BB00001F2C7F000100000001 /* TopThree.swift */,
+					BB0000202C7F000100000001 /* FocusDuration.swift */,
+					BB0000212C7F000100000001 /* FocusSession.swift */,
+					BB0000222C7F000100000001 /* FocusSessionState.swift */,
+					BB0000322C7F000100000001 /* Project.swift */,
+				);
+				path = Models;
+				sourceTree = "<group>";
+			};
 		EE0000072C7F000100000001 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -323,6 +331,7 @@
 				BB0000282C7F000100000001 /* FocusService.swift */,
 				BB0000292C7F000100000001 /* TopThreeService.swift */,
 				BB0000302C7F000100000001 /* QRAuthenticationService.swift */,
+				BB0000332C7F000100000001 /* ProjectService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -335,6 +344,14 @@
 				BB00002F2C7F000100000001 /* QRConfirmationView.swift */,
 			);
 			path = Authentication;
+			sourceTree = "<group>";
+		};
+		EE0000162C7F000100000001 /* Projects */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000342C7F000100000001 /* ProjectsViewModel.swift */,
+			);
+			path = Projects;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -453,6 +470,9 @@
 				AA00002F2C7F000100000001 /* QRAuthenticationService.swift in Sources */,
 				AA00002B2C7F000100000001 /* AppMotion.swift in Sources */,
 				AA00002C2C7F000100000001 /* Haptics.swift in Sources */,
+				AA0000312C7F000100000001 /* Project.swift in Sources */,
+				AA0000322C7F000100000001 /* ProjectService.swift in Sources */,
+				AA0000332C7F000100000001 /* ProjectsViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

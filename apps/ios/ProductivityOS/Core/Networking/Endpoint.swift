@@ -40,6 +40,9 @@ public enum AppEndpoint: Endpoint {
     // Tasks (/api/v1/tasks)
     case listTasks(page: Int = 0, size: Int = 50)
 
+    // Projects (/api/v1/projects)
+    case listProjects
+
     // Daily Top 3 (/api/v1/daily-top-three/{date})
     case getDailyTopThree(date: String)
 
@@ -65,6 +68,9 @@ public enum AppEndpoint: Endpoint {
         case .listTasks:
             return "/api/v1/tasks"
 
+        case .listProjects:
+            return "/api/v1/projects"
+
         case .getDailyTopThree(let date):
             return "/api/v1/daily-top-three/\(date)"
 
@@ -84,7 +90,7 @@ public enum AppEndpoint: Endpoint {
         case .register, .login, .qrExchange, .refresh, .logout,
              .startFocusSession, .endFocusSession:
             return .post
-        case .listTasks, .getDailyTopThree, .getActiveFocusSession, .listFocusSessions:
+        case .listTasks, .listProjects, .getDailyTopThree, .getActiveFocusSession, .listFocusSessions:
             return .get
         }
     }
