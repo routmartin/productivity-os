@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SwiftUI Architecture — How This App Thinks</title>
+<style>
+  :root {
+    --bg: #0F1020;
+    --surface: #1A1B2E;
+    --surface-2: #232542;
+    --border: #2E2F4F;
+    --border-soft: #2A2B47;
+    --primary: #8B7FFF;
+    --primary-soft: #6B5BD6;
+    --accent: #5AE3C7;
+    --warm: #FFB570;
+    --pink: #FF7AB6;
+    --text: #E8E8F4;
+    --text-soft: #9B9DBF;
+    --text-dim: #6B6D8E;
+    --line: #3D3F66;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+    background: radial-gradient(ellipse at top, #1B1B3A 0%, var(--bg) 60%);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 40px 32px 80px; }
+
+  /* HEADER */
+  header { margin-bottom: 36px; }
+  .eyebrow {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin: 0 0 12px;
+    letter-spacing: -0.8px;
+    background: linear-gradient(135deg, #fff 0%, #B8B3FF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .lede {
+    font-size: 15px;
+    color: var(--text-soft);
+    max-width: 720px;
+    margin: 0;
+  }
+
+  /* SECTION */
+  .section { margin-top: 48px; }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .section-num {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.3px;
+  }
+  .section-sub {
+    color: var(--text-soft);
+    font-size: 13px;
+    margin: 6px 0 0;
+  }
+
+  /* LAYER STACK — the heart of the diagram */
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 8px;
+    position: relative;
+  }
+
+  .layer {
+    position: relative;
+    padding: 22px 24px;
+    border-radius: 12px;
+    background: var(--surface);
+    transition: background 0.25s ease, transform 0.25s ease;
+    cursor: default;
+  }
+  .layer:hover { background: var(--surface-2); }
+  .layer + .layer { margin-top: 2px; }
+
+  .layer-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .layer-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: grid; place-items: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .layer-info { flex: 1; min-width: 0; }
+  .layer-name {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.2px;
+  }
+  .layer-role {
+    font-size: 12.5px;
+    color: var(--text-soft);
+    margin: 2px 0 0;
+  }
+  .layer-where {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    background: var(--surface-2);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-soft);
+  }
+
+  .layer-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 28px;
+  }
+  @media (max-width: 720px) { .layer-body { grid-template-columns: 1fr; } }
+
+  .layer-block h5 {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    margin: 0 0 8px;
+  }
+  .layer-block p {
+    font-size: 13px;
+    color: var(--text-soft);
+    margin: 0 0 10px;
+  }
+  .layer-block ul {
+    margin: 0; padding: 0; list-style: none;
+  }
+  .layer-block li {
+    font-size: 13px;
+    color: var(--text);
+    padding: 4px 0 4px 18px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .layer-block li::before {
+    content: "›";
+    position: absolute;
+    left: 0;
+    color: var(--primary);
+    font-weight: 700;
+  }
+  .layer-block code {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(139, 127, 255, 0.12);
+    color: var(--primary);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* LAYER COLORS — visual identity per layer */
+  .layer[data-layer="1"] .layer-icon { background: rgba(139, 127, 255, 0.15); color: var(--primary); }
+  .layer[data-layer="1"] { border-left: 3px solid var(--primary); }
+
+  .layer[data-layer="2"] .layer-icon { background: rgba(90, 227, 199, 0.13); color: var(--accent); }
+  .layer[data-layer="2"] { border-left: 3px solid var(--accent); }
+
+  .layer[data-layer="3"] .layer-icon { background: rgba(255, 181, 112, 0.13); color: var(--warm); }
+  .layer[data-layer="3"] { border-left: 3px solid var(--warm); }
+
+  .layer[data-layer="4"] .layer-icon { background: rgba(255, 122, 182, 0.13); color: var(--pink); }
+  .layer[data-layer="4"] { border-left: 3px solid var(--pink); }
+
+  .layer[data-layer="5"] .layer-icon { background: rgba(139, 127, 255, 0.15); color: var(--primary); }
+  .layer[data-layer="5"] { border-left: 3px solid var(--primary); }
+
+  .layer[data-layer="6"] .layer-icon { background: rgba(90, 227, 199, 0.13); color: var(--accent); }
+  .layer[data-layer="6"] { border-left: 3px solid var(--accent); }
+
+  /* ARROW between layers */
+  .flow-arrow {
+    text-align: center;
+    padding: 6px 0;
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    position: relative;
+  }
+  .flow-arrow::before {
+    content: "↓";
+    display: inline-block;
+    animation: bounce 2s ease-in-out infinite;
+  }
+  .flow-arrow .label {
+    display: block;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-weight: 600;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); opacity: 0.5; }
+    50% { transform: translateY(3px); opacity: 1; }
+  }
+
+  /* PATTERN CARDS — the big SwiftUI concepts */
+  .patterns {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 720px) { .patterns { grid-template-columns: 1fr; } }
+
+  .pattern {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .pattern::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(139, 127, 255, 0.08), transparent 60%);
+    pointer-events: none;
+  }
+  .pattern-tag {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  .pattern-tag.purple { background: rgba(139, 127, 255, 0.15); color: var(--primary); }
+  .pattern-tag.green  { background: rgba(90, 227, 199, 0.15);  color: var(--accent); }
+  .pattern-tag.warm   { background: rgba(255, 181, 112, 0.15); color: var(--warm); }
+  .pattern-tag.pink   { background: rgba(255, 122, 182, 0.15); color: var(--pink); }
+
+  .pattern h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    letter-spacing: -0.2px;
+  }
+  .pattern p {
+    font-size: 13px;
+    color: var(--text-soft);
+    margin: 0 0 14px;
+  }
+  .pattern .shape {
+    background: var(--bg);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .pattern .shape .k { color: var(--pink); }
+  .pattern .shape .t { color: var(--accent); }
+  .pattern .shape .c { color: var(--text-dim); }
+  .pattern .shape .s { color: var(--warm); }
+
+  /* DATA FLOW — visual diagram */
+  .flow-canvas {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 36px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .flow-canvas::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(rgba(139, 127, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139, 127, 255, 0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+  }
+  .flow-canvas svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .flow-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    position: relative;
+    z-index: 2;
+  }
+  @media (max-width: 820px) { .flow-row { grid-template-columns: 1fr; } }
+  .flow-step {
+    text-align: center;
+    padding: 16px 8px;
+  }
+  .flow-num {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+  .flow-box {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 12px;
+    margin: 8px 0;
+  }
+  .flow-box .label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .flow-box .from-to {
+    font-size: 11px;
+    color: var(--text-soft);
+    margin-top: 4px;
+  }
+  .flow-step .arrow-down {
+    color: var(--primary);
+    font-size: 14px;
+    margin: 4px 0;
+  }
+  @media (min-width: 821px) {
+    .flow-step .arrow-down { display: none; }
+  }
+
+  /* RULES — the must-follows */
+  .rules {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 820px) { .rules { grid-template-columns: 1fr; } }
+  .rule {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    position: relative;
+  }
+  .rule .x {
+    position: absolute;
+    top: 14px; right: 16px;
+    color: var(--pink);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .rule h4 {
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    color: var(--text);
+  }
+  .rule p {
+    font-size: 12.5px;
+    color: var(--text-soft);
+    margin: 0;
+    line-height: 1.5;
+  }
+  .rule code {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 11.5px;
+    color: var(--primary);
+    background: rgba(139, 127, 255, 0.10);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  /* CALLOUT — mental model */
+  .callout {
+    background: linear-gradient(135deg, rgba(139, 127, 255, 0.10) 0%, rgba(90, 227, 199, 0.06) 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 28px;
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+  }
+  .callout .icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    display: grid; place-items: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .callout h4 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .callout p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.6;
+  }
+  .callout code {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <span class="eyebrow">SwiftUI · Mental Model</span>
+    <h1>How this app is wired</h1>
+    <p class="lede">
+      A simple story of how a button tap becomes a server call and back.
+      Six layers, one direction, no surprises. Once you see the shape,
+      every file makes sense.
+    </p>
+  </header>
+
+  <!-- 1. THE STORY -->
+  <div class="callout">
+    <div class="icon">🧠</div>
+    <div>
+      <h4>The mental model in one line</h4>
+      <p>
+        The <code>View</code> shows. The <code>ViewModel</code> thinks.
+        The <code>Service</code> talks to the server. The <code>APIClient</code>
+        is the only thing that touches the wire. That's the whole app —
+        the rest is just folders.
+      </p>
+    </div>
+  </div>
+
+  <!-- 2. THE FLOW -->
+  <section class="section">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2 class="section-title">The flow of a request</h2>
+    </div>
+    <p class="section-sub">User taps "Refresh" in the Today tab. Watch the data move.</p>
+
+    <div class="flow-canvas">
+      <svg id="flow-lines" viewBox="0 0 1000 100" preserveAspectRatio="none"></svg>
+      <div class="flow-row">
+        <div class="flow-step">
+          <div class="flow-num">01</div>
+          <div class="flow-box">
+            <div class="label">TodayView</div>
+            <div class="from-to">User taps button</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">02</div>
+          <div class="flow-box">
+            <div class="label">TodayViewModel</div>
+            <div class="from-to">@Observable · calls <code>loadData()</code></div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">03</div>
+          <div class="flow-box">
+            <div class="label">TaskService</div>
+            <div class="from-to">Sendable struct · one method per endpoint</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">04</div>
+          <div class="flow-box">
+            <div class="label">APIClient</div>
+            <div class="from-to">Adds Bearer token · sends request</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">05</div>
+          <div class="flow-box">
+            <div class="label">Backend</div>
+            <div class="from-to">JSON back → decoded to model</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. THE LAYERS -->
+  <section class="section">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2 class="section-title">The six layers</h2>
+    </div>
+    <p class="section-sub">Each layer has one job. Read top-to-bottom.</p>
+
+    <div class="stack">
+
+      <!-- LAYER 1 -->
+      <div class="layer" data-layer="1">
+        <div class="layer-head">
+          <div class="layer-icon">🚀</div>
+          <div class="layer-info">
+            <h3 class="layer-name">App entry</h3>
+            <p class="layer-role">Decides which screen to show. Nothing else.</p>
+          </div>
+          <code class="layer-where">App/</code>
+        </div>
+        <div class="layer-body">
+          <div class="layer-block">
+            <h5>What lives here</h5>
+            <p>The single <code>@main</code> <code>App</code> struct. Reads the auth state and shows either the login screen or the main tabs.</p>
+          </div>
+          <div class="layer-block">
+            <h5>What it does NOT do</h5>
+            <ul>
+              <li>No business logic</li>
+              <li>No network calls</li>
+              <li>No styling</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow"><span class="label">observes</span></div>
+
+      <!-- LAYER 2 -->
+      <div class="layer" data-layer="2">
+        <div class="layer-head">
+          <div class="layer-icon">🎨</div>
+          <div class="layer-info">
+            <h3 class="layer-name">Views</h3>
+            <p class="layer-role">Render pixels. Forward user intent to the ViewModel.</p>
+          </div>
+          <code class="layer-where">Features/&lt;Name&gt;/</code>
+        </div>
+        <div class="layer-body">
+          <div class="layer-block">
+            <h5>What lives here</h5>
+            <p>One folder per feature, one <code>FeatureNameView.swift</code> inside. Each view owns a <code>@State</code> ViewModel and nothing else.</p>
+          </div>
+          <div class="layer-block">
+            <h5>The rule</h5>
+            <ul>
+              <li>If a view does <code>URLSession</code> work, it's wrong</li>
+              <li>Views only read state and call methods</li>
+              <li>All side effects go through the ViewModel</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow"><span class="label">calls methods on</span></div>
+
+      <!-- LAYER 3 -->
+      <div class="layer" data-layer="3">
+        <div class="layer-head">
+          <div class="layer-icon">🧠</div>
+          <div class="layer-info">
+            <h3 class="layer-name">ViewModels</h3>
+            <p class="layer-role">Hold state. Orchestrate work. Shape data for the UI.</p>
+          </div>
+          <code class="layer-where">Features/&lt;Name&gt;/</code>
+        </div>
+        <div class="layer-body">
+          <div class="layer-block">
+            <h5>What lives here</h5>
+            <p><code>@Observable</code> classes. One per feature. Hold <code>struct</code> value types ready for the view to render.</p>
+          </div>
+          <div class="layer-block">
+            <h5>The rule</h5>
+            <ul>
+              <li>Never import SwiftUI</li>
+              <li>Compute derived values here, not in the view</li>
+              <li>Translate errors into user-friendly messages</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow"><span class="label">asks</span></div>
+
+      <!-- LAYER 4 -->
+      <div class="layer" data-layer="4">
+        <div class="layer-head">
+          <div class="layer-icon">📦</div>
+          <div class="layer-info">
+            <h3 class="layer-name">Services</h3>
+            <p class="layer-role">One per backend resource. Know the endpoint, return models.</p>
+          </div>
+          <code class="layer-where">Core/Services/</code>
+        </div>
+        <div class="layer-body">
+          <div class="layer-block">
+            <h5>What lives here</h5>
+            <p>Plain <code>struct</code>s, marked <code>Sendable</code>. Each method is one endpoint. They are dumb on purpose.</p>
+          </div>
+          <div class="layer-block">
+            <h5>The rule</h5>
+            <ul>
+              <li>One service per backend resource</li>
+              <li>Inject <code>APIRequesting</code> for tests</li>
+              <li>Return models, never raw <code>Data</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow"><span class="label">via</span></div>
+
+      <!-- LAYER 5 -->
+      <div class="layer" data-layer="5">
+        <div class="layer-head">
+          <div class="layer-icon">🌐</div>
+          <div class="layer-info">
+            <h3 class="layer-name">Transport</h3>
+            <p class="layer-role">The only thing that touches the wire.</p>
+          </div>
+          <code class="layer-where">Core/Networking/</code>
+        </div>
+        <div class="layer-body">
+          <div class="layer-block">
+            <h5>What lives here</h5>
+            <p>Three collaborators: <code>APIClient</code> (does the work), <code>AppEndpoint</code> (type-safe paths), <code>APIError</code> (typed failures).</p>
+          </div>
+          <div class="layer-block">
+            <h5>The rule</h5>
+            <ul>
+              <li>Only <code>APIClient</code> calls <code>URLSession</code></li>
+              <li>It reads the token from <code>AuthSession</code></li>
+              <li>It handles 401-refresh exactly once (single-flight)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow"><span class="label">reads</span></div>
+
+      <!-- LAYER 6 -->
+      <div class="layer" data-layer="6">
+        <div class="layer-head">
+          <div class="layer-icon">🔐</div>
+          <div class="layer-info">
+            <h3 class="layer-name">Auth &amp; storage</h3>
+            <p class="layer-role">The credential boundary. Nothing else holds the token.</p>
+          </div>
+          <code class="layer-where">Core/Authentication/</code>
+        </div>
+        <div class="layer-body">
+          <div class="layer-block">
+            <h5>What lives here</h5>
+            <p><code>AuthSession</code> (an <code>@Observable</code> holder), <code>KeychainManager</code> (writes to Apple Keychain), and the <code>URLSession</code> cookie store (holds the refresh token).</p>
+          </div>
+          <div class="layer-block">
+            <h5>The rule</h5>
+            <ul>
+              <li>Only <code>AuthSession</code> reads/writes the access token</li>
+              <li>The refresh token never enters Swift code (it's an HttpOnly cookie)</li>
+              <li>All other layers ask <code>AuthSession</code>, they never touch Keychain directly</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 4. THE PATTERNS -->
+  <section class="section">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2 class="section-title">The four SwiftUI patterns in play</h2>
+    </div>
+    <p class="section-sub">When you read any file, one of these four shapes is happening.</p>
+
+    <div class="patterns">
+
+      <div class="pattern">
+        <span class="pattern-tag purple">@Observable</span>
+        <h3>The state holder</h3>
+        <p>One class per feature, holds everything the view needs. SwiftUI re-renders automatically when any property changes.</p>
+        <div class="shape">
+<span class="c">// TodayViewModel.swift</span>
+<span class="k">@Observable</span>
+<span class="k">final class</span> <span class="t">TodayViewModel</span> {
+  <span class="k">var</span> tasks: [<span class="t">TaskItem</span>] = []
+  <span class="k">var</span> isLoading = <span class="s">false</span>
+
+  <span class="k">func</span> loadData() <span class="k">async</span> {
+    isLoading = <span class="s">true</span>
+    <span class="k">defer</span> { isLoading = <span class="s">false</span> }
+    <span class="k">self</span>.tasks = <span class="k">try await</span> service.listActive()
+  }
+}
+        </div>
+      </div>
+
+      <div class="pattern">
+        <span class="pattern-tag green">@State + @Environment</span>
+        <h3>The view's memory</h3>
+        <p>The view owns a <code>@State</code> ViewModel. The view reads it. That's it. The view has no other state.</p>
+        <div class="shape">
+<span class="c">// TodayView.swift</span>
+<span class="k">struct</span> <span class="t">TodayView</span>: <span class="t">View</span> {
+  <span class="k">@State</span> <span class="k">private var</span> vm = <span class="t">TodayViewModel</span>()
+
+  <span class="k">var</span> body: <span class="k">some</span> <span class="t">View</span> {
+    <span class="t">List</span>(vm.tasks) { task <span class="k">in</span>
+      <span class="t">Text</span>(task.title)
+    }
+    .<span class="t">task</span> { <span class="k">await</span> vm.loadData() }
+  }
+}
+        </div>
+      </div>
+
+      <div class="pattern">
+        <span class="pattern-tag warm">Sendable struct</span>
+        <h3>The dumb talker</h3>
+        <p>A service is a struct with one method per endpoint. No state, no logic. The protocol makes it injectable for tests.</p>
+        <div class="shape">
+<span class="c">// TaskService.swift</span>
+<span class="k">struct</span> <span class="t">TaskService</span>: <span class="t">Sendable</span> {
+  <span class="k">let</span> api: <span class="t">any</span> <span class="t">APIRequesting</span>
+
+  <span class="k">func</span> listActive() <span class="k">async throws</span> -&gt; [<span class="t">TaskItem</span>] {
+    <span class="k">try await</span> api.request(<span class="t">.listTasks</span>)
+  }
+}
+        </div>
+      </div>
+
+      <div class="pattern">
+        <span class="pattern-tag pink">enum + protocol</span>
+        <h3>The type-safe path</h3>
+        <p>Every endpoint is a case in an enum. Paths are not strings scattered around — they're cases the compiler can check.</p>
+        <div class="shape">
+<span class="c">// Endpoint.swift</span>
+<span class="k">enum</span> <span class="t">AppEndpoint</span>: <span class="t">Endpoint</span> {
+  <span class="k">case</span> listTasks
+  <span class="k">case</span> completeTask(id: <span class="t">String</span>)
+  <span class="k">case</span> startFocus(taskId: <span class="t">String</span>)
+
+  <span class="k">var</span> path: <span class="t">String</span> {
+    <span class="k">switch self</span> {
+    <span class="k">case</span> .listTasks:        <span class="s">"/api/v1/tasks"</span>
+    <span class="k">case</span> .completeTask(<span class="k">let</span> id): <span class="s">"/api/v1/tasks/\(id)"</span>
+    <span class="k">case</span> .startFocus(<span class="k">let</span> id): <span class="s">"/api/v1/focus"</span>
+    }
+  }
+}
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 5. THE RULES -->
+  <section class="section">
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <h2 class="section-title">The three things to never do</h2>
+    </div>
+
+    <div class="rules">
+      <div class="rule">
+        <span class="x">✕</span>
+        <h4>No networking in a View</h4>
+        <p>If a view calls <code>URLSession</code>, fetch, or any HTTP thing directly — it belongs in a service. Views call <code>viewModel.loadData()</code> only.</p>
+      </div>
+      <div class="rule">
+        <span class="x">✕</span>
+        <h4>No calling a View from a Service</h4>
+        <p>The arrow only goes one way: View → ViewModel → Service → APIClient. Services return models, not UI state. ViewModels own UI state.</p>
+      </div>
+      <div class="rule">
+        <span class="x">✕</span>
+        <h4>No storing the token anywhere else</h4>
+        <p>Only <code>AuthSession</code> reads and writes the access token. If you find yourself reaching for <code>UserDefaults</code> or a global variable for auth — stop.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
