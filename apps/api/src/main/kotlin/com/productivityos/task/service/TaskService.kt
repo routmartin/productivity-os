@@ -45,6 +45,14 @@ class TaskService(
     }
 
     @Transactional(readOnly = true)
+    fun listAll(page: Int, size: Int): List<TaskResponse> {
+        val pageable = PageRequest.of(page, size)
+        return taskRepository.findAllByUserId(currentUser.id(), pageable)
+            .content
+            .map { TaskResponse.from(it) }
+    }
+
+    @Transactional(readOnly = true)
     fun listActive(page: Int, size: Int): List<TaskResponse> {
         val pageable = PageRequest.of(page, size)
         return taskRepository.findActiveByUserId(currentUser.id(), pageable)

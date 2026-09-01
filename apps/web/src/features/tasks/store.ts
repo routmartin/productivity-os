@@ -228,8 +228,11 @@ export const useTasksStore = defineStore("tasks", () => {
 
     // Real mode: create always yields INBOX (backend contract); the store
     // chains sanctioned transitions per destination (Tasks & Inbox UI spec
-    // §12.1). Only the final server state enters the list — a mid-chain
-    // failure leaves the task visible in its actual lifecycle state.
+    // §12.1), then assigns the project when the dialog picked one (backend
+    // create has no projectId field — it must go through PUT /{id}/project,
+    // mirroring updateTask's pattern). Only the final server state enters
+    // the list; a mid-chain failure leaves the task visible in its actual
+    // lifecycle state.
     let current: Promise<TaskResponse> = tasksApi.create({
       title: draft.title,
       description: draft.description || null,
@@ -242,6 +245,11 @@ export const useTasksStore = defineStore("tasks", () => {
     }
     if (destination === "IN_PROGRESS") {
       current = current.then((planned) => tasksApi.start(planned.id));
+    }
+    if (draft.projectId) {
+      current = current.then((created) =>
+        tasksApi.assignProject(created.id, { projectId: draft.projectId }),
+      );
     }
 
     current

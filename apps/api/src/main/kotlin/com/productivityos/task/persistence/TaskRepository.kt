@@ -8,6 +8,9 @@ import java.util.UUID
 
 interface TaskRepository : JpaRepository<TaskEntity, UUID> {
 
+    @Query("SELECT t FROM TaskEntity t WHERE t.userId = :userId AND t.deletedAt IS NULL ORDER BY t.createdAt DESC")
+    fun findAllByUserId(userId: UUID, pageable: Pageable): Page<TaskEntity>
+
     @Query("SELECT t FROM TaskEntity t WHERE t.userId = :userId AND t.deletedAt IS NULL AND t.status NOT IN (com.productivityos.task.domain.TaskStatus.COMPLETED, com.productivityos.task.domain.TaskStatus.CANCELLED) ORDER BY t.createdAt DESC")
     fun findActiveByUserId(userId: UUID, pageable: Pageable): Page<TaskEntity>
 

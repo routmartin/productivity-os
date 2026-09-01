@@ -40,7 +40,7 @@ class TaskController(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int
     ): List<TaskResponse> {
-        return taskService.listActive(page, size)
+        return taskService.listAll(page, size)
     }
 
     /**

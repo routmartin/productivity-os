@@ -49,7 +49,7 @@ const isCompleted = computed(() => props.task.status === 'COMPLETED')
 /** Backend completes tasks only from IN_PROGRESS; mock mode keeps the
  *  design-review toggle + undo. */
 const canToggle = computed(
-  () => useMock('TASKS') || props.task.status === 'IN_PROGRESS',
+  () => (useMock('TASKS') || props.task.status === 'IN_PROGRESS') && props.task.status !== 'COMPLETED',
 )
 
 type PillTone = 'neutral' | 'accent' | 'info' | 'success' | 'warning'

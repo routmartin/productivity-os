@@ -127,8 +127,8 @@ const emptyCopy = computed(() => {
 type ViewMode = 'list' | 'grid'
 type GroupMode = 'date' | 'project'
 
-const viewMode = ref<ViewMode>('list')
-const groupMode = ref<GroupMode>('date')
+const viewMode = ref<ViewMode>('grid')
+const groupMode = ref<GroupMode>('project')
 
 /* ---------------- Grouping (shared by list + grid) ---------------- */
 
@@ -278,7 +278,7 @@ function onCreateTask(draft: Parameters<typeof store.addTask>[0]) {
 /** The backend completes tasks only from IN_PROGRESS (task domain
  *  lifecycle); mock mode keeps the design-review toggle + undo. */
 function canToggleComplete(task: Task): boolean {
-  return useMock('TASKS') || task.status === 'IN_PROGRESS'
+  return (useMock('TASKS') || task.status === 'IN_PROGRESS') && task.status !== 'COMPLETED'
 }
 
 function onRetry() {
