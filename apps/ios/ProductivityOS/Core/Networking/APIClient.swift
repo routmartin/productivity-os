@@ -55,6 +55,14 @@ public final class APIClient: APIRequesting, @unchecked Sendable {
                 return date
             }
 
+            let dateOnlyFormatter = DateFormatter()
+            dateOnlyFormatter.dateFormat = "yyyy-MM-dd"
+            dateOnlyFormatter.timeZone = TimeZone(identifier: "UTC")
+            dateOnlyFormatter.locale = Locale(identifier: "en_US_POSIX")
+            if let date = dateOnlyFormatter.date(from: dateString) {
+                return date
+            }
+
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "Cannot decode date string \(dateString)"
@@ -147,22 +155,27 @@ public final class APIClient: APIRequesting, @unchecked Sendable {
             }
         }
 
-        NetworkLogger.log(request: request)
+        let logId = await NetworkLogger.log(request: request)
 
         let data: Data, response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
         } catch {
-            NetworkLogger.log(error: error, url: request.url)
+            NetworkLogger.completeWithError(id: logId, error: error, url: request.url)
             throw APIError.networkError(error.localizedDescription)
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            NetworkLogger.completeWithError(
+                id: logId,
+                error: APIError.unknown,
+                url: request.url
+            )
             throw APIError.unknown
         }
-        
-        NetworkLogger.log(response: httpResponse, data: data)
-        
+
+        NetworkLogger.completeWithResponse(id: logId, response: httpResponse, data: data)
+
         return (data, httpResponse)
     }
 
