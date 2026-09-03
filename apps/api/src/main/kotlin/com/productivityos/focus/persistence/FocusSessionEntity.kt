@@ -29,6 +29,9 @@ class FocusSessionEntity(
     @Column(name = "ended_at")
     var endedAt: Instant? = null,
 
+    @Column(name = "duration_seconds")
+    var durationSeconds: Long? = null,
+
     @Column(name = "configured_duration_seconds")
     val configuredDurationSeconds: Int? = null,
 
@@ -42,6 +45,7 @@ class FocusSessionEntity(
         taskId = taskId,
         startedAt = startedAt,
         endedAt = endedAt,
+        durationSeconds = durationSeconds,
         configuredDurationSeconds = configuredDurationSeconds,
         note = note
     )
