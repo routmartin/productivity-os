@@ -3,15 +3,17 @@ import SwiftUI
 /// Tab selection enum
 public enum AppTab: String, CaseIterable, Identifiable {
     case today = "Today"
+    case goals = "Goals"
     case focus = "Focus"
     case tasks = "Tasks"
     case me = "Me"
-    
+
     public var id: String { rawValue }
-    
+
     public var iconName: String {
         switch self {
         case .today: return "house.fill"
+        case .goals: return "target"
         case .focus: return "scope"
         case .tasks: return "checklist"
         case .me: return "person.fill"

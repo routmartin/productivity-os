@@ -42,4 +42,14 @@ public final class TasksViewModel {
             loadState = .failed(FocusSessionViewModel.userMessage(for: error))
         }
     }
+
+    /// Swap a task in the loaded list by id. Used by the edit sheet to
+    /// keep the row in sync after a successful save without a refetch.
+    public func replace(_ task: TaskItem) {
+        guard case .loaded(var tasks) = loadState else { return }
+        if let index = tasks.firstIndex(where: { $0.id == task.id }) {
+            tasks[index] = task
+            loadState = .loaded(tasks)
+        }
+    }
 }

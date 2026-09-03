@@ -85,9 +85,9 @@ public final class APILogStore: ObservableObject {
 
     public enum StatusFamily: String, CaseIterable, Identifiable, Sendable {
         case all
-        case info   // 1xx
+//        case info   // 1xx
         case success // 2xx
-        case redirect // 3xx
+//        case redirect // 3xx
         case client // 4xx
         case server // 5xx
         case error  // network/transport failures
@@ -97,9 +97,9 @@ public final class APILogStore: ObservableObject {
         public var title: String {
             switch self {
             case .all: return "All"
-            case .info: return "1xx"
+//            case .info: return "1xx"
             case .success: return "2xx"
-            case .redirect: return "3xx"
+//            case .redirect: return "3xx"
             case .client: return "4xx"
             case .server: return "5xx"
             case .error: return "Errors"
@@ -248,9 +248,9 @@ public final class APILogStore: ObservableObject {
         default:
             guard let code = entry.statusCode else { return false }
             switch family {
-            case .info: return (100...199).contains(code)
+//            case .info: return (100...199).contains(code)
             case .success: return (200...299).contains(code)
-            case .redirect: return (300...399).contains(code)
+//            case .redirect: return (300...399).contains(code)
             case .client: return (400...499).contains(code)
             case .server: return (500...599).contains(code)
             default: return false

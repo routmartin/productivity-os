@@ -50,10 +50,12 @@ public struct TaskRowView: View {
                 // Title and project
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(AppTypography.headline)
+                        .font(AppTypography.numberBadge)
                         .foregroundStyle(AppColors.textPrimary)
-                        .lineLimit(1)
-                    
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+
                     if let projectName {
                         HStack(spacing: 4) {
                             Circle()
@@ -62,21 +64,27 @@ public struct TaskRowView: View {
                             Text(projectName)
                                 .font(AppTypography.caption)
                                 .foregroundStyle(AppColors.textSecondary)
+                                .lineLimit(1)
                         }
                     }
                 }
-                
-                Spacer()
-                
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
+
+                Spacer(minLength: AppSpacing.xs)
+
                 // Priority pill
                 PriorityBadge(priority: priority)
-                
+                    .layoutPriority(0)
+                    .fixedSize()
+
                 // Trailing chevron
                 Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(AppColors.textTertiary)
+                    .fixedSize()
             }
-            .padding(.horizontal, AppSpacing.md)
+            .padding(.horizontal, AppSpacing.sm)
             .padding(.vertical, AppSpacing.sm + 2)
             .appCardStyle(cornerRadius: AppRadius.lg)
         }

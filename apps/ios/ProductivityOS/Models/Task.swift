@@ -44,10 +44,25 @@ public enum TaskEnergy: String, Codable, CaseIterable, Sendable {
 
 /// Task Status enum
 public enum TaskStatus: String, Codable, CaseIterable, Sendable {
+    case inbox = "INBOX"
     case pending = "PENDING"
     case inProgress = "IN_PROGRESS"
     case completed = "COMPLETED"
     case cancelled = "CANCELLED"
+
+    /// Resilient decode: unknown server-side statuses don't break the
+    /// whole batch. We default to `.pending` so the task still renders and
+    /// the rest of the list loads. Surface the unknown value in the OSLog
+    /// so future drift is visible without crashing the screen.
+    public init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        if let known = TaskStatus(rawValue: raw) {
+            self = known
+        } else {
+            print("[TaskStatus] unknown raw value '\(raw)' — defaulting to .pending")
+            self = .pending
+        }
+    }
 }
 
 /// Task domain model matching backend TaskResponse

@@ -63,3 +63,35 @@ public struct StartFocusRequestBody: Codable, Sendable {
         self.note = note
     }
 }
+
+// MARK: - Tasks wire contracts (backend: task/dto)
+
+/// Backend `UpdateTaskRequest` (PUT /api/v1/tasks/{id}). All fields are
+/// optional; explicit `nil` clears a nullable field. The backend requires
+/// a non-blank `title` when the field is present, but accepts it absent
+/// (the iOS edit sheet always sends the current title, so the rule is
+/// trivially satisfied).
+public struct UpdateTaskRequestBody: Codable, Sendable {
+    public let title: String?
+    public let description: String?
+    public let dueDate: String?
+    public let priority: String?
+    public let energy: String?
+    public let estimatedDurationMinutes: Int?
+
+    public init(
+        title: String? = nil,
+        description: String? = nil,
+        dueDate: String? = nil,
+        priority: String? = nil,
+        energy: String? = nil,
+        estimatedDurationMinutes: Int? = nil
+    ) {
+        self.title = title
+        self.description = description
+        self.dueDate = dueDate
+        self.priority = priority
+        self.energy = energy
+        self.estimatedDurationMinutes = estimatedDurationMinutes
+    }
+}

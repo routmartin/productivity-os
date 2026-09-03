@@ -59,6 +59,15 @@
 		AA0000322C7F000100000001 /* ProjectService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000332C7F000100000001 /* ProjectService.swift */; };
 		AA0000332C7F000100000001 /* ProjectsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000342C7F000100000001 /* ProjectsViewModel.swift */; };
 		AA0000342C7F000100000001 /* APILogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000352C7F000100000001 /* APILogStore.swift */; };
+		AA0000352C7F000100000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB0000362C7F000100000001 /* Assets.xcassets */; };
+		AA0000362C7F000100000001 /* Goal.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000372C7F000100000001 /* Goal.swift */; };
+		AA0000372C7F000100000001 /* GoalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000382C7F000100000001 /* GoalService.swift */; };
+		AA0000382C7F000100000001 /* GoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000392C7F000100000001 /* GoalsView.swift */; };
+		AA0000392C7F000100000001 /* GoalsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00003A2C7F000100000001 /* GoalsViewModel.swift */; };
+		AA00003A2C7F000100000001 /* GoalDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00003B2C7F000100000001 /* GoalDetailsView.swift */; };
+		AA00003B2C7F000100000001 /* ProjectDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00003C2C7F000100000001 /* ProjectDetailsView.swift */; };
+		AA00003C2C7F000100000001 /* DevAPIRequestLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00003D2C7F000100000001 /* DevAPIRequestLogView.swift */; };
+		AA00003D2C7F000100000001 /* TaskEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00003E2C7F000100000001 /* TaskEditSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -116,6 +125,15 @@
 		BB0000342C7F000100000001 /* ProjectsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsViewModel.swift; sourceTree = "<group>"; };
 		BB0000352C7F000100000001 /* APILogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APILogStore.swift; sourceTree = "<group>"; };
 		CC0000012C7F000100000001 /* ProductivityOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProductivityOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB0000362C7F000100000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BB0000372C7F000100000001 /* Goal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Goal.swift; sourceTree = "<group>"; };
+		BB0000382C7F000100000001 /* GoalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalService.swift; sourceTree = "<group>"; };
+		BB0000392C7F000100000001 /* GoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsView.swift; sourceTree = "<group>"; };
+		BB00003A2C7F000100000001 /* GoalsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsViewModel.swift; sourceTree = "<group>"; };
+		BB00003B2C7F000100000001 /* GoalDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailsView.swift; sourceTree = "<group>"; };
+		BB00003C2C7F000100000001 /* ProjectDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailsView.swift; sourceTree = "<group>"; };
+		BB00003D2C7F000100000001 /* DevAPIRequestLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevAPIRequestLogView.swift; sourceTree = "<group>"; };
+		BB00003E2C7F000100000001 /* TaskEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -180,6 +198,7 @@
 				EE0000132C7F000100000001 /* Profile */,
 				EE0000152C7F000100000001 /* Authentication */,
 				EE0000162C7F000100000001 /* Projects */,
+				EE0000172C7F000100000001 /* Goals */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -194,6 +213,7 @@
 					BB0000212C7F000100000001 /* FocusSession.swift */,
 					BB0000222C7F000100000001 /* FocusSessionState.swift */,
 					BB0000322C7F000100000001 /* Project.swift */,
+					BB0000372C7F000100000001 /* Goal.swift */,
 				);
 				path = Models;
 				sourceTree = "<group>";
@@ -202,6 +222,7 @@
 			isa = PBXGroup;
 			children = (
 				BB0000232C7F000100000001 /* Info.plist */,
+				BB0000362C7F000100000001 /* Assets.xcassets */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -314,6 +335,7 @@
 			children = (
 				BB00001A2C7F000100000001 /* TasksView.swift */,
 				BB00002A2C7F000100000001 /* TasksViewModel.swift */,
+				BB00003E2C7F000100000001 /* TaskEditSheet.swift */,
 			);
 			path = Tasks;
 			sourceTree = "<group>";
@@ -322,6 +344,7 @@
 			isa = PBXGroup;
 			children = (
 				BB00001B2C7F000100000001 /* ProfileView.swift */,
+				BB00003D2C7F000100000001 /* DevAPIRequestLogView.swift */,
 			);
 			path = Profile;
 			sourceTree = "<group>";
@@ -335,6 +358,7 @@
 				BB0000292C7F000100000001 /* TopThreeService.swift */,
 				BB0000302C7F000100000001 /* QRAuthenticationService.swift */,
 				BB0000332C7F000100000001 /* ProjectService.swift */,
+				BB0000382C7F000100000001 /* GoalService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -355,6 +379,17 @@
 				BB0000342C7F000100000001 /* ProjectsViewModel.swift */,
 			);
 			path = Projects;
+			sourceTree = "<group>";
+		};
+		EE0000172C7F000100000001 /* Goals */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000392C7F000100000001 /* GoalsView.swift */,
+				BB00003A2C7F000100000001 /* GoalsViewModel.swift */,
+				BB00003B2C7F000100000001 /* GoalDetailsView.swift */,
+				BB00003C2C7F000100000001 /* ProjectDetailsView.swift */,
+			);
+			path = Goals;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -415,6 +450,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA0000352C7F000100000001 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -453,6 +489,8 @@
 				AA0000192C7F000100000001 /* FocusCompletionView.swift in Sources */,
 				AA00001A2C7F000100000001 /* TasksView.swift in Sources */,
 				AA00001B2C7F000100000001 /* ProfileView.swift in Sources */,
+				AA00003C2C7F000100000001 /* DevAPIRequestLogView.swift in Sources */,
+				AA00003D2C7F000100000001 /* TaskEditSheet.swift in Sources */,
 				AA00001C2C7F000100000001 /* MainTabView.swift in Sources */,
 				AA00001D2C7F000100000001 /* User.swift in Sources */,
 				AA00001E2C7F000100000001 /* Task.swift in Sources */,
@@ -477,6 +515,12 @@
 				AA0000322C7F000100000001 /* ProjectService.swift in Sources */,
 				AA0000332C7F000100000001 /* ProjectsViewModel.swift in Sources */,
 				AA0000342C7F000100000001 /* APILogStore.swift in Sources */,
+				AA0000362C7F000100000001 /* Goal.swift in Sources */,
+				AA0000372C7F000100000001 /* GoalService.swift in Sources */,
+				AA0000382C7F000100000001 /* GoalsView.swift in Sources */,
+				AA0000392C7F000100000001 /* GoalsViewModel.swift in Sources */,
+				AA00003A2C7F000100000001 /* GoalDetailsView.swift in Sources */,
+				AA00003B2C7F000100000001 /* ProjectDetailsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

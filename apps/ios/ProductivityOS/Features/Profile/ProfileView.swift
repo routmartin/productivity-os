@@ -143,69 +143,7 @@ public struct ProfileView: View {
 
 }
 
-// MARK: - Developer Log View
-
-public struct DevAPIRequestLogView: View {
-    @StateObject private var logStore = APILogStore.shared
-
-    public init() {}
-
-    public var body: some View {
-        NavigationStack {
-            List {
-                Section("API Requests") {
-                    if logStore.logEntries.isEmpty {
-                        Text("No requests logged.")
-                            .font(AppTypography.caption)
-                            .foregroundStyle(AppColors.textSecondary)
-                    } else {
-                        ForEach(logStore.logEntries) { entry in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text(entry.method)
-                                        .font(.system(.caption, design: .monospaced))
-                                        .fontWeight(.bold)
-                                        .foregroundStyle(entry.status == nil ? AppColors.textSecondary : (entry.status ?? 0 >= 200 && (entry.status ?? 0) < 300 ? AppColors.primary : .red))
-                                    Spacer()
-                                    Text(entry.timestamp, style: .time)
-                                        .font(.system(.caption2, design: .monospaced))
-                                        .foregroundStyle(AppColors.textTertiary)
-                                }
-                                Text(entry.url)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundStyle(AppColors.textSecondary)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                                if let status = entry.status {
-                                    Text("Status: \(status)")
-                                        .font(.system(.caption2))
-                                        .foregroundStyle(AppColors.textSecondary)
-                                }
-                                if !entry.bodyPreview.isEmpty {
-                                    Text(entry.bodyPreview)
-                                        .font(.system(.caption2, design: .monospaced))
-                                        .foregroundStyle(AppColors.textTertiary)
-                                        .lineLimit(3)
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
-                }
-            }
-            .navigationTitle("API Request Log")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Clear") {
-                        logStore.clear()
-                    }
-                    .font(.system(.subheadline, weight: .semibold))
-                }
-            }
-        }
-        .presentationDetents([.large])
-    }
-}
+// MARK: - Developer Tools entry
 
 #Preview {
     ProfileView()

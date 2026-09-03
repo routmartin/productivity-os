@@ -49,7 +49,11 @@ public enum AppColors {
     public static let priorityLowBackground = Color(hex: "E0F2FE")
     /// Low priority badge foreground text
     public static let priorityLowText = Color(hex: "026AA2")
-    
+
+    /// Success state (network 2xx, completed actions).
+    public static let success = Color(hex: "1E9E6A")
+    public static let successTint = Color(hex: "E6F6EE")
+
     // MARK: - Focus Mode Environment (Deep Navy & Glowing Accents)
     /// Deep dark navy background for active focus
     public static let focusCanvas = Color(hex: "08071A")

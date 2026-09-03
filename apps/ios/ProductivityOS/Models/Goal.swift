@@ -1,25 +1,24 @@
 import Foundation
 
-/// Project status from the backend `ProjectStatus` enum
+/// Goal status from the backend `GoalStatus` enum
 /// (`DRAFT`, `ACTIVE`, `COMPLETED`, `ARCHIVED`).
-public enum ProjectStatus: String, Codable, CaseIterable, Sendable {
+public enum GoalStatus: String, Codable, CaseIterable, Sendable {
     case draft = "DRAFT"
     case active = "ACTIVE"
     case completed = "COMPLETED"
     case archived = "ARCHIVED"
 }
 
-/// Project domain model matching backend `ProjectResponse`
-/// (apps/api `project/dto/ProjectResponse.kt`). The backend does not expose
-/// a `progress` field — progress is derived client-side from the project's
-/// tasks.
-public struct Project: Identifiable, Codable, Hashable, Sendable {
+/// Goal domain model matching backend `GoalResponse`
+/// (apps/api `goal/dto/GoalResponse.kt`). The backend does not expose a
+/// `progress` field — progress is derived client-side from the goal's
+/// projects and their tasks.
+public struct Goal: Identifiable, Codable, Hashable, Sendable {
     public let id: UUID
     public let userId: UUID
     public let title: String
     public let description: String?
-    public let goalId: UUID?
-    public let status: ProjectStatus
+    public let status: GoalStatus
     public let deadline: Date?
     public let completedAt: Date?
     public let createdAt: Date
@@ -30,8 +29,7 @@ public struct Project: Identifiable, Codable, Hashable, Sendable {
         userId: UUID,
         title: String,
         description: String? = nil,
-        goalId: UUID? = nil,
-        status: ProjectStatus,
+        status: GoalStatus = .active,
         deadline: Date? = nil,
         completedAt: Date? = nil,
         createdAt: Date,
@@ -41,7 +39,6 @@ public struct Project: Identifiable, Codable, Hashable, Sendable {
         self.userId = userId
         self.title = title
         self.description = description
-        self.goalId = goalId
         self.status = status
         self.deadline = deadline
         self.completedAt = completedAt

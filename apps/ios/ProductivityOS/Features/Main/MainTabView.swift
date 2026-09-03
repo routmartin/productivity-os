@@ -26,6 +26,10 @@ public struct MainTabView: View {
                 )
             }
 
+            Tab(AppTab.goals.rawValue, systemImage: AppTab.goals.iconName, value: AppTab.goals) {
+                GoalsView()
+            }
+
             Tab(AppTab.focus.rawValue, systemImage: AppTab.focus.iconName, value: AppTab.focus, role: .search) {
                 FocusPreparationView(
                     viewModel: focusViewModel,

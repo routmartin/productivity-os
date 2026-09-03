@@ -4,6 +4,7 @@ import SwiftUI
 public struct TasksView: View {
     @State private var viewModel: TasksViewModel
     @State private var projectsViewModel: ProjectsViewModel
+    @State private var editingTask: TaskItem?
     private let onSelectTask: (TaskItem) -> Void
 
     public init(
@@ -63,6 +64,7 @@ public struct TasksView: View {
                                 iconName: "checklist"
                             ) {
                                 onSelectTask(task)
+                                editingTask = task
                             }
                         }
                     }
@@ -81,6 +83,14 @@ public struct TasksView: View {
             }
             .refreshable {
                 await viewModel.loadTasks()
+            }
+            .sheet(item: $editingTask) { task in
+                TaskEditSheet(
+                    task: task,
+                    onSaved: { updated in
+                        viewModel.replace(updated)
+                    }
+                )
             }
         }
     }

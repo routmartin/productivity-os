@@ -39,9 +39,15 @@ public enum AppEndpoint: Endpoint {
 
     // Tasks (/api/v1/tasks)
     case listTasks(page: Int = 0, size: Int = 50)
+    case updateTask(id: UUID, body: Data)
 
     // Projects (/api/v1/projects)
     case listProjects
+    case listProjectTasks(id: UUID)
+
+    // Goals (/api/v1/goals)
+    case listGoals
+    case getGoal(id: UUID)
 
     // Daily Top 3 (/api/v1/daily-top-three/{date})
     case getDailyTopThree(date: String)
@@ -67,9 +73,18 @@ public enum AppEndpoint: Endpoint {
 
         case .listTasks:
             return "/api/v1/tasks"
+        case .updateTask(let id, _):
+            return "/api/v1/tasks/\(id.uuidString.lowercased())"
 
         case .listProjects:
             return "/api/v1/projects"
+        case .listProjectTasks(let id):
+            return "/api/v1/projects/\(id.uuidString.lowercased())/tasks"
+
+        case .listGoals:
+            return "/api/v1/goals"
+        case .getGoal(let id):
+            return "/api/v1/goals/\(id.uuidString.lowercased())"
 
         case .getDailyTopThree(let date):
             return "/api/v1/daily-top-three/\(date)"
@@ -90,14 +105,16 @@ public enum AppEndpoint: Endpoint {
         case .register, .login, .qrExchange, .refresh, .logout,
              .startFocusSession, .endFocusSession:
             return .post
-        case .listTasks, .listProjects, .getDailyTopThree, .getActiveFocusSession, .listFocusSessions:
+        case .listTasks, .listProjects, .listProjectTasks, .listGoals, .getGoal, .getDailyTopThree, .getActiveFocusSession, .listFocusSessions:
             return .get
+        case .updateTask:
+            return .put
         }
     }
 
     public var body: Data? {
         switch self {
-        case .register(let data), .login(let data), .qrExchange(let data), .startFocusSession(let data):
+        case .register(let data), .login(let data), .qrExchange(let data), .startFocusSession(let data), .updateTask(_, let data):
             return data
         default:
             return nil
