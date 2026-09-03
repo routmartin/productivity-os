@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Bell, Moon, Search, Settings, Sun } from 'lucide-vue-next'
+import { Moon, Search, Settings, Sun } from 'lucide-vue-next'
 
 import { useAuthStore } from '@/features/auth/store'
 import { useSearchStore } from '@/features/search/store'
@@ -22,6 +22,23 @@ const contextLabel = computed(() => {
   }
   return String(route.meta.title ?? '')
 })
+
+/** Press <kbd>j</kbd> (no modifier, not while typing) to toggle theme. */
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  const tag = target.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable
+}
+
+function onShortcutKeydown(event: KeyboardEvent) {
+  if (event.key !== 'j' || event.metaKey || event.ctrlKey || event.altKey) return
+  if (isTypingTarget(event.target)) return
+  event.preventDefault()
+  toggleTheme()
+}
+
+onMounted(() => window.addEventListener('keydown', onShortcutKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onShortcutKeydown))
 </script>
 
 <template>
@@ -47,16 +64,13 @@ const contextLabel = computed(() => {
         <kbd class="kbd tnum">⌘K</kbd>
       </button>
 
-      <button class="icon-button" type="button" aria-label="Notifications" title="Notifications arrive in a later milestone">
-        <Bell :size="17" :stroke-width="1.75" />
-        <span class="notify-badge tnum">2</span>
-      </button>
+
 
       <button
         class="icon-button"
         type="button"
         :aria-label="theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
-        :title="theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+        :title="theme === 'dark' ? 'Switch to light theme (\\)' : 'Switch to dark theme (\\)'"
         @click="toggleTheme"
       >
         <Sun v-if="theme === 'dark'" :size="17" :stroke-width="1.75" />

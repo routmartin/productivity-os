@@ -5,6 +5,7 @@ import {
   CalendarCheck2,
   ChevronDown,
   Folder,
+  History,
   Inbox,
   ListChecks,
   LogOut,
@@ -25,10 +26,11 @@ const tasksStore = useTasksStore()
 
 const mainNav = [
   { name: 'today', title: 'Today', icon: CalendarCheck2 },
-  { name: 'inbox', title: 'Inbox', icon: Inbox, badge: true },
   { name: 'tasks', title: 'Tasks', icon: ListChecks },
+  { name: 'inbox', title: 'Inbox', icon: Inbox, badge: true },
   { name: 'projects', title: 'Projects', icon: Folder },
   { name: 'goals', title: 'Goals', icon: Target },
+    { name: 'schedule', title: 'Schedule', icon: History },
   { name: 'focus', title: 'Focus', icon: Timer },
   { name: 'ai', title: 'AI', icon: Sparkles },
 ] as const

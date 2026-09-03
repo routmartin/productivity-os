@@ -55,25 +55,22 @@ const openTaskId = computed(() => {
   return typeof value === 'string' && value ? value : null
 })
 
-/** Lands the workspace with the first task's detail open. While loading, a
- *  skeleton reserves the panel so the workspace doesn't reflow on ready. */
+/** `?preview=loading|error|empty` forces a UI state for design review.
+ *  No task is auto-opened on arrival — the panel only opens when the user
+ *  picks one or lands here from global search (`?open=<id>`). */
 async function loadAndSelect(preview: PreviewState) {
-  if (!panel.isOpen) panel.openSkeleton()
+  if (preview === 'loading') {
+    panel.openSkeleton()
+  } else {
+    panel.close()
+  }
   await store.load(preview)
   // Project names for grouping come from the projects store — load once.
   if (projectsStore.status === 'idle') void projectsStore.load()
 
-  // A search result wins over the default first item.
+  // A search result wins — open it explicitly when present.
   if (openTaskId.value && store.taskById(openTaskId.value)) {
     panel.openTask(openTaskId.value)
-    return
-  }
-
-  if (preview === 'loading' || !panel.isSkeleton) return
-  if (store.status === 'ready' && store.visibleTasks.length > 0) {
-    panel.openTask(store.visibleTasks[0].id)
-  } else {
-    panel.close()
   }
 }
 
@@ -127,7 +124,7 @@ const emptyCopy = computed(() => {
 type ViewMode = 'list' | 'grid'
 type GroupMode = 'date' | 'project'
 
-const viewMode = ref<ViewMode>('grid')
+const viewMode = ref<ViewMode>('list')
 const groupMode = ref<GroupMode>('project')
 
 /* ---------------- Grouping (shared by list + grid) ---------------- */
@@ -324,41 +321,18 @@ function onUndo() {
 
 <template>
   <div class="tasks-page">
-    <SectionHeader
-      title="Tasks"
-      :meta="store.searchQuery.length > 0 ? `${store.searchQuery.length} results` : undefined"
-    />
+  
 
-    <!-- Search and new task -->
+    <!-- New task -->
     <div class="hero-actions">
-      <div class="search" :class="{ filled: store.searchQuery.length > 0 }">
-        <Search :size="16" :stroke-width="1.75" class="search-icon" />
-        <input
-          ref="searchInput"
-          :value="store.searchQuery"
-          type="text"
-          class="search-input"
-          placeholder="Search tasks…"
-          aria-label="Search tasks"
-          @input="store.setSearch(($event.target as HTMLInputElement).value)"
-        />
-        <button
-          v-if="store.searchQuery"
-          class="clear"
-          type="button"
-          aria-label="Clear search"
-          @click="onClearSearch"
-        >
-          <X :size="14" :stroke-width="2" />
-        </button>
-      </div>
       <UiButton variant="primary" @click="dialogOpen = true">
         <Plus :size="16" :stroke-width="2" />
         New Task
       </UiButton>
     </div>
 
-    <!-- Toolbar: filters prominent, view controls subtle (spec §10: "Filters should not dominate") -->
+    <!-- Toolbar: filters prominent on the left, search + view controls subtle on the right
+         (spec §10: "Filters should not dominate") -->
     <div class="toolbar">
       <TaskFilters
         :active="store.statusFilter"
@@ -366,49 +340,73 @@ function onUndo() {
         @change="store.setFilter($event)"
       />
 
-      <div class="view-controls" role="group" aria-label="Task view">
-        <div class="seg-toggle" role="group" aria-label="Group tasks by">
+      <div class="search-view-row">
+        <div class="search" :class="{ filled: store.searchQuery.length > 0 }">
+          <Search :size="16" :stroke-width="1.75" class="search-icon" />
+          <input
+            ref="searchInput"
+            :value="store.searchQuery"
+            type="text"
+            class="search-input"
+            placeholder="Search tasks…"
+            aria-label="Search tasks"
+            @input="store.setSearch(($event.target as HTMLInputElement).value)"
+          />
           <button
+            v-if="store.searchQuery"
+            class="clear"
             type="button"
-            class="seg-btn"
-            :class="{ active: groupMode === 'date' }"
-            @click="groupMode = 'date'"
+            aria-label="Clear search"
+            @click="onClearSearch"
           >
-            <CalendarDays :size="14" :stroke-width="1.75" />
-            Date
-          </button>
-          <button
-            type="button"
-            class="seg-btn"
-            :class="{ active: groupMode === 'project' }"
-            @click="groupMode = 'project'"
-          >
-            <FolderKanban :size="14" :stroke-width="1.75" />
-            Project
+            <X :size="14" :stroke-width="2" />
           </button>
         </div>
 
-        <div class="seg-toggle" role="group" aria-label="Layout">
-          <button
-            type="button"
-            class="seg-btn icon-only"
-            :class="{ active: viewMode === 'list' }"
-            title="List"
-            aria-label="List layout"
-            @click="viewMode = 'list'"
-          >
-            <List :size="15" :stroke-width="1.75" />
-          </button>
-          <button
-            type="button"
-            class="seg-btn icon-only"
-            :class="{ active: viewMode === 'grid' }"
-            title="Grid"
-            aria-label="Grid layout"
-            @click="viewMode = 'grid'"
-          >
-            <LayoutGrid :size="15" :stroke-width="1.75" />
-          </button>
+        <div class="view-controls" role="group" aria-label="Task view">
+          <div class="seg-toggle" role="group" aria-label="Group tasks by">
+            <button
+              type="button"
+              class="seg-btn"
+              :class="{ active: groupMode === 'date' }"
+              @click="groupMode = 'date'"
+            >
+              <CalendarDays :size="14" :stroke-width="1.75" />
+              Date
+            </button>
+            <button
+              type="button"
+              class="seg-btn"
+              :class="{ active: groupMode === 'project' }"
+              @click="groupMode = 'project'"
+            >
+              <FolderKanban :size="14" :stroke-width="1.75" />
+              Project
+            </button>
+          </div>
+
+          <div class="seg-toggle" role="group" aria-label="Layout">
+            <button
+              type="button"
+              class="seg-btn icon-only"
+              :class="{ active: viewMode === 'list' }"
+              title="List"
+              aria-label="List layout"
+              @click="viewMode = 'list'"
+            >
+              <List :size="15" :stroke-width="1.75" />
+            </button>
+            <button
+              type="button"
+              class="seg-btn icon-only"
+              :class="{ active: viewMode === 'grid' }"
+              title="Grid"
+              aria-label="Grid layout"
+              @click="viewMode = 'grid'"
+            >
+              <LayoutGrid :size="15" :stroke-width="1.75" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -420,7 +418,7 @@ function onUndo() {
           <SkeletonBlock height="44px" width="220px" rounded="md" />
           <SkeletonBlock height="20px" width="300px" rounded="md" />
         </div>
-        <SkeletonBlock height="44px" width="280px" rounded="md" />
+        <SkeletonBlock height="44px" width="160px" rounded="md" />
       </div>
       <div class="skeleton-toolbar">
         <SkeletonBlock height="38px" width="380px" rounded="full" />
@@ -596,6 +594,7 @@ function onUndo() {
 .hero-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-3);
 }
 
@@ -664,6 +663,14 @@ function onUndo() {
   justify-content: space-between;
   gap: var(--space-4);
   flex-wrap: wrap;
+}
+
+.search-view-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .view-controls {
@@ -1147,12 +1154,18 @@ function onUndo() {
 /* ---------- Responsive ---------- */
 
 @media (max-width: 900px) {
-  .hero-actions {
-    justify-content: space-between;
+  .toolbar,
+  .search-view-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .search {
     flex: 1;
+  }
+
+  .view-controls {
+    justify-content: flex-end;
   }
 }
 </style>

@@ -21,6 +21,7 @@ import GoalsPage from "@/pages/GoalsPage.vue";
 import InboxPage from "@/pages/InboxPage.vue";
 import LoginPage from "@/pages/LoginPage.vue";
 import ProjectsPage from "@/pages/ProjectsPage.vue";
+import SchedulePage from "@/pages/SchedulePage.vue";
 import SettingsPage from "@/pages/SettingsPage.vue";
 import TasksPage from "@/pages/TasksPage.vue";
 import TodayPage from "@/pages/TodayPage.vue";
@@ -62,6 +63,12 @@ export const router = createRouter({
           name: "today",
           component: TodayPage,
           meta: { title: "Today", icon: CalendarCheck2, implemented: true },
+        },
+        {
+          path: "schedule",
+          name: "schedule",
+          component: SchedulePage,
+          meta: { title: "Schedule", icon: History, implemented: true },
         },
         {
           path: "inbox",

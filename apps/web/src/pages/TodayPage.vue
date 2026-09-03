@@ -11,8 +11,6 @@ import { mockBriefing } from '@/features/ai/mock'
 import DailySummaryCard from '@/features/focus/components/DailySummaryCard.vue'
 import FocusTodayCard from '@/features/focus/components/FocusTodayCard.vue'
 import { useFocusStore } from '@/features/focus/store'
-import CalendarRail from '@/features/planning/components/CalendarRail.vue'
-import ScheduleTimeline from '@/features/planning/components/ScheduleTimeline.vue'
 import TopThreeSection from '@/features/planning/components/TopThreeSection.vue'
 import { useTodayStore } from '@/features/planning/todayStore'
 import type { PreviewState } from '@/features/planning/types'
@@ -47,10 +45,6 @@ watch(
 )
 
 const isLoading = computed(() => today.status === 'loading' || today.status === 'idle')
-
-const isEmpty = computed(() => today.topThree.length === 0)
-
-const scheduleEntries = computed(() => (isEmpty.value ? [] : today.schedule))
 
 /** Recent work mixed with fresh captures, newest first — mirrors the
  *  reference's Completed / Created activity feed. */
@@ -95,13 +89,10 @@ function onPlanMyDay() {
       <div class="main">
         <SkeletonBlock height="34px" width="420px" rounded="md" />
         <SkeletonBlock height="218px" rounded="lg" />
-        <div class="main-cols">
-          <SkeletonBlock height="480px" rounded="lg" />
-          <SkeletonBlock height="480px" rounded="lg" />
-        </div>
+        <SkeletonBlock height="480px" rounded="lg" />
+        <SkeletonBlock height="320px" rounded="lg" />
       </div>
       <div class="rail">
-        <SkeletonBlock height="300px" rounded="lg" />
         <SkeletonBlock height="210px" rounded="lg" />
         <SkeletonBlock height="150px" rounded="lg" />
         <SkeletonBlock height="168px" rounded="lg" />
@@ -115,7 +106,7 @@ function onPlanMyDay() {
         description="Your plan for today could not be reached. Your data is safe — try loading it again."
         @retry="onRetry"
       />
-    </div>
+    </div>  
 
     <!-- Ready — composition follows the approved visual reference -->
     <template v-else>
@@ -127,23 +118,15 @@ function onPlanMyDay() {
       <div class="layout">
         <div class="main">
           <AiBriefing :briefing="mockBriefing" @plan="onPlanMyDay" />
-
-          <div class="main-cols">
-            <ScheduleTimeline :entries="scheduleEntries" @select="onSelectTask" />
-
-            <div class="main-stack">
-              <TopThreeSection
-                :entries="today.topThree"
-                :active-task-id="panel.activeTaskId"
-                @select="onSelectTask"
-              />
-              <RecentActivity :items="activityItems" @select="onSelectTask" />
-            </div>
-          </div>
+          <TopThreeSection
+            :entries="today.topThree"
+            :active-task-id="panel.activeTaskId"
+            @select="onSelectTask"
+          />
+          <RecentActivity :items="activityItems" @select="onSelectTask" />
         </div>
 
         <div class="rail">
-          <CalendarRail />
           <FocusTodayCard />
           <DailySummaryCard />
           <FocusTipCard />
@@ -200,20 +183,6 @@ function onPlanMyDay() {
   min-width: 0;
 }
 
-.main-cols {
-  display: grid;
-  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
-  gap: var(--space-6);
-  align-items: start;
-}
-
-.main-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  min-width: 0;
-}
-
 .rail {
   display: flex;
   flex-direction: column;
@@ -225,15 +194,7 @@ function onPlanMyDay() {
    also collapses columns instead of squeezing them (spec §32: reduce
    secondary content first — typography stays readable throughout). */
 
-/* Fold the schedule + priorities into one column when the main area can no
-   longer give both columns comfortable reading width (~460px each). */
-@container workspace (max-width: 1260px) {
-  .main-cols {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* Then collapse the right rail under the main workspace. */
+/* Collapse the right rail under the main workspace. */
 @container workspace (max-width: 980px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
