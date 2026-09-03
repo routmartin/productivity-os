@@ -30,7 +30,15 @@ class FocusSessionService(
             ?: throw NoSuchElementException("Task not found: ${request.taskId}")
         require(task.userId == userId) { "Task does not belong to the current user" }
         require(task.deletedAt == null) { "Task is deleted" }
-        require(task.status == TaskStatus.IN_PROGRESS) { "Task must be IN_PROGRESS to start a focus session" }
+        require(task.status in setOf(TaskStatus.INBOX, TaskStatus.PLANNED, TaskStatus.IN_PROGRESS)) {
+            "Task must be INBOX, PLANNED, or IN_PROGRESS to start a focus session"
+        }
+
+        if (task.status != TaskStatus.IN_PROGRESS) {
+            task.status = TaskStatus.IN_PROGRESS
+            task.updatedAt = clock.instant()
+            taskRepository.save(task)
+        }
 
         val entity = FocusSessionEntity(
             userId = userId,
@@ -53,6 +61,11 @@ class FocusSessionService(
         focusSessionRepository.save(entity)
 
         val task = taskRepository.findById(entity.taskId).orElse(null)
+        if (task != null && task.userId == userId && task.deletedAt == null && task.status == TaskStatus.IN_PROGRESS) {
+            task.status = TaskStatus.PLANNED
+            task.updatedAt = clock.instant()
+            taskRepository.save(task)
+        }
         return FocusSessionResponse.from(entity, task?.title)
     }
 
