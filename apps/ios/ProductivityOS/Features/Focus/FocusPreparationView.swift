@@ -71,7 +71,9 @@ public struct FocusPreparationView: View {
                         metadataRow(
                             icon: "hourglass",
                             label: "Estimated Focus Time",
-                            value: viewModel.selectedTask?.formattedDuration ?? "1h 30m"
+                            value: viewModel.selectedTask.flatMap { task in
+                                task.estimatedDurationMinutes.map { FocusDuration.format(minutes: $0) }
+                            } ?? "—"
                         )
                         
                         Divider().background(AppColors.surfaceBorder)
@@ -90,43 +92,13 @@ public struct FocusPreparationView: View {
                     Text("FOCUS DURATION")
                         .font(AppTypography.sectionHeader)
                         .foregroundStyle(AppColors.primary)
-                    
-                    HStack(spacing: AppSpacing.xs) {
-                        ForEach(FocusDuration.allCases) { duration in
-                            let isSelected = viewModel.selectedDuration == duration
-                            
-                            Button {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    viewModel.selectedDuration = duration
-                                }
-                            } label: {
-                                VStack(spacing: 4) {
-                                    Text(duration.title)
-                                        .font(AppTypography.headline)
-                                        .foregroundStyle(isSelected ? AppColors.primary : AppColors.textPrimary)
-                                    
-                                    Text(duration.subtitle)
-                                        .font(AppTypography.captionSmall)
-                                        .foregroundStyle(isSelected ? AppColors.primary : AppColors.textSecondary)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 72)
-                                .background(isSelected ? AppColors.primaryTint : AppColors.surface)
-                                .clipShape(RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous)
-                                        .stroke(isSelected ? AppColors.primary : AppColors.surfaceBorder, lineWidth: isSelected ? 2 : 1)
-                                )
-                                .overlay(alignment: .topTrailing) {
-                                    if isSelected {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .foregroundStyle(AppColors.primary)
-                                            .padding(6)
-                                    }
-                                }
-                            }
-                            .buttonStyle(.plain)
+
+                    // Mirrors the task estimate menu on web/API: 6 preset
+                    // lengths plus "No estimate" (unlimited). Pre-selected
+                    // chip matches the task's `estimatedDurationMinutes`.
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: AppSpacing.xs)], spacing: AppSpacing.xs) {
+                        ForEach(FocusDuration.presets + [.unlimited]) { duration in
+                            durationChip(for: duration)
                         }
                     }
                 }
@@ -195,6 +167,59 @@ public struct FocusPreparationView: View {
             .padding(AppSpacing.lg)
         }
         .background(AppColors.canvas.ignoresSafeArea())
+        .onChange(of: viewModel.selectedTask?.id) { _, _ in
+            // Re-sync the selected chip whenever the bound task changes
+            // (e.g. user opens the screen with a different task already
+            // attached to the view model).
+            if let task = viewModel.selectedTask {
+                viewModel.selectedDuration = FocusDuration.fromEstimatedMinutes(task.estimatedDurationMinutes)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func durationChip(for duration: FocusDuration) -> some View {
+        let isSelected = viewModel.selectedDuration == duration
+
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                viewModel.selectedDuration = duration
+            }
+        } label: {
+            VStack(spacing: 4) {
+                if duration.isUnlimited {
+                    Image(systemName: "infinity")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(isSelected ? AppColors.primary : AppColors.textPrimary)
+                } else {
+                    Text(duration.title)
+                        .font(AppTypography.headline)
+                        .foregroundStyle(isSelected ? AppColors.primary : AppColors.textPrimary)
+                        .multilineTextAlignment(.center)
+                }
+
+                Text(duration.subtitle)
+                    .font(AppTypography.captionSmall)
+                    .foregroundStyle(isSelected ? AppColors.primary : AppColors.textSecondary)
+            }
+            .frame(width: 80)
+            .frame(height: 68)
+            .background(isSelected ? AppColors.primaryTint : AppColors.surface)
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous)
+                    .stroke(isSelected ? AppColors.primary : AppColors.surfaceBorder, lineWidth: isSelected ? 2 : 1)
+            )
+            .overlay(alignment: .topTrailing) {
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(AppColors.primary)
+                        .padding(6)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
     
     private func metadataRow(icon: String, label: String, value: String) -> some View {

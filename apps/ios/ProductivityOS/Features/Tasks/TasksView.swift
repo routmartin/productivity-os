@@ -36,7 +36,35 @@ public struct TasksView: View {
                             .stroke(AppColors.surfaceBorder, lineWidth: 1)
                     )
 
-                    SectionHeaderView(title: "Active Tasks")
+                    // Status filter chips. Defaults to "Active" so the screen always opens
+                    // focused on actionable work (spec §15).
+                    HStack(spacing: AppSpacing.xs) {
+                        ForEach(TasksViewModel.TaskStatusFilter.allCases) { filter in
+                            let isSelected = viewModel.statusFilter == filter
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    viewModel.statusFilter = filter
+                                }
+                            } label: {
+                                Text(filter.title)
+                                    .font(AppTypography.captionSmall)
+                                    .fontWeight(.semibold)
+                                    .padding(.horizontal, AppSpacing.sm)
+                                    .frame(height: 32)
+                                    .background(isSelected ? AppColors.primaryTint : AppColors.surface)
+                                    .foregroundStyle(isSelected ? AppColors.primary : AppColors.textPrimary)
+                                    .clipShape(RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous)
+                                            .stroke(isSelected ? AppColors.primary : AppColors.surfaceBorder, lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        Spacer()
+                    }
+
+                    SectionHeaderView(title: sectionTitle)
 
                     if viewModel.isLoading && viewModel.filteredTasks.isEmpty {
                         APIStateView(kind: .loading(message: "Loading tasks..."))
@@ -49,10 +77,8 @@ public struct TasksView: View {
                         APIStateView(
                             kind: .empty(
                                 icon: "checklist",
-                                title: viewModel.searchText.isEmpty ? "No active tasks" : "No matches",
-                                subtitle: viewModel.searchText.isEmpty
-                                    ? "Create a task on web or pick one from Today."
-                                    : nil
+                                title: emptyTitle,
+                                subtitle: emptySubtitle
                             )
                         )
                     } else {
@@ -61,9 +87,14 @@ public struct TasksView: View {
                                 title: task.title,
                                 projectName: projectsViewModel.projectName(for: task) ?? "—",
                                 priority: task.priority ?? .medium,
-                                iconName: "checklist"
+                                iconName: task.isCompleted ? "checkmark.circle.fill" : "checklist"
                             ) {
-                                onSelectTask(task)
+                                // Completed / cancelled tasks aren't eligible
+                                // for a focus session (spec §AC-003). Open the
+                                // edit sheet only.
+                                if !task.isCompleted && task.status != .cancelled {
+                                    onSelectTask(task)
+                                }
                                 editingTask = task
                             }
                         }
@@ -89,10 +120,40 @@ public struct TasksView: View {
                     task: task,
                     onSaved: { updated in
                         viewModel.replace(updated)
+                    },
+                    onDismiss: {
+                        editingTask = nil
                     }
                 )
             }
         }
+    }
+
+    private var sectionTitle: String {
+        switch viewModel.statusFilter {
+        case .all: return "All Tasks"
+        case .active: return "Active Tasks"
+        case .completed: return "Completed Tasks"
+        case .cancelled: return "Cancelled Tasks"
+        }
+    }
+
+    private var emptyTitle: String {
+        if !viewModel.searchText.isEmpty { return "No matches" }
+        switch viewModel.statusFilter {
+        case .all: return "No tasks yet"
+        case .active: return "No active tasks"
+        case .completed: return "No completed tasks"
+        case .cancelled: return "No cancelled tasks"
+        }
+    }
+
+    private var emptySubtitle: String? {
+        if !viewModel.searchText.isEmpty { return nil }
+        if viewModel.statusFilter == .active {
+            return "Create a task on web or pick one from Today."
+        }
+        return nil
     }
 }
 

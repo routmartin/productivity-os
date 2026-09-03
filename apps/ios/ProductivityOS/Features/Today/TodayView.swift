@@ -199,7 +199,6 @@ public struct TodayView: View {
                 timerText: viewModel.formattedTodayFocusedTime,
                 variant: .mini
             )
-            .frame(width: 130, height: 130)
             
             // Right CTA details
             VStack(alignment: .leading, spacing: AppSpacing.xs) {

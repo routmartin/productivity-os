@@ -7,6 +7,8 @@ public struct MainTabView: View {
     @State private var focusViewModel = FocusSessionViewModel()
     @State private var projectsViewModel = ProjectsViewModel()
     @State private var isShowingFocusSheet = false
+    @State private var didAppear = false
+    @State private var presentedSessionState: FocusState = .preparing
 
     public init() {}
 
@@ -16,11 +18,11 @@ public struct MainTabView: View {
                 TodayView(
                     projectsViewModel: projectsViewModel,
                     onStartFocus: { task in
-                        focusViewModel.selectedTask = task
+                        focusViewModel.setSelectedTask(task)
                         isShowingFocusSheet = true
                     },
                     onSelectTask: { task in
-                        focusViewModel.selectedTask = task
+                        focusViewModel.setSelectedTask(task)
                         isShowingFocusSheet = true
                     }
                 )
@@ -44,7 +46,7 @@ public struct MainTabView: View {
                 TasksView(
                     projectsViewModel: projectsViewModel,
                     onSelectTask: { task in
-                        focusViewModel.selectedTask = task
+                        focusViewModel.setSelectedTask(task)
                         isShowingFocusSheet = true
                     }
                 )
@@ -59,7 +61,7 @@ public struct MainTabView: View {
         .fullScreenCover(
             isPresented: Binding(
                 get: {
-                    focusViewModel.sessionState.state == .running || focusViewModel.sessionState.state == .paused
+                    presentedSessionState == .running || presentedSessionState == .paused
                 },
                 set: { isPresenting in
                     if !isPresenting && focusViewModel.sessionState.state != .completed {
@@ -81,7 +83,7 @@ public struct MainTabView: View {
         .sheet(
             isPresented: Binding(
                 get: {
-                    focusViewModel.sessionState.state == .running || focusViewModel.sessionState.state == .paused
+                    presentedSessionState == .running || presentedSessionState == .paused
                 },
                 set: { isPresenting in
                     if !isPresenting && focusViewModel.sessionState.state != .completed {
@@ -111,7 +113,7 @@ public struct MainTabView: View {
         }
         .sheet(
             isPresented: Binding(
-                get: { focusViewModel.sessionState.state == .completed },
+                get: { presentedSessionState == .completed },
                 set: { if !$0 { focusViewModel.resetToPreparing() } }
             )
         ) {
@@ -124,8 +126,29 @@ public struct MainTabView: View {
                 isShowingFocusSheet = false
             }
         }
+        .onAppear {
+            didAppear = true
+        }
         .task {
             await focusViewModel.restoreActiveSession()
+        }
+        .onChange(of: focusViewModel.sessionState.state) { _, newState in
+            if newState == .running || newState == .paused {
+                isShowingFocusSheet = false
+            }
+            // Delay reflecting the new state so SwiftUI has finished its
+            // initial presentation cycle before we trigger any sheet/cover.
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 150_000_000)
+                if didAppear {
+                    presentedSessionState = newState
+                }
+            }
+        }
+        .onChange(of: didAppear) { _, appeared in
+            if appeared {
+                presentedSessionState = focusViewModel.sessionState.state
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {

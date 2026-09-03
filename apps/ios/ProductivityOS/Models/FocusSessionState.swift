@@ -118,12 +118,12 @@ public struct FocusSessionState: Codable, Sendable {
     
     /// Returns remaining seconds for fixed duration sessions, or nil for unlimited
     public func remainingSeconds(at referenceDate: Date = Date()) -> TimeInterval? {
-        guard !configuredDuration.isUnlimited else { return nil }
-        let total = TimeInterval(configuredDuration.totalSeconds)
+        guard !configuredDuration.isUnlimited, let totalSeconds = configuredDuration.totalSeconds else { return nil }
+        let total = TimeInterval(totalSeconds)
         let elapsed = elapsedSeconds(at: referenceDate)
         return max(0, total - elapsed)
     }
-    
+
     /// Progress ratio from 0.0 to 1.0
     public func progress(at referenceDate: Date = Date()) -> Double {
         if configuredDuration.isUnlimited {
@@ -132,7 +132,8 @@ public struct FocusSessionState: Codable, Sendable {
             let hourCycle = elapsed.truncatingRemainder(dividingBy: 3600)
             return hourCycle / 3600.0
         }
-        let total = Double(configuredDuration.totalSeconds)
+        guard let totalSeconds = configuredDuration.totalSeconds else { return 0.0 }
+        let total = Double(totalSeconds)
         guard total > 0 else { return 0.0 }
         let elapsed = Double(elapsedSeconds(at: referenceDate))
         return min(1.0, max(0.0, elapsed / total))

@@ -40,8 +40,17 @@ public final class FocusSessionViewModel {
         apiClient: APIRequesting = APIClient.shared
     ) {
         self.selectedTask = task
+        self.selectedDuration = FocusDuration.fromEstimatedMinutes(task?.estimatedDurationMinutes)
         self.sessionState = state
         self.focusService = FocusService(apiClient: apiClient)
+    }
+
+    /// Updates the selected task and snaps the duration to whatever the task
+    /// reports on the API. Used by callers wiring a task into the focus flow
+    /// so the prep screen and the stored estimate stay in sync.
+    public func setSelectedTask(_ task: TaskItem?) {
+        selectedTask = task
+        selectedDuration = FocusDuration.fromEstimatedMinutes(task?.estimatedDurationMinutes)
     }
 
     // MARK: - Derived display values
@@ -252,8 +261,7 @@ public final class FocusSessionViewModel {
     }
 
     static func duration(forSeconds seconds: Int?) -> FocusDuration {
-        guard let seconds else { return .unlimited }
-        return FocusDuration(rawValue: seconds) ?? .unlimited
+        FocusDuration.fromSeconds(seconds)
     }
 
     static func userMessage(for error: Error) -> String {
