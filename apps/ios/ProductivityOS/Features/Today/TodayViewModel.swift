@@ -114,27 +114,44 @@ public final class TodayViewModel {
         let calendar = Calendar.current
         let now = Date()
 
-        let ended = sessions.filter { !$0.isActive || $0.endedAt != nil }
+        let ended = sessions.filter { $0.endedAt != nil }
+
+        // A session whose wall-clock duration exceeds this cap is treated as
+        // a ghost (app killed mid-session, never ended, force-quit, etc.).
+        // We clamp it for aggregation so a 3-day forgotten session does not
+        // swamp the user's real weekly total. The raw duration on the wire
+        // is unchanged.
+        let perSessionCap: TimeInterval = 8 * 60 * 60
+
+        let cappedDuration: (FocusSession) -> TimeInterval = { session in
+            let raw = TimeInterval(session.durationSeconds ?? 0)
+            return min(raw, perSessionCap)
+        }
 
         let todaySessions = ended.filter { session in
             calendar.isDate(session.startedAt, inSameDayAs: now)
         }
         completedSessionsCount = todaySessions.count
         todayFocusedSeconds = todaySessions.reduce(TimeInterval(0)) { total, session in
-            total + TimeInterval(session.durationSeconds ?? 0)
+            total + cappedDuration(session)
         }
 
         let weekAgo = calendar.date(byAdding: .day, value: -6, to: calendar.startOfDay(for: now)) ?? now
         let weekSessions = ended.filter { $0.startedAt >= weekAgo }
-        let weeklySeconds = weekSessions.reduce(TimeInterval(0)) { $0 + TimeInterval($1.durationSeconds ?? 0) }
+        let weeklySeconds = weekSessions.reduce(TimeInterval(0)) { $0 + cappedDuration($1) }
         weeklyFocusFormatted = Self.formatFocusTime(weeklySeconds)
 
-        // Ring shows today's share of this week's recorded focus
-        // (data-derived placeholder until a daily-goal contract exists).
-        todayFocusProgress = weeklySeconds > 0 ? min(1, todayFocusedSeconds / weeklySeconds) : 0
+        // Placeholder daily target until the backend exposes a user-configurable
+        // daily focus goal. The ring fills as today's focus approaches this
+        // baseline (capped at 100%).
+        let goalSeconds = Self.dailyFocusGoalSeconds
+        todayFocusProgress = goalSeconds > 0 ? min(1, todayFocusedSeconds / goalSeconds) : 0
 
         dayStreak = Self.computeStreak(sessions: ended, calendar: calendar, reference: now)
     }
+
+    /// Default daily focus target: 2 hours, expressed in seconds.
+    static let dailyFocusGoalSeconds: TimeInterval = 2 * 60 * 60
 
     /// Consecutive days ending today (or yesterday, if today has no session yet)
     /// with at least one recorded session.
