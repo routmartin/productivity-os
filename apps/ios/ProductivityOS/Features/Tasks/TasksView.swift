@@ -110,10 +110,12 @@ public struct TasksView: View {
                 if case .idle = viewModel.loadState {
                     await viewModel.loadTasks()
                 }
-                await projectsViewModel.loadProjects()
+                if case .idle = projectsViewModel.loadState {
+                    await projectsViewModel.loadProjects()
+                }
             }
             .refreshable {
-                await viewModel.loadTasks()
+                await viewModel.refresh()
             }
             .sheet(item: $editingTask) { task in
                 TaskEditSheet(

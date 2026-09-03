@@ -73,6 +73,14 @@ public final class TasksViewModel {
         }
     }
 
+    /// Bypasses the shared `APICache` for the active-tasks list. Pull-to-
+    /// refresh and the user's manual expectation that "Refresh" means
+    /// "really fetch" both flow through here.
+    public func refresh() async {
+        await APICache.shared.evict(prefix: "/api/v1/tasks")
+        await loadTasks()
+    }
+
     /// Swap a task in the loaded list by id. Used by the edit sheet to
     /// keep the row in sync after a successful save without a refetch.
     public func replace(_ task: TaskItem) {

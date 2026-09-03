@@ -43,7 +43,9 @@ public struct TodayView: View {
             .background(AppColors.canvas.ignoresSafeArea())
             .task {
                 await viewModel.loadData()
-                await projectsViewModel.loadProjects()
+                if case .idle = projectsViewModel.loadState {
+                    await projectsViewModel.loadProjects()
+                }
             }
         }
     }

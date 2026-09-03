@@ -99,7 +99,11 @@ public final class GoalsViewModel {
         }
     }
 
+    /// Bypasses the shared `APICache` and re-fetches everything. Used by
+    /// pull-to-refresh and the toolbar refresh button.
     public func refresh() async {
+        await APICache.shared.evict(prefix: "/api/v1/goals")
+        await APICache.shared.evict(prefix: "/api/v1/projects")
         await loadData()
     }
 

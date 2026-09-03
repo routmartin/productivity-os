@@ -92,6 +92,15 @@ public final class TodayViewModel {
         }
     }
 
+    /// Bypasses the shared `APICache` for today's top-three, the active
+    /// task list, and the recent focus sessions. Used by pull-to-refresh.
+    public func refresh() async {
+        await APICache.shared.evict(prefix: "/api/v1/daily-top-three")
+        await APICache.shared.evict(prefix: "/api/v1/tasks")
+        await APICache.shared.evict(prefix: "/api/v1/focus")
+        await loadData()
+    }
+
     // MARK: - Mapping helpers
 
     /// Maps a TopThreeItem to a TaskItem for the existing row UI and for

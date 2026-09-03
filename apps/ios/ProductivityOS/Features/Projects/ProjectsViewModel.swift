@@ -33,6 +33,12 @@ public final class ProjectsViewModel {
         }
     }
 
+    /// Bypasses the shared `APICache` for the projects list.
+    public func refresh() async {
+        await APICache.shared.evict(prefix: "/api/v1/projects")
+        await loadProjects()
+    }
+
     /// Resolves a task's project name. Returns nil if the task has no project
     /// or the project cannot be located.
     public func projectName(for task: TaskItem) -> String? {
