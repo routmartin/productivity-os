@@ -12,6 +12,10 @@ let package = Package(
             name: "ProductivityOS",
             targets: ["ProductivityOS"]
         ),
+        .executable(
+            name: "ProductivityOSMac",
+            targets: ["ProductivityOSMac"]
+        ),
     ],
     dependencies: [],
     targets: [
@@ -21,8 +25,15 @@ let package = Package(
             path: "ProductivityOS",
             exclude: [
                 "Resources/Info.plist",
+                "Resources/Assets.xcassets",
                 "App/ProductivityOSApp.swift"
             ]
+        ),
+        .executableTarget(
+            name: "ProductivityOSMac",
+            dependencies: ["ProductivityOS"],
+            path: "MacCompanion",
+            exclude: ["Info.plist"]
         ),
         .testTarget(
             name: "ProductivityOSTests",

@@ -90,6 +90,12 @@ cd apps/ios
 xcodebuild build -scheme ProductivityOS -destination "generic/platform=iOS Simulator"
 ```
 
+### macOS Companion (Plan 006)
+
+A menu-bar-only macOS app (`ProductivityOSMac`) shares the `ProductivityOSCore` library. Build/test targets are in the root `Makefile` (`ios-mac-build`, `ios-mac-test`). The `.app` bundle (with `productivityos://` URL scheme) is assembled by `scripts/build-mac.sh`. See `docs/plans/006-macos-focus-companion.md` and `docs/specs/focus/macos-focus-companion.md` (v0.2, Approved) for the full specification and phase breakdown.
+
+---
+
 ### 3. Running Unit Tests
 
 ```Shell

@@ -4,9 +4,11 @@ import Foundation
 /// V1 list endpoints return plain JSON arrays (no Page envelope).
 public struct TaskService: Sendable {
     private let apiClient: APIRequesting
+    private let cache: APICache
 
-    public init(apiClient: APIRequesting = APIClient.shared) {
+    public init(apiClient: APIRequesting = APIClient.shared, cache: APICache = .shared) {
         self.apiClient = apiClient
+        self.cache = cache
     }
 
     /// Fetches the active task list.
@@ -17,19 +19,22 @@ public struct TaskService: Sendable {
     /// `[TaskItem]` so the Today screen keeps working. Other decode errors
     /// propagate as `APIError.decodingError`.
     public func listActiveTasks(page: Int = 0, size: Int = 50) async throws -> [TaskItem] {
-        let (data, _) = try await apiClient.send(AppEndpoint.listTasks(page: page, size: size))
-
-        let decoder = APIClient.jsonDecoder
-        if let items = try? decoder.decode([TaskItem].self, from: data) {
-            return items
+        let endpoint = AppEndpoint.listTasks(page: page, size: size)
+        let key = CacheKey(endpoint: endpoint)
+        if let (data, _) = await cache.get(key: key) {
+            return try Self.decodeLoose(data: data)
         }
-        if let slots = try? decoder.decode([TopThreeItem].self, from: data) {
-            return slots.map { Self.taskItem(from: $0) }
+        let (data, response) = try await apiClient.send(endpoint)
+        guard (200...299).contains(response.statusCode) else {
+            throw APIError(statusCode: response.statusCode, data: data)
         }
-
-        // Neither shape matched — surface the real `TaskItem` decode error
-        // so the next person to hit this can fix the backend.
-        throw APIError.decodingError(Self.describeDecodeFailure(of: data, as: [TaskItem].self))
+        await cache.set(
+            key: key,
+            data: data,
+            statusCode: response.statusCode,
+            ttl: APICache.TTL.activeTasks
+        )
+        return try Self.decodeLoose(data: data)
     }
 
     /// PUT /api/v1/tasks/{id}. Mirrors the web Tasks edit flow so the
@@ -50,8 +55,32 @@ public struct TaskService: Sendable {
             estimatedDurationMinutes: estimatedDurationMinutes
         )
         let encoded = try APIClient.encodedBody(body)
-        let (data, _) = try await apiClient.send(AppEndpoint.updateTask(id: id, body: encoded))
-        return try APIClient.jsonDecoder.decode(TaskItem.self, from: data)
+        let endpoint = AppEndpoint.updateTask(id: id, body: encoded)
+        let (data, _) = try await apiClient.send(endpoint)
+        let updated = try APIClient.jsonDecoder.decode(TaskItem.self, from: data)
+
+        // Mutations invalidate anything that depends on the task list.
+        await cache.evict(prefix: "/api/v1/tasks")
+        await cache.evict(prefix: "/api/v1/projects")
+        await cache.evict(prefix: "/api/v1/daily-top-three")
+
+        return updated
+    }
+
+    /// Tries `[TaskItem]` first, then falls back to `[TopThreeItem]`. Kept
+    /// private so callers can't depend on the ambiguous shape.
+    static func decodeLoose(data: Data) throws -> [TaskItem] {
+        let decoder = APIClient.jsonDecoder
+        if let items = try? decoder.decode([TaskItem].self, from: data) {
+            return items
+        }
+        if let slots = try? decoder.decode([TopThreeItem].self, from: data) {
+            return slots.map { Self.taskItem(from: $0) }
+        }
+
+        // Neither shape matched — surface the real `TaskItem` decode error
+        // so the next person to hit this can fix the backend.
+        throw APIError.decodingError(Self.describeDecodeFailure(of: data, as: [TaskItem].self))
     }
 
     /// Maps a TopThreeItem-shaped record into a TaskItem for the row UI.

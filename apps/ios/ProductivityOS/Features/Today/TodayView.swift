@@ -43,7 +43,9 @@ public struct TodayView: View {
             .background(AppColors.canvas.ignoresSafeArea())
             .task {
                 await viewModel.loadData()
-                await projectsViewModel.loadProjects()
+                if case .idle = projectsViewModel.loadState {
+                    await projectsViewModel.loadProjects()
+                }
             }
         }
     }
@@ -199,7 +201,6 @@ public struct TodayView: View {
                 timerText: viewModel.formattedTodayFocusedTime,
                 variant: .mini
             )
-            .frame(width: 130, height: 130)
             
             // Right CTA details
             VStack(alignment: .leading, spacing: AppSpacing.xs) {

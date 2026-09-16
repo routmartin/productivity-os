@@ -30,7 +30,15 @@ class FocusSessionService(
             ?: throw NoSuchElementException("Task not found: ${request.taskId}")
         require(task.userId == userId) { "Task does not belong to the current user" }
         require(task.deletedAt == null) { "Task is deleted" }
-        require(task.status == TaskStatus.IN_PROGRESS) { "Task must be IN_PROGRESS to start a focus session" }
+        require(task.status in setOf(TaskStatus.INBOX, TaskStatus.PLANNED, TaskStatus.IN_PROGRESS)) {
+            "Task must be INBOX, PLANNED, or IN_PROGRESS to start a focus session"
+        }
+
+        if (task.status != TaskStatus.IN_PROGRESS) {
+            task.status = TaskStatus.IN_PROGRESS
+            task.updatedAt = clock.instant()
+            taskRepository.save(task)
+        }
 
         val entity = FocusSessionEntity(
             userId = userId,
@@ -45,14 +53,20 @@ class FocusSessionService(
 
     fun end(userId: UUID, sessionId: UUID): FocusSessionResponse {
         val entity = focusSessionRepository.findById(sessionId).orElse(null)
-            ?: throw NoSuchElementException("Session not found: $sessionId")
+            ?: throw NoSuchElementException("Session not found: ${sessionId}")
         require(entity.userId == userId) { "Session does not belong to the current user" }
         require(entity.endedAt == null) { "Session is already ended" }
 
         entity.endedAt = clock.instant()
+        entity.durationSeconds = entity.endedAt!!.epochSecond - entity.startedAt.epochSecond
         focusSessionRepository.save(entity)
 
         val task = taskRepository.findById(entity.taskId).orElse(null)
+        if (task != null && task.userId == userId && task.deletedAt == null && task.status == TaskStatus.IN_PROGRESS) {
+            task.status = TaskStatus.PLANNED
+            task.updatedAt = clock.instant()
+            taskRepository.save(task)
+        }
         return FocusSessionResponse.from(entity, task?.title)
     }
 
@@ -88,6 +102,7 @@ class FocusSessionService(
         val active = focusSessionRepository.findActiveByUserId(userId)
         if (active != null && active.taskId == taskId) {
             active.endedAt = clock.instant()
+            active.durationSeconds = active.endedAt!!.epochSecond - active.startedAt.epochSecond
             focusSessionRepository.save(active)
         }
     }

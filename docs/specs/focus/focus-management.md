@@ -1,6 +1,6 @@
 # Focus Management
 
-**Status:** Proposed
+**Status:** Approved
 
 ## Purpose
 
@@ -31,6 +31,7 @@ duration distinguishes them.
 ### Client app responsibility
 
 The Pomodoro client:
+
 - Pulls the user's top-priority tasks and Daily Top 3 from the API
 - Lets the user select a task to focus on
 - Runs the Pomodoro timer locally (work intervals, breaks)
@@ -41,6 +42,7 @@ The Pomodoro client:
 ### Backend responsibility
 
 The backend:
+
 - Records Focus Sessions (start time, end time, task reference)
 - Enforces one active session per user
 - Enforces task eligibility (must be IN_PROGRESS, not deleted)
@@ -49,6 +51,7 @@ The backend:
 ### Starting a Focus Session
 
 A user starts a session for an eligible task. The server records:
+
 - The task being focused on
 - The server-authoritative start time
 - An optional configured focus duration (seconds) — allows the client to store
@@ -137,12 +140,12 @@ The client's configured focus duration (seconds) is stored with the session.
 
 ## API Endpoints
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | /api/v1/focus/active | Get current active session (or 404) |
-| POST | /api/v1/focus | Start a session |
-| POST | /api/v1/focus/{id}/end | End the active session |
-| GET | /api/v1/focus?page=&size= | List historical sessions |
+| Method | Path                      | Purpose                             |
+| ------ | ------------------------- | ----------------------------------- |
+| GET    | /api/v1/focus/active      | Get current active session (or 404) |
+| POST   | /api/v1/focus             | Start a session                     |
+| POST   | /api/v1/focus/{id}/end    | End the active session              |
+| GET    | /api/v1/focus?page=&size= | List historical sessions            |
 
 ## Out of Scope
 

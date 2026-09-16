@@ -53,11 +53,12 @@ class FocusSessionService(
 
     fun end(userId: UUID, sessionId: UUID): FocusSessionResponse {
         val entity = focusSessionRepository.findById(sessionId).orElse(null)
-            ?: throw NoSuchElementException("Session not found: $sessionId")
+            ?: throw NoSuchElementException("Session not found: ${sessionId}")
         require(entity.userId == userId) { "Session does not belong to the current user" }
         require(entity.endedAt == null) { "Session is already ended" }
 
         entity.endedAt = clock.instant()
+        entity.durationSeconds = entity.endedAt!!.epochSecond - entity.startedAt.epochSecond
         focusSessionRepository.save(entity)
 
         val task = taskRepository.findById(entity.taskId).orElse(null)
@@ -101,6 +102,7 @@ class FocusSessionService(
         val active = focusSessionRepository.findActiveByUserId(userId)
         if (active != null && active.taskId == taskId) {
             active.endedAt = clock.instant()
+            active.durationSeconds = active.endedAt!!.epochSecond - active.startedAt.epochSecond
             focusSessionRepository.save(active)
         }
     }

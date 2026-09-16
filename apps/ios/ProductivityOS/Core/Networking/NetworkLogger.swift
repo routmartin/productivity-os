@@ -22,8 +22,10 @@ public enum NetworkLogger {
     public static func log(request: URLRequest) -> UUID {
         let url = request.url
         let method = request.httpMethod ?? "GET"
+        #if DEBUG
         let headers = sanitize(headers: request.allHTTPHeaderFields ?? [:])
         let body = bodyValue(from: request.httpBody)
+        #endif
 
         if let url {
             log.debug("📡 [OUT] \(method, privacy: .public) \(url.absoluteString, privacy: .public)")
@@ -31,12 +33,16 @@ public enum NetworkLogger {
             log.debug("📡 [OUT] \(method, privacy: .public) <unknown>")
         }
 
+        #if DEBUG
         return APILogStore.shared.recordRequest(
             method: method,
             url: url ?? URL(string: "about:blank")!,
             headers: headers,
             body: body
         )
+        #else
+        return UUID()
+        #endif
     }
 
     /// Correlate a successful response with the previously recorded request.
@@ -47,6 +53,7 @@ public enum NetworkLogger {
 
         log.debug("✅ [IN] \(status, privacy: .public) \(response.url?.absoluteString ?? "", privacy: .public)")
 
+        #if DEBUG
         Task { @MainActor in
             APILogStore.shared.completeRequest(
                 id: id,
@@ -55,6 +62,7 @@ public enum NetworkLogger {
                 body: body
             )
         }
+        #endif
     }
 
     /// Correlate a transport or decoding failure with the previously
@@ -62,9 +70,11 @@ public enum NetworkLogger {
     public static func completeWithError(id: UUID, error: Error, url: URL?) {
         let description = error.localizedDescription
         log.error("❌ [ERROR] \(url?.absoluteString ?? "unknown", privacy: .public): \(description, privacy: .public)")
+        #if DEBUG
         Task { @MainActor in
             APILogStore.shared.completeRequestWithError(id: id, description: description)
         }
+        #endif
     }
 
     // MARK: - Sanitization
@@ -89,6 +99,7 @@ public enum NetworkLogger {
         }
     }
 
+    #if DEBUG
     private static func bodyValue(from data: Data?) -> APILogStore.BodyValue? {
         guard let data, !data.isEmpty else { return nil }
         let raw = String(data: data, encoding: .utf8) ?? ""
@@ -98,6 +109,7 @@ public enum NetworkLogger {
         }
         return .text(scrubbed)
     }
+    #endif
 
     /// Best-effort JSON pretty-printer. Falls back to `nil` if the body is
     /// not valid JSON (caller keeps the raw string).

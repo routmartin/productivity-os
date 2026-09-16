@@ -9,6 +9,7 @@ data class FocusSession(
     val taskId: UUID,
     val startedAt: Instant,
     val endedAt: Instant? = null,
+    val durationSeconds: Long? = null,
     val configuredDurationSeconds: Int? = null,
     val note: String? = null
 )

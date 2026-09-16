@@ -14,6 +14,8 @@ public struct TaskEditSheet: View {
     private let onSaved: (TaskItem) -> Void
     private let onDismiss: () -> Void
 
+    @Environment(\.dismiss) private var dismiss
+
     @State private var title: String
     @State private var description: String
     @State private var priority: TaskPriority?
@@ -141,7 +143,7 @@ public struct TaskEditSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { onDismiss() }
+                    Button("Cancel") { dismiss() }
                         .disabled(isSubmitting)
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -206,7 +208,7 @@ public struct TaskEditSheet: View {
                 estimatedDurationMinutes: parsedDuration
             )
             onSaved(updated)
-            onDismiss()
+            dismiss()
         } catch {
             errorMessage = FocusSessionViewModel.userMessage(for: error)
         }

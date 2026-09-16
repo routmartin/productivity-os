@@ -82,13 +82,17 @@ public struct FocusClockView: View {
                 Text(timerText)
                     .font(AppTypography.miniTimer)
                     .foregroundStyle(AppColors.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
 
                 Text("focused today")
                     .font(AppTypography.captionSmall)
                     .foregroundStyle(AppColors.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
+            .padding(.horizontal, 8)
         }
-        .frame(width: 140, height: 140)
     }
 
     // MARK: - Hero Clock (Active & Paused Focus Screen)

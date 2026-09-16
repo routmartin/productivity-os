@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 
+#if DEBUG
 /// In-memory + on-disk ring buffer for developer API request logs.
 ///
 /// Each `Entry` is the full lifecycle of one HTTP call (request → response or
@@ -289,3 +290,4 @@ public final class APILogStore: ObservableObject {
         return (try? decoder.decode([Entry].self, from: data)) ?? []
     }
 }
+#endif

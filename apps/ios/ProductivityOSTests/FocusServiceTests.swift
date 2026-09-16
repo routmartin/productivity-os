@@ -120,7 +120,7 @@ final class FocusViewModelSyncTests: XCTestCase {
     func testCompleteAfterStartedSessionSendsEndCall() async {
         let task = SampleData.taskAuth
         viewModel.selectedTask = task
-        viewModel.sessionState.start(task: task, duration: .pomodoro25)
+        viewModel.sessionState.start(task: task, duration: FocusDuration(totalSeconds: 1500))
         await viewModel.syncStart()
 
         viewModel.completeFocus()
@@ -152,7 +152,7 @@ final class FocusViewModelSyncTests: XCTestCase {
     func testEndFailureKeepsPendingSessionForRetry() async {
         let task = SampleData.taskAuth
         viewModel.selectedTask = task
-        viewModel.sessionState.start(task: task, duration: .pomodoro25)
+        viewModel.sessionState.start(task: task, duration: FocusDuration(totalSeconds: 1500))
 
         // Start succeeds…
         await viewModel.syncStart()
@@ -183,17 +183,54 @@ final class FocusViewModelSyncTests: XCTestCase {
 
         XCTAssertEqual(viewModel.sessionState.state, .running)
         XCTAssertEqual(viewModel.selectedTask?.title, "Restored task")
-        XCTAssertEqual(viewModel.selectedDuration, .deepWork45)
+        XCTAssertEqual(viewModel.selectedDuration, FocusDuration(totalSeconds: 2700))
         // Elapsed derived from server timestamp, not from local ticks.
         XCTAssertEqual(viewModel.sessionState.elapsedSeconds(at: Date()), 600, accuracy: 2.0)
     }
 
     func testDurationMappingForUnknownSecondsFallsBackToUnlimited() {
-        XCTAssertEqual(FocusSessionViewModel.duration(forSeconds: 1500), .pomodoro25)
-        XCTAssertEqual(FocusSessionViewModel.duration(forSeconds: 2700), .deepWork45)
-        XCTAssertEqual(FocusSessionViewModel.duration(forSeconds: 3600), .focused60)
+        // Known presets (matching web/API option list) round-trip exactly.
+        XCTAssertEqual(FocusSessionViewModel.duration(forSeconds: 900), FocusDuration(totalSeconds: 900))
+        XCTAssertEqual(FocusSessionViewModel.duration(forSeconds: 1800), FocusDuration(totalSeconds: 1800))
+        XCTAssertEqual(FocusSessionViewModel.duration(forSeconds: 2700), FocusDuration(totalSeconds: 2700))
+        XCTAssertEqual(FocusSessionViewModel.duration(forSeconds: 3600), FocusDuration(totalSeconds: 3600))
+        XCTAssertEqual(FocusSessionViewModel.duration(forSeconds: 5400), FocusDuration(totalSeconds: 5400))
+        XCTAssertEqual(FocusSessionViewModel.duration(forSeconds: 7200), FocusDuration(totalSeconds: 7200))
         XCTAssertEqual(FocusSessionViewModel.duration(forSeconds: nil), .unlimited)
-        XCTAssertEqual(FocusSessionViewModel.duration(forSeconds: 1234), .unlimited)
+        // Unknown values still surface (preserved verbatim) so we don't lie
+        // about the configured duration when restoring a session from the
+        // server that used a value outside the preset menu.
+        XCTAssertEqual(FocusSessionViewModel.duration(forSeconds: 1234), FocusDuration(totalSeconds: 1234))
+    }
+
+    func testSettingTaskSnapsDurationToEstimate() {
+        // Task created with estimate 90 min → selectedDuration is 1h 30m.
+        let taskWithEstimate = SampleData.taskAuth
+        viewModel.setSelectedTask(TaskItem(
+            id: taskWithEstimate.id,
+            title: taskWithEstimate.title,
+            estimatedDurationMinutes: 90
+        ))
+        XCTAssertEqual(viewModel.selectedDuration, FocusDuration(totalSeconds: 90 * 60))
+
+        // Switching to a task with no estimate falls back to unlimited.
+        viewModel.setSelectedTask(TaskItem(
+            id: UUID(),
+            title: "No estimate task",
+            estimatedDurationMinutes: nil
+        ))
+        XCTAssertEqual(viewModel.selectedDuration, .unlimited)
+
+        // Switching to a task with a non-preset estimate falls back to unlimited
+        // because no chip matches the value exactly; the user can pick a
+        // different duration manually.
+        viewModel.selectedDuration = FocusDuration(totalSeconds: 30 * 60)
+        viewModel.setSelectedTask(TaskItem(
+            id: UUID(),
+            title: "Odd estimate",
+            estimatedDurationMinutes: 37
+        ))
+        XCTAssertEqual(viewModel.selectedDuration, .unlimited)
     }
 
     private func waitUntil(

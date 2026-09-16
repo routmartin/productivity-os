@@ -9,7 +9,7 @@ final class FocusTimerAccuracyTests: XCTestCase {
     func testRepeatedPauseResumeCyclesDoNotAccumulateError() throws {
         var state = FocusSessionState()
         let start = Date(timeIntervalSince1970: 100_000)
-        state.start(task: SampleData.taskAuth, duration: .pomodoro25, at: start)
+        state.start(task: SampleData.taskAuth, duration: FocusDuration(totalSeconds: 1500), at: start)
 
         // 5 pause/resume cycles of varying pause lengths.
         var now = start.addingTimeInterval(60) // 1 min focused
@@ -28,7 +28,7 @@ final class FocusTimerAccuracyTests: XCTestCase {
     func testPauseFreezesRingAndTimer() {
         var state = FocusSessionState()
         let start = Date(timeIntervalSince1970: 50_000)
-        state.start(task: nil, duration: .deepWork45, at: start)
+        state.start(task: nil, duration: FocusDuration(totalSeconds: 2700), at: start)
         state.pause(at: start.addingTimeInterval(100))
 
         // Time keeps passing while paused — displayed values must not move.
@@ -39,7 +39,7 @@ final class FocusTimerAccuracyTests: XCTestCase {
     func testBackgroundForegroundRecalculationWhilePaused() {
         var state = FocusSessionState()
         let start = Date(timeIntervalSince1970: 10_000)
-        state.start(task: nil, duration: .focused60, at: start)
+        state.start(task: nil, duration: FocusDuration(totalSeconds: 3600), at: start)
 
         state.pause(at: start.addingTimeInterval(200))
         // App backgrounded mid-pause for an hour.
@@ -53,7 +53,7 @@ final class FocusTimerAccuracyTests: XCTestCase {
     func testCompletionClampsElapsedAtEndTime() {
         var state = FocusSessionState()
         let start = Date(timeIntervalSince1970: 0)
-        state.start(task: nil, duration: .pomodoro25, at: start)
+        state.start(task: nil, duration: FocusDuration(totalSeconds: 1500), at: start)
         state.complete(at: start.addingTimeInterval(600))
 
         // Checking far later must not grow the elapsed time.
@@ -62,7 +62,7 @@ final class FocusTimerAccuracyTests: XCTestCase {
     }
 
     func testInitialStateHasNoProgress() {
-        let state = FocusSessionState(configuredDuration: .pomodoro25)
+        let state = FocusSessionState(configuredDuration: FocusDuration(totalSeconds: 1500))
         XCTAssertEqual(state.elapsedSeconds(), 0)
         XCTAssertEqual(state.remainingSeconds(), 1500)
         XCTAssertEqual(state.progress(), 0)
@@ -89,7 +89,7 @@ final class FocusNaturalCompletionTests: XCTestCase {
         viewModel.selectedTask = SampleData.taskAuth
         viewModel.sessionState.start(
             task: viewModel.selectedTask,
-            duration: .pomodoro25,
+            duration: FocusDuration(totalSeconds: 1500),
             at: Date().addingTimeInterval(-1500)
         )
 
@@ -109,8 +109,8 @@ final class FocusNaturalCompletionTests: XCTestCase {
 
     func testCompletionRequiresBackendConfirmation() async {
         viewModel.selectedTask = SampleData.taskAuth
-        viewModel.selectedDuration = .pomodoro25
-        viewModel.sessionState.start(task: viewModel.selectedTask, duration: .pomodoro25)
+        viewModel.selectedDuration = FocusDuration(totalSeconds: 1500)
+        viewModel.sessionState.start(task: viewModel.selectedTask, duration: FocusDuration(totalSeconds: 1500))
         await viewModel.syncStart()
         XCTAssertNotNil(viewModel.serverSession)
 
@@ -125,8 +125,8 @@ final class FocusNaturalCompletionTests: XCTestCase {
 
     func testFailedEndKeepsSessionUnclaimedAndRetryCompletesIt() async {
         viewModel.selectedTask = SampleData.taskAuth
-        viewModel.selectedDuration = .pomodoro25
-        viewModel.sessionState.start(task: viewModel.selectedTask, duration: .pomodoro25)
+        viewModel.selectedDuration = FocusDuration(totalSeconds: 1500)
+        viewModel.sessionState.start(task: viewModel.selectedTask, duration: FocusDuration(totalSeconds: 1500))
         await viewModel.syncStart()
 
         // End call fails.
