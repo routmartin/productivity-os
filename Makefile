@@ -1,4 +1,4 @@
-.PHONY: dev run db-up db-down build test clean docs web web-mock web-install preview kill
+.PHONY: dev run db-up db-down build test clean docs web web-mock web-install preview kill ios-mac-build ios-mac-test
 
 web-install:
 	cd apps/web && pnpm install
@@ -60,3 +60,9 @@ docs: db-up
 	./gradlew :apps:api:bootRun &
 	sleep 8
 	open http://localhost:8080/docs
+
+ios-mac-build:
+	cd apps/ios && swift build --target ProductivityOSMac
+
+ios-mac-test:
+	cd apps/ios && swift test

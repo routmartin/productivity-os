@@ -1,3 +1,4 @@
+#if os(iOS)
 import SwiftUI
 
 /// Main coordinator view with iOS 26 Liquid Glass tab bar.
@@ -174,3 +175,4 @@ private extension View {
         }
     }
 }
+#endif

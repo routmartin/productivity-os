@@ -1,3 +1,4 @@
+#if DEBUG && os(iOS)
 import SwiftUI
 
 /// DevTools: Network tab — a single-screen inspector for every API call the
@@ -289,7 +290,9 @@ private struct DevAPIRequestDetailView: View {
                 }
             }
             .sheet(isPresented: $showShareSheet) {
+                #if os(iOS)
                 ShareSheet(items: [shareText])
+                #endif
             }
         }
     }
@@ -597,6 +600,7 @@ private struct DevAPIRequestDetailView: View {
 
 // MARK: - Share
 
+#if os(iOS)
 private struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 
@@ -606,7 +610,9 @@ private struct ShareSheet: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
+#endif
 
 #Preview {
     DevAPIRequestLogView()
 }
+#endif

@@ -125,7 +125,6 @@
 		BB0000332C7F000100000001 /* ProjectService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectService.swift; sourceTree = "<group>"; };
 		BB0000342C7F000100000001 /* ProjectsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsViewModel.swift; sourceTree = "<group>"; };
 		BB0000352C7F000100000001 /* APILogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APILogStore.swift; sourceTree = "<group>"; };
-		CC0000012C7F000100000001 /* ProductivityOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProductivityOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB0000362C7F000100000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BB0000372C7F000100000001 /* Goal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Goal.swift; sourceTree = "<group>"; };
 		BB0000382C7F000100000001 /* GoalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalService.swift; sourceTree = "<group>"; };
@@ -136,6 +135,7 @@
 		BB00003D2C7F000100000001 /* DevAPIRequestLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevAPIRequestLogView.swift; sourceTree = "<group>"; };
 		BB00003E2C7F000100000001 /* TaskEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditSheet.swift; sourceTree = "<group>"; };
 		BB00003F2C7F000100000001 /* APICache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICache.swift; sourceTree = "<group>"; };
+		CC0000012C7F000100000001 /* ProductivityOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProductivityOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -205,21 +205,21 @@
 			path = Features;
 			sourceTree = "<group>";
 		};
-			EE0000062C7F000100000001 /* Models */ = {
-				isa = PBXGroup;
-				children = (
-					BB00001D2C7F000100000001 /* User.swift */,
-					BB00001E2C7F000100000001 /* Task.swift */,
-					BB00001F2C7F000100000001 /* TopThree.swift */,
-					BB0000202C7F000100000001 /* FocusDuration.swift */,
-					BB0000212C7F000100000001 /* FocusSession.swift */,
-					BB0000222C7F000100000001 /* FocusSessionState.swift */,
-					BB0000322C7F000100000001 /* Project.swift */,
-					BB0000372C7F000100000001 /* Goal.swift */,
-				);
-				path = Models;
-				sourceTree = "<group>";
-			};
+		EE0000062C7F000100000001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				BB00001D2C7F000100000001 /* User.swift */,
+				BB00001E2C7F000100000001 /* Task.swift */,
+				BB00001F2C7F000100000001 /* TopThree.swift */,
+				BB0000202C7F000100000001 /* FocusDuration.swift */,
+				BB0000212C7F000100000001 /* FocusSession.swift */,
+				BB0000222C7F000100000001 /* FocusSessionState.swift */,
+				BB0000322C7F000100000001 /* Project.swift */,
+				BB0000372C7F000100000001 /* Goal.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
 		EE0000072C7F000100000001 /* Resources */ = {
 			isa = PBXGroup;
 			children = (

@@ -128,6 +128,7 @@ public struct FocusPreparationView: View {
                         .labelsHidden()
                         .tint(AppColors.primary)
                         .onChange(of: viewModel.isDoNotDisturbEnabled) { enabled in
+                            #if os(iOS)
                             if enabled {
                                 // Apple does not expose a public API to toggle system DND programmatically.
                                 // Open OS Focus settings so the user can enable it directly.
@@ -135,6 +136,7 @@ public struct FocusPreparationView: View {
                                     UIApplication.shared.open(url)
                                 }
                             }
+                            #endif
                         }
                 }
                 .padding(AppSpacing.md)

@@ -60,8 +60,10 @@ final class APICacheTests: XCTestCase {
 
         await APICache.shared.evict(prefix: "/api/v1/projects")
 
-        XCTAssertNil(await APICache.shared.get(key: CacheKey(method: "GET", path: "/api/v1/projects")))
-        XCTAssertNil(await APICache.shared.get(key: CacheKey(method: "GET", path: "/api/v1/projects/B/tasks")))
+        let projectsGet = await APICache.shared.get(key: CacheKey(method: "GET", path: "/api/v1/projects"))
+        let projectTasksGet = await APICache.shared.get(key: CacheKey(method: "GET", path: "/api/v1/projects/B/tasks"))
+        XCTAssertNil(projectsGet)
+        XCTAssertNil(projectTasksGet)
         let goals = await APICache.shared.get(key: CacheKey(method: "GET", path: "/api/v1/goals"))
         XCTAssertNotNil(goals)
     }

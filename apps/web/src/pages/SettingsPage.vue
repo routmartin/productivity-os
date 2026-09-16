@@ -51,6 +51,21 @@ const qrImageUrl = computed(() => {
   return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl.value)}`
 })
 
+async function copyDeepLink() {
+  if (!qrUrl.value) return
+  try {
+    await navigator.clipboard.writeText(qrUrl.value)
+  } catch {
+    // Fallback: select text via temporary input
+    const input = document.createElement('input')
+    input.value = qrUrl.value
+    document.body.appendChild(input)
+    input.select()
+    document.execCommand('copy')
+    document.body.removeChild(input)
+  }
+}
+
 // ——— Profile / timezone ———
 
 const timezone = ref(auth.user?.timezone ?? 'UTC')
@@ -186,11 +201,11 @@ async function savePassword() {
       </div>
     </SurfaceCard>
 
-    <SurfaceCard title="Connect iPhone">
+    <SurfaceCard title="Connect iPhone or Mac">
       <div class="qr-section">
         <div v-if="!qrChallenge && !isLoadingQr" class="qr-placeholder">
           <Smartphone :size="48" class="icon" />
-          <p>Securely connect your iPhone to your Productivity OS account.</p>
+          <p>Securely connect your iPhone or Mac companion to your Productivity OS account.</p>
           <UiButton variant="primary" @click="generateQr">
             Generate Login QR
           </UiButton>
@@ -208,6 +223,10 @@ async function savePassword() {
           <div class="qr-info">
             <h3>Scan with Productivity OS</h3>
             <p>Open the app on your iPhone and tap <strong>Scan QR</strong>.</p>
+            <p v-if="qrUrl" class="deep-link-row">
+              <strong>Mac companion?</strong>
+              <a :href="qrUrl" class="deep-link" @click="copyDeepLink">{{ qrUrl }}</a>
+            </p>
             <p class="expiry-note">Expires in 2 minutes.</p>
             <UiButton variant="subtle" size="sm" @click="generateQr">
               Refresh QR
@@ -444,6 +463,24 @@ async function savePassword() {
   color: var(--text-disabled) !important;
   margin-top: var(--space-2);
   margin-bottom: var(--space-4);
+}
+
+.deep-link-row {
+  margin-top: var(--space-2);
+}
+
+.deep-link {
+  display: block;
+  font-family: monospace;
+  font-size: var(--text-xs) !important;
+  color: var(--accent-strong) !important;
+  word-break: break-all;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.deep-link:hover {
+  opacity: 0.8;
 }
 
 .qr-error {

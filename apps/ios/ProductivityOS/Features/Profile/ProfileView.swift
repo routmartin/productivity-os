@@ -1,9 +1,12 @@
+#if os(iOS)
 import SwiftUI
 
 /// Profile view with theme switching and developer tools
 public struct ProfileView: View {
     @State private var authSession = AuthSession.shared
+    #if DEBUG && os(iOS)
     @State private var showDevLog = false
+    #endif
 
     public init() {}
 
@@ -55,6 +58,7 @@ public struct ProfileView: View {
                     }
 
                     // Developer Tools
+                    #if DEBUG && os(iOS)
                     VStack(alignment: .leading, spacing: AppSpacing.sm) {
                         SectionHeaderView(title: "Developer Tools")
 
@@ -65,6 +69,7 @@ public struct ProfileView: View {
                         }
                         .appCardStyle(cornerRadius: AppRadius.md)
                     }
+                    #endif
 
                     // Sign out
                     AppButton(title: "Log Out", style: .secondary) {
@@ -81,9 +86,11 @@ public struct ProfileView: View {
             .background(AppColors.canvas.ignoresSafeArea())
             .navigationTitle("Me")
             .preferredColorScheme(.light)
+            #if DEBUG && os(iOS)
             .sheet(isPresented: $showDevLog) {
                 DevAPIRequestLogView()
             }
+            #endif
         }
     }
 
@@ -148,3 +155,4 @@ public struct ProfileView: View {
 #Preview {
     ProfileView()
 }
+#endif
