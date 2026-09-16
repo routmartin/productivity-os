@@ -17,16 +17,17 @@ data class FocusSessionResponse(
 ) {
     companion object {
         fun from(entity: FocusSessionEntity, taskTitle: String?): FocusSessionResponse {
-            val endedAt = entity.endedAt
-            val duration = if (endedAt != null) {
+            // Prefer the persisted duration_seconds; fall back to deriving from
+            // timestamps for any pre-V13 row that hasn't been backfilled yet.
+            val duration = entity.durationSeconds ?: entity.endedAt?.let { endedAt ->
                 endedAt.epochSecond - entity.startedAt.epochSecond
-            } else null
+            }
             return FocusSessionResponse(
                 id = entity.id!!,
                 taskId = entity.taskId,
                 taskTitle = taskTitle,
                 startedAt = entity.startedAt,
-                endedAt = endedAt,
+                endedAt = entity.endedAt,
                 durationSeconds = duration,
                 configuredDurationSeconds = entity.configuredDurationSeconds,
                 note = entity.note,
