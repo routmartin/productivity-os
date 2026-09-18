@@ -55,6 +55,8 @@ public enum AppEndpoint: Endpoint {
     // Focus (/api/v1/focus)
     case getActiveFocusSession
     case startFocusSession(body: Data)
+    case pauseFocusSession(id: UUID)
+    case resumeFocusSession(id: UUID)
     case endFocusSession(id: UUID)
     case listFocusSessions(page: Int = 0, size: Int = 50)
 
@@ -93,6 +95,10 @@ public enum AppEndpoint: Endpoint {
             return "/api/v1/focus/active"
         case .startFocusSession:
             return "/api/v1/focus"
+        case .pauseFocusSession(let id):
+            return "/api/v1/focus/\(id.uuidString.lowercased())/pause"
+        case .resumeFocusSession(let id):
+            return "/api/v1/focus/\(id.uuidString.lowercased())/resume"
         case .endFocusSession(let id):
             return "/api/v1/focus/\(id.uuidString.lowercased())/end"
         case .listFocusSessions:
@@ -103,7 +109,7 @@ public enum AppEndpoint: Endpoint {
     public var method: HTTPMethod {
         switch self {
         case .register, .login, .qrExchange, .refresh, .logout,
-             .startFocusSession, .endFocusSession:
+             .startFocusSession, .pauseFocusSession, .resumeFocusSession, .endFocusSession:
             return .post
         case .listTasks, .listProjects, .listProjectTasks, .listGoals, .getGoal, .getDailyTopThree, .getActiveFocusSession, .listFocusSessions:
             return .get

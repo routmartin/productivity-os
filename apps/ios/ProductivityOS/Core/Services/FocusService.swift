@@ -1,12 +1,12 @@
 import Foundation
 
 /// Focus session service backed by the FocusController contract:
-/// start (`POST /focus`), end (`POST /focus/{id}/end`), active
-/// (`GET /focus/active`, 404 → nil), list (`GET /focus`).
+/// start (`POST /focus`), pause (`POST /focus/{id}/pause`),
+/// resume (`POST /focus/{id}/resume`), end (`POST /focus/{id}/end`),
+/// active (`GET /focus/active`, 404 → nil), list (`GET /focus`).
 ///
-/// There is no server pause/resume contract: pause/resume is local timer
-/// state only (see FocusSessionViewModel). The backend records
-/// `durationSeconds = endedAt - startedAt`.
+/// The backend records pause intervals and reports the active focus duration
+/// (wall-clock minus paused time; ADR-008).
 public struct FocusService: Sendable {
     private let apiClient: APIRequesting
     private let cache: APICache
@@ -60,6 +60,20 @@ public struct FocusService: Sendable {
 
     public func end(id: UUID) async throws -> FocusSession {
         let session: FocusSession = try await apiClient.request(AppEndpoint.endFocusSession(id: id))
+        await cache.evict(prefix: "/api/v1/focus")
+        return session
+    }
+
+    /// Pauses an active, running session (server records the pause; ADR-008).
+    public func pause(id: UUID) async throws -> FocusSession {
+        let session: FocusSession = try await apiClient.request(AppEndpoint.pauseFocusSession(id: id))
+        await cache.evict(prefix: "/api/v1/focus")
+        return session
+    }
+
+    /// Resumes an active, paused session (server closes the pause; ADR-008).
+    public func resume(id: UUID) async throws -> FocusSession {
+        let session: FocusSession = try await apiClient.request(AppEndpoint.resumeFocusSession(id: id))
         await cache.evict(prefix: "/api/v1/focus")
         return session
     }

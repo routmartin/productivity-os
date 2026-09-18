@@ -5,6 +5,14 @@ import XCTest
 final class FocusServiceTests: XCTestCase {
     private let taskID = UUID(uuidString: "e8e19bb5-93bb-4d57-9dbd-c36b47c43df1")!
 
+    override func setUp() async throws {
+        await APICache.shared.reset()
+    }
+
+    override func tearDown() async throws {
+        await APICache.shared.reset()
+    }
+
     func testStartSendsTaskIdAndConfiguredDuration() async throws {
         let mock = MockAPIClient()
         mock.defaultResponse = .success((
@@ -85,14 +93,50 @@ final class FocusServiceTests: XCTestCase {
         XCTAssertEqual(mock.recordedRequests.first?.path, "/api/v1/focus/\(id.uuidString.lowercased())/end")
         XCTAssertEqual(mock.recordedRequests.first?.method, "POST")
     }
+
+    func testPauseCallsPausePathAndDecodesPausedState() async throws {
+        let mock = MockAPIClient()
+        let id = UUID(uuidString: "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")!
+        mock.defaultResponse = .success((
+            Data("""
+            {"id":"\(id.uuidString)","taskId":"\(taskID.uuidString.lowercased())","startedAt":"2026-08-26T10:00:00Z","endedAt":null,"durationSeconds":null,"configuredDurationSeconds":1500,"note":null,"isActive":true,"isPaused":true,"pausedAt":"2026-08-26T10:05:00Z","accumulatedPausedSeconds":0}
+            """.utf8),
+            200
+        ))
+
+        let paused = try await FocusService(apiClient: mock).pause(id: id)
+
+        XCTAssertTrue(paused.isPaused)
+        XCTAssertNotNil(paused.pausedAt)
+        XCTAssertEqual(mock.recordedRequests.first?.path, "/api/v1/focus/\(id.uuidString.lowercased())/pause")
+        XCTAssertEqual(mock.recordedRequests.first?.method, "POST")
+    }
+
+    func testResumeCallsResumePathAndClearsPausedState() async throws {
+        let mock = MockAPIClient()
+        let id = UUID(uuidString: "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")!
+        mock.defaultResponse = .success((
+            Data("""
+            {"id":"\(id.uuidString)","taskId":"\(taskID.uuidString.lowercased())","startedAt":"2026-08-26T10:00:00Z","endedAt":null,"durationSeconds":null,"configuredDurationSeconds":1500,"note":null,"isActive":true,"isPaused":false,"pausedAt":null,"accumulatedPausedSeconds":300}
+            """.utf8),
+            200
+        ))
+
+        let resumed = try await FocusService(apiClient: mock).resume(id: id)
+
+        XCTAssertFalse(resumed.isPaused)
+        XCTAssertEqual(resumed.accumulatedPausedSeconds, 300)
+        XCTAssertEqual(mock.recordedRequests.first?.path, "/api/v1/focus/\(id.uuidString.lowercased())/resume")
+        XCTAssertEqual(mock.recordedRequests.first?.method, "POST")
+    }
 }
 
 final class FocusViewModelSyncTests: XCTestCase {
     private var mock: MockAPIClient!
     private var viewModel: FocusSessionViewModel!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        await APICache.shared.reset()
         mock = MockAPIClient()
         // Valid FocusSessionResponse for start/end calls unless overridden.
         mock.defaultResponse = .success((
@@ -102,6 +146,10 @@ final class FocusViewModelSyncTests: XCTestCase {
             200
         ))
         viewModel = FocusSessionViewModel(apiClient: mock)
+    }
+
+    override func tearDown() async throws {
+        await APICache.shared.reset()
     }
 
     func testStartWithoutTaskRunsLocallyAndWarnsNoSave() async {
@@ -231,6 +279,74 @@ final class FocusViewModelSyncTests: XCTestCase {
             estimatedDurationMinutes: 37
         ))
         XCTAssertEqual(viewModel.selectedDuration, .unlimited)
+    }
+
+    func testPauseRecordsServerPause() async {
+        let task = SampleData.taskAuth
+        viewModel.selectedTask = task
+        viewModel.sessionState.start(task: task, duration: .unlimited)
+        await viewModel.syncStart()
+        XCTAssertEqual(viewModel.serverSession?.isPaused, false)
+
+        mock.defaultResponse = .success((
+            Data("""
+            {"id":"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D","taskId":"e8e19bb5-93bb-4d57-9dbd-c36b47c43df1","startedAt":"2026-08-26T10:00:00Z","endedAt":null,"durationSeconds":null,"configuredDurationSeconds":null,"note":null,"isActive":true,"isPaused":true,"pausedAt":"2026-08-26T10:05:00Z","accumulatedPausedSeconds":0}
+            """.utf8),
+            200
+        ))
+
+        viewModel.pauseFocus()
+        await waitUntil { [viewModel] in viewModel?.serverSession?.isPaused == true }
+
+        XCTAssertEqual(viewModel.sessionState.state, .paused)
+        XCTAssertTrue(mock.recordedRequests.contains { $0.path.hasSuffix("/pause") && $0.method == "POST" })
+        viewModel.resetToPreparing()
+    }
+
+    func testResumeRecordsServerResume() async {
+        let task = SampleData.taskAuth
+        viewModel.selectedTask = task
+        viewModel.sessionState.start(task: task, duration: .unlimited)
+        viewModel.sessionState.pause()
+        viewModel.serverSession = FocusSession(
+            id: UUID(uuidString: "A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D")!,
+            taskId: task.id,
+            startedAt: Date().addingTimeInterval(-600),
+            isPaused: true,
+            pausedAt: Date().addingTimeInterval(-120),
+            accumulatedPausedSeconds: 0
+        )
+
+        mock.defaultResponse = .success((
+            Data("""
+            {"id":"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D","taskId":"e8e19bb5-93bb-4d57-9dbd-c36b47c43df1","startedAt":"2026-08-26T10:00:00Z","endedAt":null,"durationSeconds":null,"configuredDurationSeconds":null,"note":null,"isActive":true,"isPaused":false,"pausedAt":null,"accumulatedPausedSeconds":300}
+            """.utf8),
+            200
+        ))
+
+        viewModel.resumeFocus()
+        await waitUntil { [viewModel] in viewModel?.serverSession?.isPaused == false }
+
+        XCTAssertEqual(viewModel.sessionState.state, .running)
+        XCTAssertTrue(mock.recordedRequests.contains { $0.path.hasSuffix("/resume") && $0.method == "POST" })
+        viewModel.resetToPreparing()
+    }
+
+    func testRestorePausedSessionRestoresPausedState() async {
+        let startedAt = Date().addingTimeInterval(-600)
+        let pausedAt = Date().addingTimeInterval(-120)
+        mock.defaultResponse = .success((
+            Data("""
+            {"id":"A1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6D","taskId":"e8e19bb5-93bb-4d57-9dbd-c36b47c43df1","taskTitle":"Restored task","startedAt":"\(ISO8601DateFormatter().string(from: startedAt))","endedAt":null,"durationSeconds":null,"configuredDurationSeconds":2700,"note":null,"isActive":true,"isPaused":true,"pausedAt":"\(ISO8601DateFormatter().string(from: pausedAt))","accumulatedPausedSeconds":60}
+            """.utf8),
+            200
+        ))
+
+        await viewModel.restoreActiveSession()
+
+        XCTAssertEqual(viewModel.sessionState.state, .paused)
+        XCTAssertEqual(viewModel.sessionState.totalPausedSeconds, 60, accuracy: 0.5)
+        viewModel.resetToPreparing()
     }
 
     private func waitUntil(

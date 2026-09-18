@@ -84,11 +84,11 @@ public final class FocusSessionViewModel {
     }
 
     public func pauseFocus() {
-        // No server pause contract — local-only state transition.
         sessionState.pause(at: Date())
         currentDate = Date()
         stopLocalTicker()
         updateLiveActivity()
+        syncTask = Task { [weak self] in await self?.syncPause() }
     }
 
     public func resumeFocus() {
@@ -96,6 +96,7 @@ public final class FocusSessionViewModel {
         currentDate = Date()
         startLocalTicker()
         updateLiveActivity()
+        syncTask = Task { [weak self] in await self?.syncResume() }
     }
 
     /// Begins completion: freezes the clock, confirms with the backend, and
@@ -160,8 +161,16 @@ public final class FocusSessionViewModel {
             )
             selectedDuration = Self.duration(forSeconds: active.configuredDurationSeconds)
             sessionState.start(task: selectedTask, duration: selectedDuration, at: active.startedAt)
+            if active.isPaused {
+                // Restore the paused state recorded server-side (ADR-008).
+                sessionState.totalPausedSeconds = TimeInterval(active.accumulatedPausedSeconds)
+                sessionState.pauseStartTime = active.pausedAt ?? Date()
+                sessionState.state = .paused
+            }
             currentDate = Date()
-            startLocalTicker()
+            if sessionState.state == .running {
+                startLocalTicker()
+            }
             startLiveActivity()
         } catch {
             syncErrorMessage = Self.userMessage(for: error)
@@ -173,10 +182,22 @@ public final class FocusSessionViewModel {
     public func retrySync() {
         guard !isSyncInFlight else { return }
         syncTask = Task { [weak self] in
-            if self?.pendingEndSessionID != nil {
-                await self?.confirmCompletion()
-            } else if self?.serverSession == nil, self?.sessionState.state == .running || self?.sessionState.state == .paused {
-                await self?.syncStart()
+            guard let self else { return }
+            if self.pendingEndSessionID != nil {
+                await self.confirmCompletion()
+            } else if let session = self.serverSession {
+                // Server session exists: reconcile a pause/resume that failed
+                // to reach the backend with the local timer state.
+                switch self.sessionState.state {
+                case .paused where !session.isPaused:
+                    await self.syncPause()
+                case .running where session.isPaused:
+                    await self.syncResume()
+                default:
+                    break
+                }
+            } else if self.sessionState.state == .running || self.sessionState.state == .paused {
+                await self.syncStart()
             }
         }
     }
@@ -239,6 +260,29 @@ public final class FocusSessionViewModel {
         } catch {
             // Keep the ID so a later retry can persist the result.
             pendingEndSessionID = session.id
+            syncErrorMessage = Self.userMessage(for: error)
+        }
+    }
+
+    /// Records a pause server-side; leaves the local timer untouched on failure
+    /// so the user can retry via `retrySync()` (ADR-008).
+    func syncPause() async {
+        guard let session = serverSession, !session.isPaused else { return }
+        do {
+            syncErrorMessage = nil
+            serverSession = try await focusService.pause(id: session.id)
+        } catch {
+            syncErrorMessage = Self.userMessage(for: error)
+        }
+    }
+
+    /// Records a resume server-side; leaves the local timer untouched on failure.
+    func syncResume() async {
+        guard let session = serverSession, session.isPaused else { return }
+        do {
+            syncErrorMessage = nil
+            serverSession = try await focusService.resume(id: session.id)
+        } catch {
             syncErrorMessage = Self.userMessage(for: error)
         }
     }
