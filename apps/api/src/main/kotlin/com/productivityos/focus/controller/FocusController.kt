@@ -38,6 +38,16 @@ class FocusController(
         return ResponseEntity.created(location).body(session)
     }
 
+    @PostMapping("/{id}/pause")
+    fun pause(@PathVariable id: UUID): FocusSessionResponse {
+        return focusSessionService.pause(currentUser.id(), id)
+    }
+
+    @PostMapping("/{id}/resume")
+    fun resume(@PathVariable id: UUID): FocusSessionResponse {
+        return focusSessionService.resume(currentUser.id(), id)
+    }
+
     @PostMapping("/{id}/end")
     fun end(@PathVariable id: UUID): FocusSessionResponse {
         return focusSessionService.end(currentUser.id(), id)

@@ -9,16 +9,28 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 import com.productivityos.focus.dto.FocusSessionResponse
 import com.productivityos.focus.dto.StartFocusRequest
 import com.productivityos.focus.persistence.FocusSessionEntity
+import com.productivityos.focus.persistence.FocusSessionPauseEntity
+import com.productivityos.focus.persistence.FocusSessionPauseRepository
 import com.productivityos.focus.persistence.FocusSessionRepository
 
+/**
+ * Records focus sessions and their pause intervals (ADR-008).
+ *
+ * Recorded duration is active focus time:
+ * `duration = max(0, (ended_at - started_at) - sum(pause intervals))`.
+ * All instants are server-authoritative via the injectable [Clock] (ADR-006).
+ */
 @Service
 @Transactional
 class FocusSessionService(
     private val focusSessionRepository: FocusSessionRepository,
+    private val focusSessionPauseRepository: FocusSessionPauseRepository,
     private val taskRepository: TaskRepository,
     private val clock: Clock
 ) {
@@ -48,17 +60,41 @@ class FocusSessionService(
             note = request.note
         )
         val saved = focusSessionRepository.save(entity)
-        return FocusSessionResponse.from(saved, task.title)
+        return toResponse(saved, task.title)
+    }
+
+    /** Pauses an active, running session (AC-011). */
+    fun pause(userId: UUID, sessionId: UUID): FocusSessionResponse {
+        val entity = requireActiveOwnedSession(userId, sessionId)
+        require(focusSessionPauseRepository.findOpenBySessionId(sessionId) == null) {
+            "Session is already paused"
+        }
+        focusSessionPauseRepository.save(
+            FocusSessionPauseEntity(sessionId = sessionId, startedAt = clock.instant())
+        )
+        return toResponse(entity, taskTitle(entity))
+    }
+
+    /** Resumes an active, paused session (AC-012). */
+    fun resume(userId: UUID, sessionId: UUID): FocusSessionResponse {
+        val entity = requireActiveOwnedSession(userId, sessionId)
+        val open = focusSessionPauseRepository.findOpenBySessionId(sessionId)
+            ?: throw IllegalArgumentException("Session is not paused")
+        open.endedAt = clock.instant()
+        focusSessionPauseRepository.save(open)
+        return toResponse(entity, taskTitle(entity))
     }
 
     fun end(userId: UUID, sessionId: UUID): FocusSessionResponse {
         val entity = focusSessionRepository.findById(sessionId).orElse(null)
-            ?: throw NoSuchElementException("Session not found: ${sessionId}")
+            ?: throw NoSuchElementException("Session not found: $sessionId")
         require(entity.userId == userId) { "Session does not belong to the current user" }
         require(entity.endedAt == null) { "Session is already ended" }
 
-        entity.endedAt = clock.instant()
-        entity.durationSeconds = entity.endedAt!!.epochSecond - entity.startedAt.epochSecond
+        val endedAt = clock.instant()
+        closeOpenPause(sessionId, endedAt)
+        entity.endedAt = endedAt
+        entity.durationSeconds = activeDurationSeconds(entity.id!!, entity.startedAt, endedAt)
         focusSessionRepository.save(entity)
 
         val task = taskRepository.findById(entity.taskId).orElse(null)
@@ -67,14 +103,13 @@ class FocusSessionService(
             task.updatedAt = clock.instant()
             taskRepository.save(task)
         }
-        return FocusSessionResponse.from(entity, task?.title)
+        return toResponse(entity, task?.title)
     }
 
     @Transactional(readOnly = true)
     fun getActive(userId: UUID): FocusSessionResponse? {
         val entity = focusSessionRepository.findActiveByUserId(userId) ?: return null
-        val task = taskRepository.findById(entity.taskId).orElse(null)
-        return FocusSessionResponse.from(entity, task?.title)
+        return toResponse(entity, taskTitle(entity))
     }
 
     @Transactional(readOnly = true)
@@ -82,10 +117,7 @@ class FocusSessionService(
         val pageable = PageRequest.of(page, size)
         return focusSessionRepository.findAllByUserId(userId, pageable)
             .content
-            .map { entity ->
-                val task = taskRepository.findById(entity.taskId).orElse(null)
-                FocusSessionResponse.from(entity, task?.title)
-            }
+            .map { entity -> toResponse(entity, taskTitle(entity)) }
     }
 
     @EventListener
@@ -101,9 +133,53 @@ class FocusSessionService(
     private fun autoEndActiveSession(taskId: UUID, userId: UUID) {
         val active = focusSessionRepository.findActiveByUserId(userId)
         if (active != null && active.taskId == taskId) {
-            active.endedAt = clock.instant()
-            active.durationSeconds = active.endedAt!!.epochSecond - active.startedAt.epochSecond
+            val endedAt = clock.instant()
+            closeOpenPause(active.id!!, endedAt)
+            active.endedAt = endedAt
+            active.durationSeconds = activeDurationSeconds(active.id!!, active.startedAt, endedAt)
             focusSessionRepository.save(active)
         }
+    }
+
+    // MARK: - Helpers
+
+    private fun requireActiveOwnedSession(userId: UUID, sessionId: UUID): FocusSessionEntity {
+        val entity = focusSessionRepository.findById(sessionId).orElse(null)
+            ?: throw NoSuchElementException("Session not found: $sessionId")
+        require(entity.userId == userId) { "Session does not belong to the current user" }
+        require(entity.endedAt == null) { "Session is already ended" }
+        return entity
+    }
+
+    private fun closeOpenPause(sessionId: UUID, at: Instant) {
+        val open = focusSessionPauseRepository.findOpenBySessionId(sessionId) ?: return
+        open.endedAt = at
+        focusSessionPauseRepository.save(open)
+    }
+
+    /** Active focus seconds: wall-clock elapsed minus every pause interval. */
+    private fun activeDurationSeconds(sessionId: UUID, startedAt: Instant, endedAt: Instant): Long {
+        val pausedSeconds = focusSessionPauseRepository.findAllClosedBySessionId(sessionId)
+            .sumOf { Duration.between(it.startedAt, it.endedAt!!).seconds }
+        val wallClockSeconds = Duration.between(startedAt, endedAt).seconds
+        return maxOf(0L, wallClockSeconds - pausedSeconds)
+    }
+
+    private fun accumulatedPausedSeconds(sessionId: UUID): Long =
+        focusSessionPauseRepository.findAllClosedBySessionId(sessionId)
+            .sumOf { Duration.between(it.startedAt, it.endedAt!!).seconds }
+
+    private fun taskTitle(entity: FocusSessionEntity): String? =
+        taskRepository.findById(entity.taskId).orElse(null)?.title
+
+    private fun toResponse(entity: FocusSessionEntity, taskTitle: String?): FocusSessionResponse {
+        val open = focusSessionPauseRepository.findOpenBySessionId(entity.id!!)
+        return FocusSessionResponse.from(
+            entity = entity,
+            taskTitle = taskTitle,
+            isPaused = open != null,
+            pausedAt = open?.startedAt,
+            accumulatedPausedSeconds = accumulatedPausedSeconds(entity.id)
+        )
     }
 }
