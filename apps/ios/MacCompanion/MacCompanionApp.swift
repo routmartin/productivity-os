@@ -55,14 +55,12 @@ struct MacCompanionApp: App {
 /// runtime calls these on the main thread, so no isolation is needed.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The Mac companion pairs with challenges issued by the backend that the
-    /// web app is logged into. Locally that's the Vite dev proxy's target
-    /// (`http://localhost:8080`, see `apps/web/vite.config.ts`); the global
-    /// `APIClient.shared` defaults to production, which would reject local
-    /// challenges. Keep an explicit development client for now.
+    /// web app is logged into. `APIClient.shared` targets the production
+    /// backend by default, matching the deployed web app the pairing flow runs
+    /// against.
     lazy var coordinator: MacAuthCoordinator = {
-        let devConfig = APIConfiguration(environment: .development)
-        let devClient = APIClient(config: devConfig)
-        return MacAuthCoordinator(apiClient: devClient)
+        let client = APIClient.shared
+        return MacAuthCoordinator(apiClient: client)
     }()
     private let log = Logger(subsystem: "com.productivityos.mac", category: "URLScheme")
 

@@ -49,16 +49,23 @@ struct FocusPopoverView: View {
     // MARK: - Subviews
 
     private var header: some View {
-        HStack {
-            Text("Productivity OS")
-                .font(.headline)
-            Spacer()
-            if authSession.isAuthenticated {
-                Button("Sign out") {
-                    authSession.logout()
-                    state?.reactToAuthState()
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Productivity OS")
+                    .font(.headline)
+                Spacer()
+                if authSession.isAuthenticated {
+                    Button("Sign out") {
+                        authSession.logout()
+                        state?.reactToAuthState()
+                    }
+                    .controlSize(.small)
                 }
-                .controlSize(.small)
+            }
+            if authSession.isAuthenticated {
+                Text("Connected as \(authSession.currentUser?.email ?? "…")")
+                    .font(.caption2)
+                    .foregroundStyle(.green)
             }
         }
     }
