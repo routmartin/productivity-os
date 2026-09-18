@@ -12,6 +12,7 @@ public struct LoginView: View {
     @State private var errorMessage: String?
     @State private var activeSheet: LoginSheet?
     @State private var isAuthenticatingQr = false
+    @State private var isPasswordVisible = false
 
     private let authService: AuthService
     private let qrAuthService: QRAuthenticationService = .shared
@@ -101,11 +102,37 @@ public struct LoginView: View {
                             Text("PASSWORD")
                                 .font(AppTypography.sectionHeader)
                                 .foregroundStyle(AppColors.primary)
-                            SecureField(isRegistering ? "At least 12 characters" : "Your password", text: $password)
+                            HStack(spacing: AppSpacing.sm) {
+                                Group {
+                                    if isPasswordVisible {
+                                        TextField(
+                                            isRegistering ? "At least 12 characters" : "Your password",
+                                            text: $password
+                                        )
+                                    } else {
+                                        SecureField(
+                                            isRegistering ? "At least 12 characters" : "Your password",
+                                            text: $password
+                                        )
+                                    }
+                                }
                                 .font(AppTypography.body)
+                                .autocorrectionDisabled()
                                 #if os(iOS)
                                 .textInputAutocapitalization(.never)
                                 #endif
+
+                                Button {
+                                    isPasswordVisible.toggle()
+                                } label: {
+                                    Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundStyle(AppColors.textTertiary)
+                                        .frame(width: 28, height: 28)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(isPasswordVisible ? "Hide password" : "Show password")
+                            }
                         }
 
                         if let errorMessage {
