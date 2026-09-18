@@ -33,6 +33,9 @@ public final class FocusSessionViewModel {
     private var timerTask: Task<Void, Never>?
 
     @ObservationIgnored private let focusService: FocusService
+    #if os(iOS)
+    @ObservationIgnored private let liveActivity = FocusLiveActivityManager.shared
+    #endif
 
     public init(
         task: TaskItem? = nil,
@@ -76,6 +79,7 @@ public final class FocusSessionViewModel {
         sessionState.start(task: selectedTask, duration: selectedDuration, at: Date())
         currentDate = Date()
         startLocalTicker()
+        startLiveActivity()
         syncTask = Task { [weak self] in await self?.syncStart() }
     }
 
@@ -84,12 +88,14 @@ public final class FocusSessionViewModel {
         sessionState.pause(at: Date())
         currentDate = Date()
         stopLocalTicker()
+        updateLiveActivity()
     }
 
     public func resumeFocus() {
         sessionState.resume(at: Date())
         currentDate = Date()
         startLocalTicker()
+        updateLiveActivity()
     }
 
     /// Begins completion: freezes the clock, confirms with the backend, and
@@ -100,12 +106,14 @@ public final class FocusSessionViewModel {
         isCompleting = true
         completionDate = Date()
         stopLocalTicker()
+        endLiveActivity()
         syncTask = Task { [weak self] in await self?.confirmCompletion() }
     }
 
     public func cancelFocus() {
         sessionState.cancel(at: Date())
         stopLocalTicker()
+        endLiveActivity()
         // Backend records any ended session; cancelling records the work done.
         syncTask = Task { [weak self] in await self?.syncEnd() }
     }
@@ -118,6 +126,7 @@ public final class FocusSessionViewModel {
         syncErrorMessage = nil
         isCompleting = false
         stopLocalTicker()
+        endLiveActivity()
     }
 
     /// Re-evaluates time-dependent display after backgrounding / foregrounding.
@@ -138,7 +147,10 @@ public final class FocusSessionViewModel {
         }
         do {
             syncErrorMessage = nil
-            guard let active = try await focusService.active() else { return }
+            guard let active = try await focusService.active() else {
+                endLiveActivity()
+                return
+            }
             serverSession = active
             selectedTask = TaskItem(
                 id: active.taskId,
@@ -150,6 +162,7 @@ public final class FocusSessionViewModel {
             sessionState.start(task: selectedTask, duration: selectedDuration, at: active.startedAt)
             currentDate = Date()
             startLocalTicker()
+            startLiveActivity()
         } catch {
             syncErrorMessage = Self.userMessage(for: error)
         }
@@ -209,6 +222,7 @@ public final class FocusSessionViewModel {
             isCompleting = false
             syncErrorMessage = Self.userMessage(for: error)
             startLocalTicker()
+            startLiveActivity()
         }
     }
 
@@ -258,6 +272,32 @@ public final class FocusSessionViewModel {
     private func stopLocalTicker() {
         timerTask?.cancel()
         timerTask = nil
+    }
+
+    // MARK: - Live Activity (local-only, iOS)
+    // The widget derives its countdown from absolute timestamps, so it only
+    // needs to be told when the session starts, changes state, or ends.
+
+    private func startLiveActivity() {
+        #if os(iOS)
+        liveActivity.start(
+            taskTitle: selectedTask?.title ?? "Focus session",
+            projectName: selectedTask?.projectName,
+            state: sessionState
+        )
+        #endif
+    }
+
+    private func updateLiveActivity() {
+        #if os(iOS)
+        liveActivity.update(state: sessionState)
+        #endif
+    }
+
+    private func endLiveActivity() {
+        #if os(iOS)
+        liveActivity.end()
+        #endif
     }
 
     static func duration(forSeconds seconds: Int?) -> FocusDuration {
