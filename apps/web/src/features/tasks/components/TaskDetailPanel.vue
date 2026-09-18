@@ -4,7 +4,6 @@ import {
   CalendarDays,
   CalendarPlus,
   CheckCircle2,
-  CircleSlash,
   Clock,
   Flag,
   Folder,
@@ -14,7 +13,6 @@ import {
   RotateCcw,
   SearchX,
   Target,
-  Timer,
   Trash2,
   XCircle,
   Zap,
@@ -24,11 +22,9 @@ import EmptyState from '@/components/shared/EmptyState.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiPill from '@/components/ui/UiPill.vue'
 import { useContextPanelStore } from '@/app/layouts/contextPanelStore'
-import { useRouter } from 'vue-router'
 import { formatLongDate, relativeTime } from '@/lib/utils/date'
 import { formatMinutes } from '@/lib/utils/duration'
 
-import { useFocusStore } from '@/features/focus/store'
 import { useGoalsStore } from '@/features/goals/store'
 import { useProjectsStore } from '@/features/projects/store'
 import { useTodayStore } from '@/features/planning/todayStore'
@@ -43,9 +39,7 @@ const props = defineProps<{ taskId: string }>()
 const store = useTasksStore()
 const projectsStore = useProjectsStore()
 const goalsStore = useGoalsStore()
-const focusStore = useFocusStore()
 const todayStore = useTodayStore()
-const router = useRouter()
 const panel = useContextPanelStore()
 
 const task = computed(() => store.taskById(props.taskId))
@@ -101,43 +95,6 @@ const dueLabel = computed(() => {
   if (!due) return null
   return formatLongDate(new Date(`${due}T00:00:00`))
 })
-
-const previewNote = ref<string | null>(null)
-let noteTimer: ReturnType<typeof setTimeout> | undefined
-
-function showNote(message: string) {
-  previewNote.value = message
-  clearTimeout(noteTimer)
-  noteTimer = setTimeout(() => (previewNote.value = null), 3200)
-}
-
-/** Focus sessions require an IN_PROGRESS task (focus spec Rule 4). One-click
- *  Start (Tasks & Inbox UI spec §15.1): an active task not yet in progress is
- *  started here, then the panel hands off to the Focus workspace instead of
- *  dead-ending with a message. */
-const starting = ref(false)
-
-async function onStartFocus() {
-  const current = task.value
-  if (!current || starting.value) return
-  if (current.status === 'COMPLETED' || current.status === 'CANCELLED') {
-    showNote(
-      'This task is no longer active — reopen or restore it before focusing.',
-    )
-    return
-  }
-  starting.value = true
-  try {
-    if (current.status !== 'IN_PROGRESS') {
-      await store.startTaskNow(current.id)
-      if (store.lastError) return
-    }
-    focusStore.selectTask(current.id)
-    void router.push({ name: 'focus' })
-  } finally {
-    starting.value = false
-  }
-}
 
 function onPlan() {
   const current = task.value
@@ -240,16 +197,6 @@ function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1])
     </dl>
 
     <div class="actions">
-      <UiButton
-        variant="primary"
-        full-width
-        :disabled="starting"
-        @click="onStartFocus"
-      >
-        <Timer :size="15" :stroke-width="1.75" />
-        {{ starting ? 'Starting…' : 'Start focus session' }}
-      </UiButton>
-
       <UiButton
         variant="ghost"
         full-width
@@ -380,13 +327,6 @@ function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1])
           </div>
         </div>
       </template>
-
-      <Transition name="fade">
-        <p v-if="previewNote" class="preview-note" role="status">
-          <CircleSlash :size="13" :stroke-width="1.75" />
-          {{ previewNote }}
-        </p>
-      </Transition>
     </div>
 
     <footer class="footer tnum">
@@ -511,24 +451,6 @@ function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1])
 .confirm-row {
   display: flex;
   gap: var(--space-2);
-}
-
-.preview-note {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--surface-2);
-  border: 1px solid var(--border-subtle);
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  line-height: 1.5;
-}
-
-.preview-note svg {
-  flex-shrink: 0;
-  margin-top: 1px;
 }
 
 .footer {

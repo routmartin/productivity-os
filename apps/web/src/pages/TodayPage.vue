@@ -6,11 +6,7 @@ import { useContextPanelStore } from '@/app/layouts/contextPanelStore'
 import ErrorState from '@/components/shared/ErrorState.vue'
 import SkeletonBlock from '@/components/shared/SkeletonBlock.vue'
 import AiBriefing from '@/features/ai/components/AiBriefing.vue'
-import FocusTipCard from '@/features/ai/components/FocusTipCard.vue'
 import { mockBriefing } from '@/features/ai/mock'
-import DailySummaryCard from '@/features/focus/components/DailySummaryCard.vue'
-import FocusTodayCard from '@/features/focus/components/FocusTodayCard.vue'
-import { useFocusStore } from '@/features/focus/store'
 import TopThreeSection from '@/features/planning/components/TopThreeSection.vue'
 import { useTodayStore } from '@/features/planning/todayStore'
 import type { PreviewState } from '@/features/planning/types'
@@ -19,7 +15,6 @@ import { showPreviewNote } from '@/lib/preview'
 
 const route = useRoute()
 const today = useTodayStore()
-const focusStore = useFocusStore()
 const panel = useContextPanelStore()
 
 /** `?preview=loading|error|empty` forces a UI state for design review. */
@@ -31,9 +26,6 @@ function previewFromQuery(): PreviewState {
 /** Lands the workspace with no auto-opened panel — Today stays quiet. */
 async function loadAndSelect(preview: PreviewState) {
   await today.load(preview)
-  // Focus Today / Daily Summary read real session history — without this
-  // load, a fresh user would see the mock 2h47m seed data on the rail.
-  await focusStore.load()
   if (preview === 'loading') return
   panel.close()
 }
@@ -115,22 +107,14 @@ function onPlanMyDay() {
         <p class="hero-sub">Focus on your priorities and progress will follow.</p>
       </header>
 
-      <div class="layout">
-        <div class="main">
-          <AiBriefing :briefing="mockBriefing" @plan="onPlanMyDay" />
-          <TopThreeSection
-            :entries="today.topThree"
-            :active-task-id="panel.activeTaskId"
-            @select="onSelectTask"
-          />
-          <RecentActivity :items="activityItems" @select="onSelectTask" />
-        </div>
-
-        <div class="rail">
-          <FocusTodayCard />
-          <DailySummaryCard />
-          <FocusTipCard />
-        </div>
+      <div class="main">
+        <AiBriefing :briefing="mockBriefing" @plan="onPlanMyDay" />
+        <TopThreeSection
+          :entries="today.topThree"
+          :active-task-id="panel.activeTaskId"
+          @select="onSelectTask"
+        />
+        <RecentActivity :items="activityItems" @select="onSelectTask" />
       </div>
     </template>
   </div>
@@ -168,14 +152,7 @@ function onPlanMyDay() {
   color: var(--text-tertiary);
 }
 
-/* Main workspace + narrower right context column (spec §17) */
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--rail-width);
-  gap: var(--space-6);
-  align-items: start;
-}
-
+/* Main workspace — full width now that the Today rail is gone (spec §17). */
 .main {
   display: flex;
   flex-direction: column;
@@ -183,35 +160,9 @@ function onPlanMyDay() {
   min-width: 0;
 }
 
-.rail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  min-width: 0;
-}
-
 /* Container queries keyed off the workspace, so opening the context panel
-   also collapses columns instead of squeezing them (spec §32: reduce
-   secondary content first — typography stays readable throughout). */
-
-/* Collapse the right rail under the main workspace. */
-@container workspace (max-width: 980px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .rail {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-  }
-}
-
+   also relaxes secondary content instead of squeezing it (spec §32). */
 @container workspace (max-width: 640px) {
-  .rail {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .hero-title {
     font-size: var(--text-3xl);
   }

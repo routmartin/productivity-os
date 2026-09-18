@@ -8,7 +8,6 @@ import {
   Settings,
   Sparkles,
   Target,
-  Timer,
   type LucideIcon,
 } from "lucide-vue-next";
 import { createRouter, createWebHistory } from "vue-router";
@@ -16,7 +15,6 @@ import { createRouter, createWebHistory } from "vue-router";
 import AppShell from "@/app/layouts/AppShell.vue";
 import { useAuthStore } from "@/features/auth/store";
 import ComingSoonPage from "@/pages/ComingSoonPage.vue";
-import FocusPage from "@/pages/FocusPage.vue";
 import GoalsPage from "@/pages/GoalsPage.vue";
 import InboxPage from "@/pages/InboxPage.vue";
 import LoginPage from "@/pages/LoginPage.vue";
@@ -93,12 +91,6 @@ export const router = createRouter({
           name: "goals",
           component: GoalsPage,
           meta: { title: "Goals", icon: Target, implemented: true },
-        },
-        {
-          path: "focus",
-          name: "focus",
-          component: FocusPage,
-          meta: { title: "Focus", icon: Timer, implemented: true },
         },
         {
           path: "ai",

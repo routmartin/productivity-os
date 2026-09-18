@@ -12,7 +12,6 @@ import {
   Settings,
   Sparkles,
   Target,
-  Timer,
 } from 'lucide-vue-next'
 
 import { useAuthStore } from '@/features/auth/store'
@@ -31,7 +30,6 @@ const mainNav = [
   { name: 'projects', title: 'Projects', icon: Folder },
   { name: 'goals', title: 'Goals', icon: Target },
     { name: 'schedule', title: 'Schedule', icon: History },
-  { name: 'focus', title: 'Focus', icon: Timer },
   { name: 'ai', title: 'AI', icon: Sparkles },
 ] as const
 
