@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Moon, Search, Settings, Sun } from 'lucide-vue-next'
+import { Moon, PanelLeftOpen, Search, Settings, Sun } from 'lucide-vue-next'
 
 import { useAuthStore } from '@/features/auth/store'
 import { useSearchStore } from '@/features/search/store'
 import { theme, toggleTheme } from '@/lib/theme'
 import { firstNameFromEmail, greetingFor } from '@/lib/utils/date'
+import { useNavStore } from './navStore'
 
 const route = useRoute()
 const auth = useAuthStore()
 const search = useSearchStore()
+const nav = useNavStore()
 
 /** Today leads with the personal greeting (see the approved reference);
  *  other sections show their page title. */
@@ -44,6 +46,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onShortcutKeydown))
 <template>
   <header class="top-bar">
     <div class="page-id">
+      <button
+        v-if="nav.isCollapsed"
+        class="icon-button expand-nav-btn"
+        type="button"
+        aria-label="Expand sidebar"
+        title="Expand sidebar (⌘\)"
+        @click="nav.toggleCollapse"
+      >
+        <PanelLeftOpen :size="18" :stroke-width="1.75" />
+      </button>
+
       <h1 class="page-title">
         {{ contextLabel }}
         <span v-if="isToday" aria-hidden="true">👋</span>
@@ -107,9 +120,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onShortcutKeydown))
 
 .page-id {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-3);
   min-width: 0;
+}
+
+.expand-nav-btn {
+  flex-shrink: 0;
 }
 
 .page-title {

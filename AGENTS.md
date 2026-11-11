@@ -99,6 +99,18 @@ OpenCode is the primary engineer and orchestrator. It may:
 It must not silently change product requirements, specifications, ADRs, or
 architecture decisions.
 
+### SDD Planner (`sdd-planner`)
+
+The SDD Planner is the specialist for specification authoring and implementation planning. It:
+
+- writes and refines specifications in `docs/specs/` adhering to the lifecycle and template in `docs/specs/README.md`
+- defines testable Acceptance Criteria (Given/When/Then format)
+- drafts implementation plans in `docs/plans/` following `docs/plans/README.md`
+- validates backend endpoint contracts against Kotlin controllers, DTOs, and exception handlers before documenting them
+- keeps specs synchronized with implementation via `/spec-sync` (drift detection & amendments)
+- highlights product ambiguity and records open questions for human decision
+- does not modify production application code during planning
+
 ### Cline
 
 Cline is the independent code reviewer. It:

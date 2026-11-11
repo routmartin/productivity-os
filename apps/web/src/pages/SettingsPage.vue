@@ -34,8 +34,8 @@ async function generateQr() {
     const res = await apiClient.auth.createQrChallenge()
     qrChallenge.value = res.challenge
     qrExpiresAt.value = res.expiresAt
-  } catch (err: any) {
-    qrError.value = err.message || 'Failed to generate QR code.'
+  } catch (err: unknown) {
+    qrError.value = err instanceof Error ? err.message : 'Failed to generate QR code.'
   } finally {
     isLoadingQr.value = false
   }
