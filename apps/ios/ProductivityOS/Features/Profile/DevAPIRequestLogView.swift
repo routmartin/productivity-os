@@ -15,6 +15,7 @@ public struct DevAPIRequestLogView: View {
     @State private var selectedFamily: APILogStore.StatusFamily = .all
     @State private var query: String = ""
     @State private var selectedEntry: APILogStore.Entry?
+    @State private var copiedAll = false
 
     public init() {}
 
@@ -126,6 +127,12 @@ public struct DevAPIRequestLogView: View {
     private var toolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
+                Button {
+                    copyAll()
+                } label: {
+                    Label(copiedAll ? "Copied" : "Copy all", systemImage: copiedAll ? "checkmark" : "doc.on.doc")
+                }
+                .disabled(store.logEntries.isEmpty)
                 Button(role: .destructive) {
                     store.clear()
                 } label: {
@@ -136,6 +143,21 @@ public struct DevAPIRequestLogView: View {
                 Image(systemName: "ellipsis.circle")
                     .foregroundStyle(AppColors.primary)
             }
+        }
+    }
+
+    /// Copies every logged call — newest first, matching the list — into one
+    /// pasteable transcript.
+    private func copyAll() {
+        let text = store.logEntries
+            .reversed()
+            .map { $0.transcript }
+            .joined(separator: "\n\n" + String(repeating: "─", count: 28) + "\n\n")
+        guard !text.isEmpty else { return }
+        UIPasteboard.general.string = text
+        copiedAll = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            copiedAll = false
         }
     }
 }
@@ -251,7 +273,6 @@ private struct DevAPIRequestRow: View {
 private struct DevAPIRequestDetailView: View {
     let entry: APILogStore.Entry
     @Environment(\.dismiss) private var dismiss
-    @State private var showShareSheet = false
     @State private var isRequestBodyExpanded = true
     @State private var isResponseBodyExpanded = true
     @State private var justCopied: String?
@@ -261,10 +282,7 @@ private struct DevAPIRequestDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.md) {
                     overview
-                    timingSection
-                    requestHeadersSection
                     requestBodySection
-                    responseHeadersSection
                     responseBodySection
                     if let error = entry.errorDescription {
                         errorSection(error)
@@ -282,17 +300,12 @@ private struct DevAPIRequestDetailView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        showShareSheet = true
+                        copyToClipboard(entry.transcript, copyKey: "all")
                     } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundStyle(AppColors.primary)
+                        Image(systemName: justCopied == "all" ? "checkmark" : "doc.on.doc")
+                            .foregroundStyle(justCopied == "all" ? AppColors.success : AppColors.primary)
                     }
                 }
-            }
-            .sheet(isPresented: $showShareSheet) {
-                #if os(iOS)
-                ShareSheet(items: [shareText])
-                #endif
             }
         }
     }
@@ -323,49 +336,29 @@ private struct DevAPIRequestDetailView: View {
                             .font(.system(size: 12, weight: .bold, design: .monospaced))
                             .foregroundStyle(AppColors.textTertiary)
                     }
+                    Spacer(minLength: AppSpacing.xs)
+                    if let duration = entry.durationMs {
+                        Text(format(durationMs: duration))
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(AppColors.textSecondary)
+                    }
                 }
-                Text(entry.path)
-                    .font(.system(.subheadline, design: .monospaced))
+
+                Divider().background(AppColors.surfaceBorder)
+
+                copyChip(label: "Copy URL", copyKey: "url", text: entry.fullURL)
+
+                Text(entry.fullURL)
+                    .font(.system(.footnote, design: .monospaced))
                     .foregroundStyle(AppColors.textPrimary)
                     .textSelection(.enabled)
-                if let q = entry.query, !q.isEmpty {
-                    Text("?\(q)")
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(AppColors.textSecondary)
-                        .textSelection(.enabled)
-                }
-                if !entry.host.isEmpty {
-                    Text(entry.host)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(AppColors.textTertiary)
-                }
-            }
-        }
-    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-    private var timingSection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            SectionHeaderView(title: "Timing")
-            AppCard(cornerRadius: AppRadius.md) {
-                HStack(spacing: AppSpacing.lg) {
-                    metric(label: "Started", value: entry.startedAt.formatted(date: .omitted, time: .standard))
-                    metric(
-                        label: "Duration",
-                        value: entry.durationMs.map { format(durationMs: $0) } ?? "—"
-                    )
-                    metric(
-                        label: "Phase",
-                        value: entry.phase == .success ? "OK" : (entry.phase == .failure ? "Fail" : "…")
-                    )
-                }
+                Text(entry.startedAt.formatted(date: .abbreviated, time: .standard))
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(AppColors.textTertiary)
             }
-        }
-    }
-
-    private var requestHeadersSection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            SectionHeaderView(title: "Request headers")
-            headersCard(headers: entry.requestHeaders)
         }
     }
 
@@ -379,17 +372,6 @@ private struct DevAPIRequestDetailView: View {
             )
             if isRequestBodyExpanded {
                 bodyCard(body: entry.requestBody, emptyMessage: "(none)")
-            }
-        }
-    }
-
-    private var responseHeadersSection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            SectionHeaderView(title: "Response headers")
-            if let headers = entry.responseHeaders {
-                headersCard(headers: headers)
-            } else {
-                placeholderCard("(no response)")
             }
         }
     }
@@ -450,12 +432,22 @@ private struct DevAPIRequestDetailView: View {
 
             Spacer()
 
-            copyButton(text: bodyText ?? "", copyKey: copyKey)
+            copyChip(label: "Copy", copyKey: copyKey, text: bodyText ?? "")
         }
         .padding(.horizontal, 4)
     }
 
-    private func copyButton(text: String, copyKey: String) -> some View {
+    private func copyToClipboard(_ text: String, copyKey: String) {
+        UIPasteboard.general.string = text
+        justCopied = copyKey
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            if justCopied == copyKey {
+                justCopied = nil
+            }
+        }
+    }
+
+    private func copyChip(label: String, copyKey: String, text: String) -> some View {
         let isEmpty = text.isEmpty
         let justCopiedThis = justCopied == copyKey
         return Button {
@@ -464,7 +456,7 @@ private struct DevAPIRequestDetailView: View {
             HStack(spacing: 4) {
                 Image(systemName: justCopiedThis ? "checkmark" : "doc.on.doc")
                     .font(.system(size: 11, weight: .bold))
-                Text(justCopiedThis ? "Copied" : "Copy")
+                Text(justCopiedThis ? "Copied" : label)
                     .font(.system(size: 11, weight: .semibold))
             }
             .foregroundStyle(justCopiedThis ? AppColors.success : (isEmpty ? AppColors.textTertiary : AppColors.primary))
@@ -482,101 +474,22 @@ private struct DevAPIRequestDetailView: View {
         .disabled(isEmpty)
     }
 
-    private func copyToClipboard(_ text: String, copyKey: String) {
-        UIPasteboard.general.string = text
-        justCopied = copyKey
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
-            if justCopied == copyKey {
-                justCopied = nil
-            }
-        }
-    }
-
-    private func headersCard(headers: [String: String]) -> some View {
-        AppCard(cornerRadius: AppRadius.md) {
-            if headers.isEmpty {
-                Text("(none)")
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(AppColors.textTertiary)
-            } else {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(headers.keys.sorted(), id: \.self) { key in
-                        HStack(alignment: .top, spacing: AppSpacing.xs) {
-                            Text(key)
-                                .font(.system(.caption, design: .monospaced))
-                                .fontWeight(.semibold)
-                                .foregroundStyle(AppColors.textPrimary)
-                            Text(":")
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(AppColors.textTertiary)
-                            Text(headers[key] ?? "")
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(AppColors.textSecondary)
-                                .textSelection(.enabled)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     @ViewBuilder
     private func bodyCard(body: APILogStore.BodyValue?, emptyMessage: String) -> some View {
         AppCard(cornerRadius: AppRadius.md) {
             if let body {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    Text(body.displayString)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(AppColors.textSecondary)
-                        .textSelection(.enabled)
-                        .padding(.vertical, AppSpacing.xxs)
-                }
+                Text(body.displayString)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(AppColors.textSecondary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 Text(emptyMessage)
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(AppColors.textTertiary)
             }
         }
-    }
-
-    private func placeholderCard(_ text: String) -> some View {
-        AppCard(cornerRadius: AppRadius.md) {
-            Text(text)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(AppColors.textTertiary)
-        }
-    }
-
-    private func metric(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label.uppercased())
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .tracking(0.8)
-                .foregroundStyle(AppColors.textTertiary)
-            Text(value)
-                .font(.system(.subheadline, design: .monospaced))
-                .fontWeight(.medium)
-                .foregroundStyle(AppColors.textPrimary)
-                .textSelection(.enabled)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var shareText: String {
-        var lines: [String] = []
-        lines.append("\(entry.method) \(entry.path)")
-        if let code = entry.statusCode { lines.append("HTTP \(code)") }
-        if let ms = entry.durationMs { lines.append("Duration: \(ms) ms") }
-        if let body = entry.responseBody {
-            lines.append("")
-            lines.append("Response:")
-            lines.append(body.displayString)
-        }
-        if let error = entry.errorDescription {
-            lines.append("")
-            lines.append("Error: \(error)")
-        }
-        return lines.joined(separator: "\n")
     }
 
     private func statusColor(for code: Int) -> Color {
@@ -598,19 +511,63 @@ private struct DevAPIRequestDetailView: View {
     }
 }
 
-// MARK: - Share
+// MARK: - Dev gesture detection
 
-#if os(iOS)
-private struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
+/// Invisible bridge that opens the request log on a double-tap anywhere on
+/// screen. Embedded once at the app root so it works from any screen.
+struct DevGestureDetector: UIViewControllerRepresentable {
+    let onTrigger: () -> Void
 
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    func makeUIViewController(context: Context) -> DevGestureViewController {
+        let controller = DevGestureViewController()
+        controller.onTrigger = onTrigger
+        controller.view.isUserInteractionEnabled = false
+        return controller
     }
 
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: DevGestureViewController, context: Context) {
+        uiViewController.onTrigger = onTrigger
+    }
 }
-#endif
+
+final class DevGestureViewController: UIViewController, UIGestureRecognizerDelegate {
+    var onTrigger: (() -> Void)?
+    private var didInstallGestures = false
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        installDoubleTapIfNeeded()
+    }
+
+    // MARK: - Double tap
+
+    private func installDoubleTapIfNeeded() {
+        guard !didInstallGestures, let window = view.window else { return }
+        didInstallGestures = true
+
+        let recognizer = UITapGestureRecognizer(
+            target: self,
+            action: #selector(handleDoubleTap(_:))
+        )
+        recognizer.numberOfTapsRequired = 2
+        recognizer.cancelsTouchesInView = false
+        recognizer.delegate = self
+        window.addGestureRecognizer(recognizer)
+    }
+
+    @objc private func handleDoubleTap(_ recognizer: UITapGestureRecognizer) {
+        onTrigger?()
+    }
+
+    /// Coexist with the app's controls and other gestures instead of
+    /// swallowing their touches.
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        true
+    }
+}
 
 #Preview {
     DevAPIRequestLogView()

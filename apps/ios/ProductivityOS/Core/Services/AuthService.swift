@@ -36,6 +36,7 @@ public final class AuthService: @unchecked Sendable {
         // Best-effort server logout (revokes the refresh token + clears cookie).
         _ = try? await apiClient.send(AppEndpoint.logout)
         authSession.logout()
+        FocusWidgetPublisher.clear()
     }
 
     // MARK: - Session restoration

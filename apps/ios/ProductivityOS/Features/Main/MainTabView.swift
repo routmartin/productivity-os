@@ -156,6 +156,45 @@ public struct MainTabView: View {
                 focusViewModel.refreshClock()
             }
         }
+        .onOpenURL { url in
+            guard url.scheme == "productivityos" else { return }
+            switch url.host {
+            case "today":
+                selectedTab = .today
+            case "tasks":
+                selectedTab = .tasks
+            case "focus":
+                selectedTab = .focus
+            case "goals":
+                selectedTab = .goals
+            case "me", "profile":
+                selectedTab = .me
+            default:
+                break
+            }
+        }
+    }
+}
+
+extension View {
+    /// DEBUG builds: double-tap anywhere on screen to open the API request
+    /// log from anywhere in the app.
+    func devGestureToOpenRequestLog() -> some View {
+        modifier(DevGestureModifier())
+    }
+}
+
+private struct DevGestureModifier: ViewModifier {
+    @State private var isPresented = false
+
+    func body(content: Content) -> some View {
+        #if DEBUG
+        content
+            .background(DevGestureDetector { isPresented = true })
+            .sheet(isPresented: $isPresented) { DevAPIRequestLogView() }
+        #else
+        content
+        #endif
     }
 }
 

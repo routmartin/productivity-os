@@ -12,6 +12,10 @@ let package = Package(
             name: "ProductivityOS",
             targets: ["ProductivityOS"]
         ),
+        .library(
+            name: "FocusWidgetShared",
+            targets: ["FocusWidgetShared"]
+        ),
         .executable(
             name: "ProductivityOSMac",
             targets: ["ProductivityOSMac"]
@@ -20,13 +24,19 @@ let package = Package(
     dependencies: [],
     targets: [
         .target(
-            name: "ProductivityOS",
+            name: "FocusWidgetShared",
             dependencies: [],
+            path: "Shared"
+        ),
+        .target(
+            name: "ProductivityOS",
+            dependencies: ["FocusWidgetShared"],
             path: "ProductivityOS",
             exclude: [
                 "Resources/Info.plist",
                 "Resources/Assets.xcassets",
-                "App/ProductivityOSApp.swift"
+                "App/ProductivityOSApp.swift",
+                "Resources/ProductivityOS.entitlements"
             ]
         ),
         .executableTarget(
@@ -37,7 +47,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ProductivityOSTests",
-            dependencies: ["ProductivityOS"],
+            dependencies: ["ProductivityOS", "FocusWidgetShared"],
             path: "ProductivityOSTests"
         ),
     ]

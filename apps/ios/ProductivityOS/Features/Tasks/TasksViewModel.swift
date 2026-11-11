@@ -68,6 +68,7 @@ public final class TasksViewModel {
         do {
             let tasks = try await taskService.listActiveTasks()
             loadState = .loaded(tasks)
+            FocusWidgetPublisher.publish(tasks)
         } catch {
             loadState = .failed(FocusSessionViewModel.userMessage(for: error))
         }
@@ -88,6 +89,7 @@ public final class TasksViewModel {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             tasks[index] = task
             loadState = .loaded(tasks)
+            FocusWidgetPublisher.publish(tasks)
         }
     }
 

@@ -239,7 +239,18 @@ public struct LoginView: View {
                 }
                 // AuthSession.isAuthenticated flips → app root shows MainTabView.
             } catch {
-                errorMessage = FocusSessionViewModel.userMessage(for: error)
+                if isRegistering,
+                   let apiError = error as? APIError,
+                   apiError.errorCode == "EMAIL_TAKEN" {
+                    // The email is already registered: guide the user to log in
+                    // instead of leaving them stuck on the Create Account form.
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isRegistering = false
+                        errorMessage = "That email already has an account — log in instead."
+                    }
+                } else {
+                    errorMessage = FocusSessionViewModel.userMessage(for: error)
+                }
             }
         }
     }

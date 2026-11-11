@@ -32,6 +32,7 @@ public final class APILogStore: ObservableObject {
         public let path: String
         public let host: String
         public let query: String?
+        public let absoluteURL: String?
         public let requestHeaders: [String: String]
         public let requestBody: BodyValue?
         public var endedAt: Date?
@@ -49,6 +50,7 @@ public final class APILogStore: ObservableObject {
             path: String,
             host: String,
             query: String?,
+            absoluteURL: String? = nil,
             requestHeaders: [String: String],
             requestBody: BodyValue?
         ) {
@@ -58,6 +60,7 @@ public final class APILogStore: ObservableObject {
             self.path = path
             self.host = host
             self.query = query
+            self.absoluteURL = absoluteURL
             self.requestHeaders = requestHeaders
             self.requestBody = requestBody
             self.phase = .pending
@@ -156,6 +159,7 @@ public final class APILogStore: ObservableObject {
             path: url.path,
             host: url.host ?? "",
             query: url.query,
+            absoluteURL: url.absoluteString,
             requestHeaders: headers,
             requestBody: body
         )
@@ -288,6 +292,46 @@ public final class APILogStore: ObservableObject {
     private static func load(from url: URL, decoder: JSONDecoder) -> [Entry] {
         guard let data = try? Data(contentsOf: url) else { return [] }
         return (try? decoder.decode([Entry].self, from: data)) ?? []
+    }
+}
+
+// MARK: - Copy text
+
+extension APILogStore.Entry {
+    /// Complete request URL, ready to paste into a browser or another tool.
+    public var fullURL: String {
+        if let absolute = absoluteURL, !absolute.isEmpty {
+            return absolute
+        }
+        var url = host
+        if !path.isEmpty { url += path }
+        if let query, !query.isEmpty { url += "?" + query }
+        return url.isEmpty ? path : url
+    }
+
+    /// Full, copy-pasteable transcript of the call: route, status, timing,
+    /// request body and response body.
+    public var transcript: String {
+        var lines: [String] = []
+        lines.append("\(method) \(fullURL)")
+        lines.append("Started: \(startedAt.formatted(date: .abbreviated, time: .standard))")
+        if let statusCode { lines.append("HTTP \(statusCode)") }
+        if let durationMs { lines.append("Duration: \(durationMs) ms") }
+        if let requestBody {
+            lines.append("")
+            lines.append("── Request body ──")
+            lines.append(requestBody.displayString)
+        }
+        if let responseBody {
+            lines.append("")
+            lines.append("── Response body ──")
+            lines.append(responseBody.displayString)
+        }
+        if let errorDescription {
+            lines.append("")
+            lines.append("Error: \(errorDescription)")
+        }
+        return lines.joined(separator: "\n")
     }
 }
 #endif

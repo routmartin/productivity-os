@@ -4,6 +4,7 @@ import WidgetKit
 @main
 struct FocusLiveActivityBundle: WidgetBundle {
     var body: some Widget {
+        FocusHomeWidget()
         FocusLiveActivityWidget()
     }
 }

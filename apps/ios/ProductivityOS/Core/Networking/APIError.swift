@@ -46,6 +46,18 @@ public enum APIError: Error, LocalizedError, Sendable {
         let details: String?
     }
     
+    /// Structured backend error code (ADR-005), when the server supplied one.
+    public var errorCode: String? {
+        switch self {
+        case .unauthorized(let code, _):
+            return code
+        case .serverError(_, let code, _):
+            return code
+        default:
+            return nil
+        }
+    }
+
     public var errorDescription: String? {
         switch self {
         case .invalidURL:

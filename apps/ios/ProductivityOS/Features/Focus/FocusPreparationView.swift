@@ -127,7 +127,7 @@ public struct FocusPreparationView: View {
                     Toggle("", isOn: $viewModel.isDoNotDisturbEnabled)
                         .labelsHidden()
                         .tint(AppColors.primary)
-                        .onChange(of: viewModel.isDoNotDisturbEnabled) { enabled in
+                        .onChange(of: viewModel.isDoNotDisturbEnabled) {old, enabled in
                             #if os(iOS)
                             if enabled {
                                 // Apple does not expose a public API to toggle system DND programmatically.

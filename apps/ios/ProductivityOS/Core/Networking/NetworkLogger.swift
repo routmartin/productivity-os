@@ -89,7 +89,7 @@ public enum NetworkLogger {
         "password", "accessToken", "refreshToken", "challenge",
     ]
 
-    private static func sanitize(headers: [String: String]) -> [String: String] {
+    static func sanitize(headers: [String: String]) -> [String: String] {
         headers.reduce(into: [:]) { acc, pair in
             if sensitiveHeaders.contains(pair.key.lowercased()) {
                 acc[pair.key] = "[REDACTED]"
@@ -99,7 +99,6 @@ public enum NetworkLogger {
         }
     }
 
-    #if DEBUG
     private static func bodyValue(from data: Data?) -> APILogStore.BodyValue? {
         guard let data, !data.isEmpty else { return nil }
         let raw = String(data: data, encoding: .utf8) ?? ""
@@ -109,7 +108,6 @@ public enum NetworkLogger {
         }
         return .text(scrubbed)
     }
-    #endif
 
     /// Best-effort JSON pretty-printer. Falls back to `nil` if the body is
     /// not valid JSON (caller keeps the raw string).
@@ -129,7 +127,7 @@ public enum NetworkLogger {
     /// Replace `"key": "value"` JSON string values with `"key": "[REDACTED]"`
     /// for any sensitive field. Non-string values for these keys are
     /// untouched (e.g. boolean flags are not credentials).
-    private static func sanitize(body: String) -> String {
+    static func sanitize(body: String) -> String {
         var scrubbed = body
         for key in sensitiveFields {
             let pattern = "\"\(NSRegularExpression.escapedPattern(for: key))\"\\s*:\\s*\"[^\"]*\""

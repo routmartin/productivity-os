@@ -79,6 +79,7 @@ public final class TodayViewModel {
             let (topThreeItems, loadedTasks, loadedSessions) = try await (topThree, tasks, sessions)
             self.availableTasks = loadedTasks
             self.loadedSessions = loadedSessions
+            FocusWidgetPublisher.publish(loadedTasks)
 
             self.topThreeTasks = topThreeItems
                 .filter { !$0.isDeleted && !$0.isCancelled }

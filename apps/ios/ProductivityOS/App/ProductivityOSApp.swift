@@ -7,11 +7,15 @@ struct ProductivityOSApp: App {
     var body: some Scene {
         WindowGroup {
             // AuthSession is observable: login/logout flips the root automatically.
-            if authSession.isAuthenticated {
-                MainTabView()
-            } else {
-                LoginView()
+            Group {
+                if authSession.isAuthenticated {
+                    MainTabView()
+                } else {
+                    LoginView()
+                }
             }
+            // DEBUG builds: shake or edge-swipe to open the API request log.
+            .devGestureToOpenRequestLog()
         }
     }
 }
