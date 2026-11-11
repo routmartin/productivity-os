@@ -16,3 +16,7 @@ out/
 # Node (future apps/web)
 node_modules/
 dist/
+
+# k6 performance test credentials — never commit real accounts
+scripts/perf/creds.csv
+scripts/perf/creds-*.csv

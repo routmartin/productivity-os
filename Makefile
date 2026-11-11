@@ -1,4 +1,4 @@
-.PHONY: dev run db-up db-down build test clean docs web web-mock web-install preview kill ios-mac-build ios-mac-test
+.PHONY: dev run db-up db-down build test clean docs web web-mock web-install preview kill ios-mac-build ios-mac-test perf
 
 web-install:
 	cd apps/web && pnpm install
@@ -41,6 +41,11 @@ kill:
 
 build:
 	./gradlew :apps:api:compileKotlin :apps:api:compileTestKotlin
+
+# API performance test with k6. Requires k6 and a running API.
+# Override, e.g.:  make perf PEAK_VUS=100 HOLD=3m
+perf:
+	./scripts/perf/run.sh -e PEAK_VUS=$(or $(PEAK_VUS),20) -e HOLD=$(or $(HOLD),1m)
 
 # Release: build + push + deploy the API to Cloud Run, then health-check it.
 deploy-api:
