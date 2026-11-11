@@ -248,7 +248,7 @@ then further attempts are temporarily rejected regardless of correctness.
   unavailable" feedback. Accepts the enumeration trade-off — distinct from
   login which never reveals whether an email is registered.
 - **Rate-limit thresholds:** 5 failed login attempts per email within a
-  15-minute window triggers a 15-minute lockout for that email. Application-level
+  15-minute window triggers a 3-minute lockout for that email. Application-level
   in-memory tracking; no dedicated infrastructure required for V1.
 - **Registration auto-login:** Registration does not sign the user in. An
   explicit login is required afterward. Registration returns 201 with user
@@ -259,6 +259,8 @@ then further attempts are temporarily rejected regardless of correctness.
 
 ## Change History
 
+- Amended rate-limit lockout from 15 minutes to 3 minutes (human decision);
+  5 attempts per 15-minute window are unchanged.
 - Promoted to Approved: an implementation exists (auth vertical slice,
   plan 001), all rules are load-bearing in production code, and
   `docs/specs/users/account-settings.md` (approved) depends on it for

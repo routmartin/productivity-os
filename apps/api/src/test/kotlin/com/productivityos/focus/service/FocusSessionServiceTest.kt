@@ -159,6 +159,35 @@ class FocusSessionServiceTest {
         assertEquals(900L, response.durationSeconds) // 1200 - 300
     }
 
+    // Regression: duration must be computed before `endedAt` is set on the
+    // entity. Otherwise JPA's auto-flush (triggered by the duration query)
+    // persists `ended_at` with a null `duration_seconds`, violating
+    // `focus_sessions_duration_when_ended_chk` on a real Postgres.
+    @Test
+    fun `end computes active duration before marking the session ended`() {
+        val session = activeSession()
+        clock.instant = t0.plusSeconds(900)
+        var endedAtSeenByDurationQuery: Instant? = null
+        var durationQueryCount = 0
+        `when`(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session))
+        `when`(pauseRepository.findOpenBySessionId(sessionId)).thenReturn(null)
+        `when`(pauseRepository.findAllClosedBySessionId(sessionId)).thenAnswer {
+            if (durationQueryCount == 0) endedAtSeenByDurationQuery = session.endedAt
+            durationQueryCount++
+            emptyList<FocusSessionPauseEntity>()
+        }
+        `when`(taskRepository.findById(taskId)).thenReturn(Optional.empty())
+
+        service.end(userId, sessionId)
+
+        assertNull(
+            endedAtSeenByDurationQuery,
+            "endedAt must stay unset until the duration query has run (auto-flush safety)"
+        )
+        assertEquals(t0.plusSeconds(900), session.endedAt)
+        assertEquals(900L, session.durationSeconds)
+    }
+
     // AC-007: auto-end closes an open pause and records duration.
     @Test
     fun `auto-end on task deletion closes an open pause`() {
@@ -175,6 +204,27 @@ class FocusSessionServiceTest {
         assertEquals(t0.plusSeconds(900), session.endedAt)
         assertEquals(600L, session.durationSeconds)
         verify(sessionRepository).save(session)
+    }
+
+    // Regression: same auto-flush safety requirement on the auto-end path.
+    @Test
+    fun `auto-end computes active duration before marking the session ended`() {
+        val session = activeSession()
+        clock.instant = t0.plusSeconds(900)
+        `when`(sessionRepository.findActiveByUserId(userId)).thenReturn(session)
+        `when`(pauseRepository.findOpenBySessionId(sessionId)).thenReturn(null)
+        `when`(pauseRepository.findAllClosedBySessionId(sessionId)).thenAnswer {
+            assertNull(
+                session.endedAt,
+                "endedAt must stay unset until the duration query has run (auto-flush safety)"
+            )
+            emptyList<FocusSessionPauseEntity>()
+        }
+
+        service.onTaskDeleted(TaskDeletedEvent(taskId, userId))
+
+        assertEquals(t0.plusSeconds(900), session.endedAt)
+        assertEquals(900L, session.durationSeconds)
     }
 
     // AC-008

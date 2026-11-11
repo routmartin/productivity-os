@@ -6,6 +6,7 @@ import com.productivityos.auth.exception.DuplicateEmailException
 import com.productivityos.auth.exception.InvalidRefreshTokenException
 import com.productivityos.project.exception.ProjectNotFoundException
 import com.productivityos.goal.exception.GoalNotFoundException
+import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
@@ -17,6 +18,8 @@ import java.time.DateTimeException
 
 @ControllerAdvice
 class GlobalExceptionHandler {
+
+    private val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
     @ExceptionHandler(TaskNotFoundException::class)
     fun handleTaskNotFound(ex: TaskNotFoundException): ResponseEntity<ErrorResponse> {
@@ -112,11 +115,19 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body)
     }
 
+    /**
+     * Generic fallback for database constraint violations. It must stay
+     * domain-neutral: duplicate emails are already converted to
+     * [DuplicateEmailException] by the registration service. Previously this
+     * returned `EMAIL_TAKEN` for every violation, which disguised unrelated
+     * failures (e.g. focus-session constraints) as an email error.
+     */
     @ExceptionHandler(DataIntegrityViolationException::class)
     fun handleDataIntegrityViolation(ex: DataIntegrityViolationException): ResponseEntity<ErrorResponse> {
+        log.error("Data integrity violation [traceId={}]", traceId(), ex)
         val body = ErrorResponse(
-            code = "EMAIL_TAKEN",
-            message = "An account with this email already exists",
+            code = "DATA_CONFLICT",
+            message = "The request conflicts with existing data",
             traceId = traceId()
         )
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body)

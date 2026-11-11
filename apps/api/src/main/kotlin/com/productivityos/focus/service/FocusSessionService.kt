@@ -92,9 +92,14 @@ class FocusSessionService(
         require(entity.endedAt == null) { "Session is already ended" }
 
         val endedAt = clock.instant()
+        // Close the pause and compute the active duration BEFORE marking the
+        // session ended. `activeDurationSeconds` runs a query, and JPA's
+        // auto-flush would otherwise persist `ended_at` with `duration_seconds`
+        // still null, violating `focus_sessions_duration_when_ended_chk`.
         closeOpenPause(sessionId, endedAt)
+        val durationSeconds = activeDurationSeconds(entity.id!!, entity.startedAt, endedAt)
         entity.endedAt = endedAt
-        entity.durationSeconds = activeDurationSeconds(entity.id!!, entity.startedAt, endedAt)
+        entity.durationSeconds = durationSeconds
         focusSessionRepository.save(entity)
 
         val task = taskRepository.findById(entity.taskId).orElse(null)
@@ -134,9 +139,12 @@ class FocusSessionService(
         val active = focusSessionRepository.findActiveByUserId(userId)
         if (active != null && active.taskId == taskId) {
             val endedAt = clock.instant()
+            // Same ordering requirement as `end`: compute duration before
+            // dirtying `endedAt`, or the auto-flush hits the duration check.
             closeOpenPause(active.id!!, endedAt)
+            val durationSeconds = activeDurationSeconds(active.id!!, active.startedAt, endedAt)
             active.endedAt = endedAt
-            active.durationSeconds = activeDurationSeconds(active.id!!, active.startedAt, endedAt)
+            active.durationSeconds = durationSeconds
             focusSessionRepository.save(active)
         }
     }

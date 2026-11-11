@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 import java.security.SecureRandom
 import java.util.Base64
@@ -24,7 +25,13 @@ class QrAuthService(
 ) {
     private val secureRandom = SecureRandom()
 
-    fun createChallenge(userId: UUID): QrAuthChallengeEntity {
+    data class QrChallenge(
+        val challenge: String,
+        val userId: UUID,
+        val expiresAt: Instant
+    )
+
+    fun createChallenge(userId: UUID): QrChallenge {
         val challenge = generateChallengeValue()
         val entity = QrAuthChallengeEntity(
             challenge = challenge,
@@ -32,7 +39,12 @@ class QrAuthService(
             expiresAt = clock.instant().plus(Duration.ofMinutes(2)),
             createdAt = clock.instant()
         )
-        return qrAuthChallengeRepository.save(entity)
+        val saved = qrAuthChallengeRepository.save(entity)
+        return QrChallenge(
+            challenge = saved.challenge,
+            userId = saved.userId,
+            expiresAt = saved.expiresAt
+        )
     }
 
     fun exchange(challengeValue: String): LoginService.LoginResult {

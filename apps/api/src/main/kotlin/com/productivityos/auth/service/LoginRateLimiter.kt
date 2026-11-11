@@ -14,7 +14,7 @@ class LoginRateLimiter(
     companion object {
         private const val MAX_ATTEMPTS = 5
         private const val WINDOW_MINUTES = 15L
-        private const val LOCKOUT_MINUTES = 15L
+        private const val LOCKOUT_MINUTES = 3L
     }
 
     fun recordFailure(email: String) {
