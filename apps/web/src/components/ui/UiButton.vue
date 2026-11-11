@@ -4,7 +4,7 @@ import UiSpinner from './UiSpinner.vue'
 withDefaults(
   defineProps<{
     variant?: 'primary' | 'ghost' | 'subtle' | 'ai' | 'outline-ai'
-    size?: 'sm' | 'md' | 'lg'
+    size?: 'sm' | 'md' | 'lg' | 'xl'
     type?: 'button' | 'submit'
     loading?: boolean
     disabled?: boolean
@@ -81,6 +81,12 @@ withDefaults(
 .size-lg {
   height: 48px;
   padding: 0 var(--space-6);
+  font-size: var(--text-lg);
+}
+
+.size-xl {
+  height: 52px;
+  padding: 0 var(--space-7);
   font-size: var(--text-lg);
 }
 

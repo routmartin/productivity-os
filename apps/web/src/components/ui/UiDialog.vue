@@ -22,8 +22,8 @@ const props = withDefaults(
   defineProps<{
     open: boolean
     title: string
-    /** `lg` renders a wider dialog for content-dense details. */
-    size?: 'md' | 'lg'
+    /** `lg` renders a wider dialog, `xl` and `full` render full-size dialogs. */
+    size?: 'md' | 'lg' | 'xl' | 'full'
   }>(),
   { size: 'md' },
 )
@@ -71,7 +71,7 @@ onBeforeUnmount(() => {
         <header class="dialog-header">
           <h2 class="dialog-title">{{ title }}</h2>
           <button class="close" type="button" aria-label="Close" @click="emit('close')">
-            <X :size="16" :stroke-width="1.75" />
+            <X :size="18" :stroke-width="1.75" />
           </button>
         </header>
 
@@ -115,11 +115,41 @@ onBeforeUnmount(() => {
   padding: var(--space-8);
 }
 
+.dialog.xl {
+  max-width: 1024px;
+  max-height: calc(100vh - 64px);
+  padding: var(--space-8);
+}
+
+.dialog.full {
+  max-width: min(1160px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  padding: var(--space-8);
+}
+
+.dialog.full .dialog-title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .overlay {
+    padding: var(--space-3);
+  }
+  .dialog,
+  .dialog.lg,
+  .dialog.xl,
+  .dialog.full {
+    padding: var(--space-5);
+    max-height: calc(100vh - 24px);
+  }
+}
+
 .dialog-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .dialog-title {
@@ -130,8 +160,8 @@ onBeforeUnmount(() => {
 .close {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-md);
   color: var(--text-tertiary);
   transition:
@@ -149,7 +179,13 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  margin-top: var(--space-5);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.dialog-footer > :only-child {
+  margin-left: auto;
 }
 
 .dialog-enter-active {
