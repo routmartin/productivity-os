@@ -176,7 +176,7 @@ function getNodesForCell(phaseId: SchedulePhaseId, swimlaneId: Swimlane['id']): 
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-panel);
 }
 
 .matrix-grid {
@@ -283,9 +283,9 @@ function getNodesForCell(phaseId: SchedulePhaseId, swimlaneId: Swimlane['id']): 
 }
 
 .lane-habits {
-  background: rgba(57, 197, 138, 0.12);
+  background: var(--success-soft);
   color: var(--success);
-  border: 1px solid rgba(57, 197, 138, 0.3);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
 }
 
 .lane-tasks {
@@ -295,9 +295,9 @@ function getNodesForCell(phaseId: SchedulePhaseId, swimlaneId: Swimlane['id']): 
 }
 
 .lane-anchors {
-  background: rgba(244, 183, 64, 0.12);
+  background: var(--warning-soft);
   color: var(--warning);
-  border: 1px solid rgba(244, 183, 64, 0.3);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
 }
 
 .lane-titles {
@@ -323,7 +323,7 @@ function getNodesForCell(phaseId: SchedulePhaseId, swimlaneId: Swimlane['id']): 
   padding: var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
   border-right: 1px solid var(--border-subtle);
-  background: rgba(11, 13, 18, 0.4);
+  background: var(--surface-1);
   min-height: 140px;
   display: flex;
   flex-direction: column;

@@ -247,9 +247,9 @@ const rechargeNodes = computed(() =>
   letter-spacing: 0.06em;
   padding: 3px 10px;
   border-radius: var(--radius-full);
-  background: rgba(57, 197, 138, 0.12);
+  background: var(--success-soft);
   color: var(--success);
-  border: 1px solid rgba(57, 197, 138, 0.3);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
 }
 
 .badge-focus {
@@ -273,9 +273,9 @@ const rechargeNodes = computed(() =>
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-3);
-  background: rgba(17, 20, 27, 0.5);
-  border: 1px dashed var(--border-subtle);
+  padding: var(--space-4);
+  background: var(--surface-2);
+  border: 1px dashed var(--border-strong);
   border-radius: var(--radius-lg);
 }
 
@@ -288,8 +288,8 @@ const rechargeNodes = computed(() =>
 
 .stack-tag {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-tertiary);
+  font-weight: 700;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -298,8 +298,8 @@ const rechargeNodes = computed(() =>
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
-  background: var(--surface-2);
+  padding: 3px 10px;
+  background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);

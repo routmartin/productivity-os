@@ -307,18 +307,18 @@ function onLoadSample() {
 }
 
 .habits-pill {
-  border-color: rgba(57, 197, 138, 0.25);
-  background: rgba(57, 197, 138, 0.08);
+  border-color: color-mix(in srgb, var(--success) 30%, transparent);
+  background: var(--success-soft);
 }
 
 .bedtime-pill {
-  border-color: rgba(57, 197, 138, 0.25);
-  background: rgba(57, 197, 138, 0.08);
+  border-color: color-mix(in srgb, var(--success) 30%, transparent);
+  background: var(--success-soft);
 }
 
 .bedtime-pill.bedtime-overflow {
-  border-color: rgba(244, 183, 64, 0.35);
-  background: rgba(244, 183, 64, 0.1);
+  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+  background: var(--warning-soft);
   color: var(--warning);
 }
 

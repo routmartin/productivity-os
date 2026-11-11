@@ -69,7 +69,7 @@ function select(id: ScheduleLayoutMode) {
   border-radius: var(--radius-full);
   padding: 3px;
   gap: 2px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .switch-btn {
@@ -97,7 +97,7 @@ function select(id: ScheduleLayoutMode) {
   background: var(--surface-3);
   color: var(--text-primary);
   border-color: var(--border-strong);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   font-weight: 600;
 }
 

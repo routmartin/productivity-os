@@ -143,26 +143,26 @@ function handleSelect() {
 
 /* Specific glows */
 .anchor-wake .anchor-icon-wrap {
-  background: rgba(244, 183, 64, 0.12);
+  background: var(--warning-soft);
   color: var(--warning);
-  border: 1px solid rgba(244, 183, 64, 0.3);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
 }
 
 .anchor-bedtime .anchor-icon-wrap {
-  background: rgba(108, 92, 231, 0.12);
+  background: var(--accent-soft);
   color: var(--accent-strong);
-  border: 1px solid rgba(108, 92, 231, 0.3);
+  border: 1px solid var(--accent-border);
 }
 
 .anchor-bedtime.has-overflow .anchor-icon-wrap {
-  background: rgba(244, 183, 64, 0.14);
+  background: var(--warning-soft);
   color: var(--warning);
-  border-color: rgba(244, 183, 64, 0.4);
+  border-color: color-mix(in srgb, var(--warning) 45%, transparent);
 }
 
 .anchor-node.has-overflow {
-  border-color: rgba(244, 183, 64, 0.35);
-  background: linear-gradient(135deg, rgba(244, 183, 64, 0.05), rgba(17, 20, 27, 0.95));
+  border-color: var(--warning);
+  background: linear-gradient(135deg, var(--warning-soft), var(--surface-1));
 }
 
 .anchor-icon-wrap {
@@ -242,7 +242,7 @@ function handleSelect() {
   font-weight: 600;
   color: var(--success);
   background: var(--success-soft);
-  border: 1px solid rgba(57, 197, 138, 0.25);
+  border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
   padding: 3px 8px;
   border-radius: var(--radius-full);
 }

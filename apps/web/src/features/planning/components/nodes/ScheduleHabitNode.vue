@@ -166,12 +166,13 @@ function handleSelect() {
 }
 
 .habit-node.completed {
-  border-color: rgba(57, 197, 138, 0.28);
-  background: rgba(17, 20, 27, 0.95);
+  border-color: color-mix(in srgb, var(--success) 35%, transparent);
+  background: color-mix(in srgb, var(--success-soft) 25%, var(--surface-1));
 }
 
 .habit-node.completed:hover {
-  border-color: rgba(57, 197, 138, 0.45);
+  border-color: color-mix(in srgb, var(--success) 55%, transparent);
+  background: color-mix(in srgb, var(--success-soft) 40%, var(--surface-1));
 }
 
 /* Compact matrix mode */
@@ -213,8 +214,8 @@ function handleSelect() {
 .check-toggle.checked {
   background: var(--success);
   border-color: var(--success);
-  color: #0b0d12;
-  box-shadow: 0 0 10px rgba(57, 197, 138, 0.4);
+  color: #ffffff;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--success) 35%, transparent);
 }
 
 .check-icon {
@@ -254,7 +255,7 @@ function handleSelect() {
 .habit-icon-wrap.completed {
   color: var(--success);
   background: var(--success-soft);
-  border-color: rgba(57, 197, 138, 0.2);
+  border-color: color-mix(in srgb, var(--success) 25%, transparent);
 }
 
 /* Text Content */
@@ -279,6 +280,10 @@ function handleSelect() {
 }
 
 .completed .habit-title {
+  color: var(--text-primary);
+}
+
+.completed .habit-subtitle {
   color: var(--text-secondary);
 }
 
@@ -320,8 +325,8 @@ function handleSelect() {
 
 .streak-lit {
   background: var(--orange-soft);
-  border-color: rgba(232, 131, 73, 0.3);
+  border-color: color-mix(in srgb, var(--orange) 30%, transparent);
   color: var(--orange);
-  box-shadow: 0 0 8px rgba(232, 131, 73, 0.2);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--orange) 20%, transparent);
 }
 </style>

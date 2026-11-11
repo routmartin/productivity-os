@@ -185,23 +185,23 @@ function onKeydown(event: KeyboardEvent, taskId: string | null) {
 }
 
 .entry.tone-accent {
-  background: linear-gradient(120deg, rgba(108, 92, 231, 0.16), rgba(108, 92, 231, 0.06));
-  border-color: rgba(108, 92, 231, 0.22);
+  background: linear-gradient(120deg, var(--accent-soft), transparent);
+  border-color: var(--accent-border);
 }
 
 .entry.tone-blue {
-  background: linear-gradient(120deg, rgba(59, 130, 246, 0.14), rgba(59, 130, 246, 0.05));
-  border-color: rgba(59, 130, 246, 0.2);
+  background: linear-gradient(120deg, var(--blue-soft), transparent);
+  border-color: color-mix(in srgb, var(--blue) 25%, transparent);
 }
 
 .entry.tone-success {
-  background: linear-gradient(120deg, rgba(57, 197, 138, 0.13), rgba(57, 197, 138, 0.05));
-  border-color: rgba(57, 197, 138, 0.18);
+  background: linear-gradient(120deg, var(--success-soft), transparent);
+  border-color: color-mix(in srgb, var(--success) 25%, transparent);
 }
 
 .entry.tone-warning {
-  background: linear-gradient(120deg, rgba(244, 183, 64, 0.13), rgba(232, 131, 73, 0.05));
-  border-color: rgba(244, 183, 64, 0.18);
+  background: linear-gradient(120deg, var(--warning-soft), transparent);
+  border-color: color-mix(in srgb, var(--warning) 25%, transparent);
 }
 
 .entry-body {

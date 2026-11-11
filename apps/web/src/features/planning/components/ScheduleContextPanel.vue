@@ -412,9 +412,9 @@ const consistencyPercent = computed(() => {
 }
 
 .kind-habit {
-  background: rgba(57, 197, 138, 0.14);
+  background: var(--success-soft);
   color: var(--success);
-  border: 1px solid rgba(57, 197, 138, 0.3);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
 }
 
 .kind-task {
@@ -515,8 +515,8 @@ const consistencyPercent = computed(() => {
 }
 
 .habit-action-box.is-completed {
-  border-color: rgba(57, 197, 138, 0.4);
-  background: rgba(57, 197, 138, 0.08);
+  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+  background: var(--success-soft);
 }
 
 .habit-left {
@@ -547,7 +547,7 @@ const consistencyPercent = computed(() => {
 .big-check-btn.checked {
   background: var(--success);
   border-color: var(--success);
-  box-shadow: 0 0 16px rgba(57, 197, 138, 0.4);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--success) 40%, transparent);
 }
 
 .habit-texts {
@@ -844,7 +844,7 @@ const consistencyPercent = computed(() => {
   font-size: var(--text-sm);
   font-weight: 700;
   color: var(--success);
-  background: rgba(57, 197, 138, 0.12);
+  background: var(--success-soft);
   padding: 2px 8px;
   border-radius: var(--radius-full);
 }
@@ -867,7 +867,7 @@ const consistencyPercent = computed(() => {
 }
 
 .matrix-cell.completed {
-  background: rgba(57, 197, 138, 0.2);
+  background: var(--success-soft);
   border-color: var(--success);
 }
 

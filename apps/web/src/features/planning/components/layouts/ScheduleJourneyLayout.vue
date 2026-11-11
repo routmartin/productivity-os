@@ -177,16 +177,16 @@ function isPhaseCompleted(phaseId: SchedulePhaseId): boolean {
   padding: var(--space-6);
   position: relative;
   transition: all 0.25s var(--ease-out);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-panel);
 }
 
 .journey-phase-card:hover {
   border-color: var(--border-strong);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .phase-completed {
-  border-color: rgba(57, 197, 138, 0.3);
+  border-color: color-mix(in srgb, var(--success) 35%, transparent);
 }
 
 /* Phase Header */

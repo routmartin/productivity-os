@@ -163,7 +163,7 @@ function handleStartFocus(event: Event) {
 
 .task-node.in-focus {
   border-color: var(--accent-strong);
-  background: linear-gradient(135deg, rgba(108, 92, 231, 0.12), rgba(17, 20, 27, 0.95));
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface-1));
   box-shadow: 0 0 0 1.5px var(--accent), 0 0 24px var(--accent-glow);
 }
 
