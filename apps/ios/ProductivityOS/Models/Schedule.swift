@@ -297,3 +297,34 @@ public struct AddStepPayload: Sendable {
         self.iconName = iconName
     }
 }
+
+public struct UpdateStepPayload: Sendable {
+    public let title: String
+    public let subtitle: String?
+    public let phaseId: SchedulePhaseId?
+    public let timeSlot: String?
+    public let durationMinutes: Int?
+    public let notes: String?
+    public let iconName: String?
+    public let date: String?
+
+    public init(
+        title: String,
+        subtitle: String? = nil,
+        phaseId: SchedulePhaseId? = nil,
+        timeSlot: String? = nil,
+        durationMinutes: Int? = nil,
+        notes: String? = nil,
+        iconName: String? = nil,
+        date: String? = nil
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.phaseId = phaseId
+        self.timeSlot = timeSlot
+        self.durationMinutes = durationMinutes
+        self.notes = notes
+        self.iconName = iconName
+        self.date = date
+    }
+}

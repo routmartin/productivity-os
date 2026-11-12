@@ -64,6 +64,7 @@ public enum AppEndpoint: Endpoint {
     case getSchedule(date: String)
     case toggleHabit(id: UUID, body: Data?)
     case addScheduleStep(body: Data)
+    case updateScheduleStep(id: String, body: Data)
     case deleteScheduleStep(id: String)
 
     public var path: String {
@@ -116,6 +117,8 @@ public enum AppEndpoint: Endpoint {
             return "/api/v1/schedule/habits/\(id.uuidString.lowercased())/toggle"
         case .addScheduleStep:
             return "/api/v1/schedule/steps"
+        case .updateScheduleStep(let id, _):
+            return "/api/v1/schedule/steps/\(id)"
         case .deleteScheduleStep(let id):
             return "/api/v1/schedule/steps/\(id)"
         }
@@ -130,7 +133,7 @@ public enum AppEndpoint: Endpoint {
         case .listTasks, .listProjects, .listProjectTasks, .listGoals, .getGoal, .getDailyTopThree, .getActiveFocusSession, .listFocusSessions,
              .getSchedule:
             return .get
-        case .updateTask:
+        case .updateTask, .updateScheduleStep:
             return .put
         case .deleteScheduleStep:
             return .delete
@@ -140,7 +143,7 @@ public enum AppEndpoint: Endpoint {
     public var body: Data? {
         switch self {
         case .register(let data), .login(let data), .qrExchange(let data), .startFocusSession(let data), .updateTask(_, let data),
-             .addScheduleStep(let data):
+             .addScheduleStep(let data), .updateScheduleStep(_, let data):
             return data
         case .toggleHabit(_, let data):
             return data

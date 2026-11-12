@@ -214,4 +214,87 @@ final class ScheduleServiceTests: XCTestCase {
         XCTAssertEqual(request.method, "DELETE")
         XCTAssertEqual(request.path, "/api/v1/schedule/steps/custom-node-1234")
     }
+
+    // MARK: - AC-010 & AC-011: Update Schedule Step Tests
+
+    func testUpdateStepSuccessEncodesPayloadAndSendsPutRequest() async throws {
+        let stepId = "e2a1b9c3-4d5e-6f7a-8b9c-0d1e2f3a4b5c"
+        let updatedNodeJSON = """
+        {
+            "id": "\(stepId)",
+            "type": "task",
+            "phase": "deep-focus",
+            "title": "Deep Focus Architecture & System Design",
+            "subtitle": "High cognitive load · Core DB schema",
+            "time": "09:30",
+            "durationMinutes": 90,
+            "totalMinutes": 90,
+            "notes": "Ensure all FK constraints and indexes are covered.",
+            "order": 6
+        }
+        """
+
+        mockAPIClient.scriptedResponses = [
+            .success((Data(updatedNodeJSON.utf8), 200))
+        ]
+
+        let payload = UpdateStepPayload(
+            title: "Deep Focus Architecture & System Design",
+            subtitle: "High cognitive load · Core DB schema",
+            phaseId: .deepFocus,
+            timeSlot: "09:30",
+            durationMinutes: 90,
+            notes: "Ensure all FK constraints and indexes are covered.",
+            iconName: "brain.head.profile"
+        )
+
+        let result = try await scheduleService.updateStep(id: stepId, payload: payload, for: sampleDate)
+
+        XCTAssertEqual(result.id, stepId)
+        XCTAssertEqual(result.title, "Deep Focus Architecture & System Design")
+        XCTAssertEqual(result.phase, .deepFocus)
+        XCTAssertEqual(result.durationMinutes, 90)
+        XCTAssertEqual(result.notes, "Ensure all FK constraints and indexes are covered.")
+
+        let request = try XCTUnwrap(mockAPIClient.recordedRequests.first)
+        XCTAssertEqual(request.method, "PUT")
+        XCTAssertEqual(request.path, "/api/v1/schedule/steps/\(stepId)")
+
+        let body = try XCTUnwrap(request.body)
+        let decodedBody = try JSONDecoder().decode(UpdateScheduleStepRequestBody.self, from: body)
+        XCTAssertEqual(decodedBody.title, "Deep Focus Architecture & System Design")
+        XCTAssertEqual(decodedBody.subtitle, "High cognitive load · Core DB schema")
+        XCTAssertEqual(decodedBody.phase, "deep-focus")
+        XCTAssertEqual(decodedBody.timeSlot, "09:30")
+        XCTAssertEqual(decodedBody.durationMinutes, 90)
+        XCTAssertEqual(decodedBody.notes, "Ensure all FK constraints and indexes are covered.")
+        XCTAssertEqual(decodedBody.iconName, "brain.head.profile")
+        XCTAssertEqual(decodedBody.date, "2026-11-12")
+    }
+
+    func testUpdateStepPropagatesAnchorRejectionError() async throws {
+        let errorJSON = """
+        {
+            "code": "ANCHOR_UPDATE_NOT_ALLOWED",
+            "message": "Anchor node update is not allowed",
+            "traceId": "7f8a9b0c"
+        }
+        """
+
+        mockAPIClient.scriptedResponses = [
+            .failure(APIError(statusCode: 400, data: Data(errorJSON.utf8)))
+        ]
+
+        let payload = UpdateStepPayload(
+            title: "Modified Wake Anchor",
+            durationMinutes: 30
+        )
+
+        do {
+            _ = try await scheduleService.updateStep(id: "anchor-wake", payload: payload, for: sampleDate)
+            XCTFail("Expected anchor update rejection error")
+        } catch let error as APIError {
+            XCTAssertEqual(error.errorCode, "ANCHOR_UPDATE_NOT_ALLOWED")
+        }
+    }
 }
