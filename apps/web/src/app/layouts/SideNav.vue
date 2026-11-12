@@ -6,7 +6,6 @@ import {
   ChevronDown,
   Folder,
   History,
-  Inbox,
   ListChecks,
   LogOut,
   PanelLeftClose,
@@ -17,29 +16,22 @@ import {
 } from 'lucide-vue-next'
 
 import { useAuthStore } from '@/features/auth/store'
-import { useTasksStore } from '@/features/tasks/store'
 import { firstNameFromEmail } from '@/lib/utils/date'
 import { useNavStore } from './navStore'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
-const tasksStore = useTasksStore()
 const nav = useNavStore()
 
 const mainNav = [
   { name: 'today', title: 'Today', icon: CalendarCheck2 },
+  { name: 'schedule', title: 'Schedule', icon: History },
   { name: 'tasks', title: 'Tasks', icon: ListChecks },
-  { name: 'inbox', title: 'Inbox', icon: Inbox, badge: true },
   { name: 'projects', title: 'Projects', icon: Folder },
   { name: 'goals', title: 'Goals', icon: Target },
-  { name: 'schedule', title: 'Schedule', icon: History },
   { name: 'ai', title: 'AI', icon: Sparkles },
 ] as const
-
-/** Inbox badge tracks the live (mock) inbox count — quick captures and New
- * Task creations update it immediately. */
-const inboxCount = computed(() => tasksStore.inboxCount)
 
 const displayName = computed(() => firstNameFromEmail(auth.user?.email ?? ''))
 const initials = computed(() => displayName.value.charAt(0).toUpperCase())
@@ -111,17 +103,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           >
             <component :is="item.icon" :size="18" :stroke-width="1.75" class="nav-icon" />
             <span v-if="!nav.isCollapsed" class="nav-label">{{ item.title }}</span>
-            <span
-              v-if="'badge' in item && item.badge && !nav.isCollapsed"
-              class="badge tnum"
-            >
-              {{ inboxCount }}
-            </span>
-            <span
-              v-else-if="'badge' in item && item.badge && nav.isCollapsed && inboxCount > 0"
-              class="badge-dot"
-              :title="`${inboxCount} unread inbox items`"
-            />
           </RouterLink>
         </li>
       </ul>

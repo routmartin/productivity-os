@@ -7,6 +7,7 @@ import { useAuthStore } from '@/features/auth/store'
 import { useSearchStore } from '@/features/search/store'
 import { theme, toggleTheme } from '@/lib/theme'
 import { firstNameFromEmail, greetingFor } from '@/lib/utils/date'
+import { isTypingTarget } from '@/lib/utils/keyboard'
 import { useNavStore } from './navStore'
 
 const route = useRoute()
@@ -26,12 +27,6 @@ const contextLabel = computed(() => {
 })
 
 /** Press <kbd>j</kbd> (no modifier, not while typing) to toggle theme. */
-function isTypingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  const tag = target.tagName
-  return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable
-}
-
 function onShortcutKeydown(event: KeyboardEvent) {
   if (event.key !== 'j' || event.metaKey || event.ctrlKey || event.altKey) return
   if (isTypingTarget(event.target)) return

@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CalendarDays, Check, Clock, Pin, Repeat } from 'lucide-vue-next'
+import { AlertCircle, CalendarDays, Check, Clock, Pin, Repeat } from 'lucide-vue-next'
 
 import UiPill from '@/components/ui/UiPill.vue'
 import { formatShortDate, formatClockTime, relativeTime } from '@/lib/utils/date'
 import { formatMinutes } from '@/lib/utils/duration'
 
 import { useProjectsStore } from '@/features/projects/store'
-import { useMock } from '@/lib/mock'
 import { useTasksStore } from '../store'
 import type { Task, TaskStatus } from '../types'
 import TaskPrioritySegments from './TaskPrioritySegments.vue'
@@ -46,10 +45,9 @@ const subtitle = computed(() => {
 
 const isCompleted = computed(() => props.task.status === 'COMPLETED')
 
-/** Backend completes tasks only from IN_PROGRESS; mock mode keeps the
- *  design-review toggle + undo. */
+/** Active and completed tasks can be toggled (cancelling remains via detail panel). */
 const canToggle = computed(
-  () => (useMock('TASKS') || props.task.status === 'IN_PROGRESS') && props.task.status !== 'COMPLETED',
+  () => props.task.status !== 'CANCELLED',
 )
 
 type PillTone = 'neutral' | 'accent' | 'info' | 'success' | 'warning'
@@ -69,10 +67,23 @@ function statusPill(status: TaskStatus): { label: string; tone: PillTone } | nul
 
 const pill = computed(() => statusPill(props.task.status))
 
+const isOverdue = computed(() => {
+  if (!props.task.dueDate || props.task.status === 'COMPLETED' || props.task.status === 'CANCELLED') {
+    return false
+  }
+  return props.task.dueDate < store.todayISO
+})
+
 const dueLabel = computed(() => {
   if (!props.task.dueDate) return null
+  if (props.task.dueDate === store.todayISO) return 'Today'
+  if (props.task.dueDate === store.tomorrowISO) return 'Tomorrow'
   return formatShortDate(new Date(`${props.task.dueDate}T00:00:00`))
 })
+
+function onReschedule(date: string | null) {
+  void store.setDueDate(props.task.id, date)
+}
 
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter' || event.key === ' ') {
@@ -132,6 +143,39 @@ function onPin(event: MouseEvent) {
       <span v-if="subtitle" class="subtitle">{{ subtitle }}</span>
     </span>
 
+    <div class="quick-reschedule" role="group" aria-label="Quick reschedule">
+      <button
+        type="button"
+        class="reschedule-btn"
+        :class="{ current: task.dueDate === store.todayISO }"
+        title="Schedule for Today"
+        aria-label="Schedule for Today"
+        @click.stop="onReschedule(store.todayISO)"
+      >
+        Today
+      </button>
+      <button
+        type="button"
+        class="reschedule-btn"
+        :class="{ current: task.dueDate === store.tomorrowISO }"
+        title="Schedule for Tomorrow"
+        aria-label="Schedule for Tomorrow"
+        @click.stop="onReschedule(store.tomorrowISO)"
+      >
+        Tomorrow
+      </button>
+      <button
+        v-if="task.dueDate"
+        type="button"
+        class="reschedule-btn"
+        title="Move to Backlog (clear date)"
+        aria-label="Move to Backlog"
+        @click.stop="onReschedule(null)"
+      >
+        Backlog
+      </button>
+    </div>
+
     <span class="meta">
       <span v-if="task.recurrence" class="meta-item">
         <Repeat :size="13" :stroke-width="1.75" />
@@ -143,7 +187,11 @@ function onPin(event: MouseEvent) {
       </span>
       <UiPill v-if="pill" :tone="pill.tone" class="status-pill">{{ pill.label }}</UiPill>
       <TaskPrioritySegments v-if="task.priority" :priority="task.priority" />
-      <span v-if="dueLabel" class="meta-item tnum">
+      <UiPill v-if="isOverdue" tone="warning" class="overdue-pill">
+        <AlertCircle :size="12" :stroke-width="2" />
+        Overdue · {{ dueLabel }}
+      </UiPill>
+      <span v-else-if="dueLabel" class="meta-item tnum">
         <CalendarDays :size="13" :stroke-width="1.75" />
         {{ dueLabel }}
       </span>
@@ -276,6 +324,63 @@ function onPin(event: MouseEvent) {
 .subtitle {
   font-size: var(--text-sm);
   color: var(--text-tertiary);
+}
+
+.quick-reschedule {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+  flex-shrink: 0;
+}
+
+.task-list-row:hover .quick-reschedule,
+.task-list-row:focus-within .quick-reschedule {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.reschedule-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.reschedule-btn:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.reschedule-btn.current {
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+  font-weight: 600;
+}
+
+@media (max-width: 800px) {
+  .quick-reschedule {
+    display: none;
+  }
+}
+
+.overdue-pill {
+  font-weight: 600;
 }
 
 .meta {

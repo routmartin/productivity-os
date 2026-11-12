@@ -3,7 +3,6 @@ import {
   CalendarCheck2,
   Folder,
   History,
-  Inbox,
   ListChecks,
   Settings,
   Sparkles,
@@ -16,7 +15,6 @@ import AppShell from "@/app/layouts/AppShell.vue";
 import { useAuthStore } from "@/features/auth/store";
 import ComingSoonPage from "@/pages/ComingSoonPage.vue";
 import GoalsPage from "@/pages/GoalsPage.vue";
-import InboxPage from "@/pages/InboxPage.vue";
 import LoginPage from "@/pages/LoginPage.vue";
 import ProjectsPage from "@/pages/ProjectsPage.vue";
 import SchedulePage from "@/pages/SchedulePage.vue";
@@ -70,9 +68,7 @@ export const router = createRouter({
         },
         {
           path: "inbox",
-          name: "inbox",
-          component: InboxPage,
-          meta: { title: "Inbox", icon: Inbox, implemented: true },
+          redirect: { name: "tasks" },
         },
         {
           path: "tasks",

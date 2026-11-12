@@ -28,10 +28,19 @@ async function create(request: CreateTaskRequest): Promise<TaskResponse> {
   return apiClient.post<TaskResponse>(BASE, request);
 }
 
-/** IN_PROGRESS → COMPLETED (one-way; backend has no un-complete
- *  transition — plan 002 records the decision). */
+/** IN_PROGRESS | PLANNED → COMPLETED */
 async function complete(id: string): Promise<TaskResponse> {
   return apiClient.post<TaskResponse>(`${BASE}/${id}/completion`);
+}
+
+/** COMPLETED → IN_PROGRESS | PLANNED (Uncompletion / Micro-Rewind). */
+async function uncomplete(
+  id: string,
+  targetStatus: "PLANNED" | "IN_PROGRESS" = "IN_PROGRESS",
+): Promise<TaskResponse> {
+  return apiClient.post<TaskResponse>(`${BASE}/${id}/uncompletion`, {
+    targetStatus,
+  });
 }
 
 /** CANCELLED → PLANNED. */
@@ -84,6 +93,7 @@ export const tasksApi = {
   list,
   create,
   complete,
+  uncomplete,
   reopening,
   plan,
   start,

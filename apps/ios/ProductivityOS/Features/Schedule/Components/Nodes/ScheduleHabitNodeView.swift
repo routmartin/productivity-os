@@ -67,8 +67,8 @@ public struct ScheduleHabitNodeView: View {
                 }
 
                 // Details
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .center, spacing: 6) {
                         Text(node.title)
                             .font(AppTypography.headline)
                             .foregroundStyle(AppColors.textPrimary)
@@ -95,25 +95,59 @@ public struct ScheduleHabitNodeView: View {
                         }
                     }
 
-                    HStack(spacing: 6) {
-                        if let time = node.time {
-                            Text(time)
-                                .font(AppTypography.captionSmall)
-                                .foregroundStyle(AppColors.textSecondary)
-                        }
+                    if let subtitle = node.subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(AppTypography.captionSmall)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .lineLimit(1)
+                    }
 
-                        if let duration = node.durationMinutes {
-                            Text("• \(duration)m")
-                                .font(AppTypography.captionSmall)
-                                .foregroundStyle(AppColors.textSecondary)
-                        }
+                    // Noticeable Time & Duration Badges
+                    if node.time != nil || node.durationMinutes != nil {
+                        HStack(spacing: 6) {
+                            if let time = node.time {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "clock.fill")
+                                        .font(.system(size: 10, weight: .bold))
+                                    Text(time)
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .monospacedDigit()
+                                }
+                                .foregroundStyle(isCompleted ? AppColors.success : AppColors.primary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3.5)
+                                .background(
+                                    Capsule()
+                                        .fill(isCompleted ? AppColors.success.opacity(0.12) : AppColors.primaryTint)
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(isCompleted ? AppColors.success.opacity(0.3) : AppColors.primary.opacity(0.2), lineWidth: 0.8)
+                                        )
+                                )
+                            }
 
-                        if let subtitle = node.subtitle {
-                            Text("• \(subtitle)")
-                                .font(AppTypography.captionSmall)
-                                .foregroundStyle(AppColors.textSecondary)
-                                .lineLimit(1)
+                            if let duration = node.durationMinutes {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "hourglass")
+                                        .font(.system(size: 9, weight: .bold))
+                                    Text("\(duration)m")
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .monospacedDigit()
+                                }
+                                .foregroundStyle(Color(hex: "334155"))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3.5)
+                                .background(
+                                    Capsule()
+                                        .fill(Color(hex: "F1F5F9"))
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(Color(hex: "E2E8F0"), lineWidth: 0.8)
+                                        )
+                                )
+                            }
                         }
+                        .padding(.top, 1)
                     }
                 }
             }

@@ -7,6 +7,11 @@ public struct TaskRowView: View {
     private let projectName: String?
     private let priority: TaskPriority
     private let iconName: String
+    private let dueDate: String?
+    private let onRescheduleToday: (() -> Void)?
+    private let onRescheduleTomorrow: (() -> Void)?
+    private let onMoveToBacklog: (() -> Void)?
+    private let onEdit: (() -> Void)?
     private let action: () -> Void
     
     public init(
@@ -22,7 +27,43 @@ public struct TaskRowView: View {
         self.projectName = projectName
         self.priority = priority
         self.iconName = iconName
+        self.dueDate = nil
+        self.onRescheduleToday = nil
+        self.onRescheduleTomorrow = nil
+        self.onMoveToBacklog = nil
+        self.onEdit = nil
         self.action = action
+    }
+
+    public init(
+        position: Int? = nil,
+        title: String,
+        projectName: String? = "Productivity OS",
+        priority: TaskPriority = .medium,
+        iconName: String = "flag.fill",
+        dueDate: String? = nil,
+        onRescheduleToday: (() -> Void)? = nil,
+        onRescheduleTomorrow: (() -> Void)? = nil,
+        onMoveToBacklog: (() -> Void)? = nil,
+        onEdit: (() -> Void)? = nil,
+        action: @escaping () -> Void = {}
+    ) {
+        self.position = position
+        self.title = title
+        self.projectName = projectName
+        self.priority = priority
+        self.iconName = iconName
+        self.dueDate = dueDate
+        self.onRescheduleToday = onRescheduleToday
+        self.onRescheduleTomorrow = onRescheduleTomorrow
+        self.onMoveToBacklog = onMoveToBacklog
+        self.onEdit = onEdit
+        self.action = action
+    }
+
+    private var isOverdue: Bool {
+        guard let dueDate else { return false }
+        return dueDate < TasksViewModel.todayISO
     }
     
     public var body: some View {
@@ -65,7 +106,27 @@ public struct TaskRowView: View {
                                 .font(AppTypography.caption)
                                 .foregroundStyle(AppColors.textSecondary)
                                 .lineLimit(1)
+                            if let dueDate {
+                                Text("•")
+                                    .font(AppTypography.caption)
+                                    .foregroundStyle(AppColors.textTertiary)
+                                HStack(spacing: 2) {
+                                    Image(systemName: isOverdue ? "exclamationmark.circle.fill" : "calendar")
+                                        .font(.system(size: 10))
+                                    Text(dueDate)
+                                        .font(AppTypography.caption)
+                                }
+                                .foregroundStyle(isOverdue ? Color(hex: "FF6B4A") : AppColors.textSecondary)
+                            }
                         }
+                    } else if let dueDate {
+                        HStack(spacing: 2) {
+                            Image(systemName: isOverdue ? "exclamationmark.circle.fill" : "calendar")
+                                .font(.system(size: 10))
+                            Text(dueDate)
+                                .font(AppTypography.caption)
+                        }
+                        .foregroundStyle(isOverdue ? Color(hex: "FF6B4A") : AppColors.textSecondary)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -89,6 +150,74 @@ public struct TaskRowView: View {
             .appCardStyle(cornerRadius: AppRadius.lg)
         }
         .buttonStyle(ScaleButtonStyle())
+        .modifier(TaskRowActionsModifier(
+            onEdit: onEdit,
+            onRescheduleToday: onRescheduleToday,
+            onRescheduleTomorrow: onRescheduleTomorrow,
+            onMoveToBacklog: onMoveToBacklog
+        ))
+    }
+}
+
+private struct TaskRowActionsModifier: ViewModifier {
+    let onEdit: (() -> Void)?
+    let onRescheduleToday: (() -> Void)?
+    let onRescheduleTomorrow: (() -> Void)?
+    let onMoveToBacklog: (() -> Void)?
+
+    private var hasActions: Bool {
+        onEdit != nil || onRescheduleToday != nil || onRescheduleTomorrow != nil || onMoveToBacklog != nil
+    }
+
+    func body(content: Content) -> some View {
+        if hasActions {
+            content
+                .contextMenu {
+                    if let onEdit {
+                        Button(action: onEdit) {
+                            Label("Edit Task", systemImage: "pencil")
+                        }
+                        Divider()
+                    }
+                    if let onRescheduleToday {
+                        Button(action: onRescheduleToday) {
+                            Label("Reschedule to Today", systemImage: "sun.max")
+                        }
+                    }
+                    if let onRescheduleTomorrow {
+                        Button(action: onRescheduleTomorrow) {
+                            Label("Reschedule to Tomorrow", systemImage: "arrow.right.circle")
+                        }
+                    }
+                    if let onMoveToBacklog {
+                        Button(action: onMoveToBacklog) {
+                            Label("Move to Backlog", systemImage: "tray")
+                        }
+                    }
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    if let onMoveToBacklog {
+                        Button(action: onMoveToBacklog) {
+                            Label("Backlog", systemImage: "tray")
+                        }
+                        .tint(AppColors.textSecondary)
+                    }
+                    if let onRescheduleTomorrow {
+                        Button(action: onRescheduleTomorrow) {
+                            Label("Tomorrow", systemImage: "arrow.right.circle")
+                        }
+                        .tint(Color.blue)
+                    }
+                    if let onRescheduleToday {
+                        Button(action: onRescheduleToday) {
+                            Label("Today", systemImage: "sun.max")
+                        }
+                        .tint(Color.orange)
+                    }
+                }
+        } else {
+            content
+        }
     }
 }
 

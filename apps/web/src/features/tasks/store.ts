@@ -1,28 +1,28 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
+import { useAuthStore } from "@/features/auth/store";
 import { errorMessage } from "@/lib/api/errorMessages";
 import { useMock } from "@/lib/mock";
+import { toISODateInZone } from "@/lib/utils/date";
 import type { PreviewState } from "@/features/planning/types";
 
 import { tasksApi } from "./api";
 import { taskResponseToTask } from "./api-types";
 import type { TaskResponse } from "./api-types";
 import { mockTasks } from "./mock";
-import type { NewTaskDraft, Task, TaskStatus } from "./types";
+import type { DateSegment, NewTaskDraft, Task, TaskStatus } from "./types";
 
 export type LoadStatus = "idle" | "loading" | "ready" | "error";
 
 export type TaskStatusFilter =
   | "ALL"
-  | "INBOX"
   | "PLANNED"
   | "IN_PROGRESS"
   | "COMPLETED";
 
 export const TASK_FILTER_LABELS: Record<TaskStatusFilter, string> = {
   ALL: "All",
-  INBOX: "Inbox",
   PLANNED: "Planned",
   IN_PROGRESS: "In Progress",
   COMPLETED: "Completed",
@@ -54,13 +54,59 @@ function nextLocalId(): string {
 const USE_MOCK = useMock("TASKS");
 
 export const useTasksStore = defineStore("tasks", () => {
+  const auth = useAuthStore();
   const tasks = ref<Task[]>(USE_MOCK ? [...mockTasks] : []);
   const status = ref<LoadStatus>("idle");
   const searchQuery = ref("");
   const statusFilter = ref<TaskStatusFilter>("ALL");
+  const dateSegment = ref<DateSegment>("TODAY");
   const previewEmpty = ref(false);
   /** Last failed mutation message (null when none). */
   const lastError = ref<string | null>(null);
+  /** Global task creation dialog visibility state (Plan 013). */
+  const isCreateDialogOpen = ref(false);
+  /** Initial draft values when opening the create dialog (Plan 015). */
+  const createDialogInitialDraft = ref<Partial<NewTaskDraft> | null>(null);
+  /** Global reactive undo toast state (Plan 014 D4). */
+  const toast = ref<{ kind: 'complete' | 'reopen' | 'create'; title: string } | null>(null);
+  let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const todayISO = computed(() =>
+    toISODateInZone(new Date(), auth.user?.timezone ?? undefined),
+  );
+
+  const tomorrowISO = computed(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return toISODateInZone(tomorrow, auth.user?.timezone ?? undefined);
+  });
+
+  function showToast(state: { kind: 'complete' | 'reopen' | 'create'; title: string }): void {
+    toast.value = state;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.value = null;
+    }, 5000);
+  }
+
+  function dismissToast(): void {
+    if (toastTimer) clearTimeout(toastTimer);
+    toast.value = null;
+  }
+
+  function openCreateDialog(initial?: Partial<NewTaskDraft>): void {
+    createDialogInitialDraft.value = initial ?? null;
+    isCreateDialogOpen.value = true;
+  }
+
+  function closeCreateDialog(): void {
+    isCreateDialogOpen.value = false;
+    createDialogInitialDraft.value = null;
+  }
+
+  function setDateSegment(segment: DateSegment): void {
+    dateSegment.value = segment;
+  }
 
   function clearError(): void {
     lastError.value = null;
@@ -83,13 +129,57 @@ export const useTasksStore = defineStore("tasks", () => {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   });
 
-  const filterCounts = computed<Record<TaskStatusFilter, number>>(() => ({
-    ALL: tasks.value.length,
-    INBOX: tasks.value.filter((t) => t.status === "INBOX").length,
-    PLANNED: tasks.value.filter((t) => t.status === "PLANNED").length,
-    IN_PROGRESS: tasks.value.filter((t) => t.status === "IN_PROGRESS").length,
-    COMPLETED: tasks.value.filter((t) => t.status === "COMPLETED").length,
+  /** Matches task against the temporal date segment (Plan 015, AC-UI-011). */
+  function matchesDateSegment(
+    task: Task,
+    segment: DateSegment = dateSegment.value,
+  ): boolean {
+    switch (segment) {
+      case "TODAY":
+        // AC-UI-011: task.dueDate === todayISO, plus active tasks (status !== 'COMPLETED' && status !== 'CANCELLED') where task.dueDate < todayISO
+        return (
+          task.dueDate === todayISO.value ||
+          (task.dueDate !== null &&
+            task.dueDate < todayISO.value &&
+            task.status !== "COMPLETED" &&
+            task.status !== "CANCELLED")
+        );
+      case "UPCOMING":
+        return task.dueDate !== null && task.dueDate > todayISO.value;
+      case "BACKLOG":
+        return task.dueDate === null;
+      case "ALL":
+      default:
+        return true;
+    }
+  }
+
+  /** Global temporal segment counts (AC-UI-010, Plan 015 D4). Excludes cancelled tasks. */
+  const segmentCounts = computed<Record<DateSegment, number>>(() => ({
+    ALL: tasks.value.filter((t) => t.status !== "CANCELLED").length,
+    TODAY: tasks.value.filter(
+      (t) => matchesDateSegment(t, "TODAY") && t.status !== "CANCELLED",
+    ).length,
+    UPCOMING: tasks.value.filter(
+      (t) => matchesDateSegment(t, "UPCOMING") && t.status !== "CANCELLED",
+    ).length,
+    BACKLOG: tasks.value.filter(
+      (t) => matchesDateSegment(t, "BACKLOG") && t.status !== "CANCELLED",
+    ).length,
   }));
+
+  /** Lifecycle filter counts within the active date segment. */
+  const filterCounts = computed<Record<TaskStatusFilter, number>>(() => {
+    const segmentTasks = tasks.value.filter((t) =>
+      matchesDateSegment(t, dateSegment.value),
+    );
+    return {
+      ALL: segmentTasks.length,
+      PLANNED: segmentTasks.filter((t) => t.status === "PLANNED").length,
+      IN_PROGRESS: segmentTasks.filter((t) => t.status === "IN_PROGRESS").length,
+      COMPLETED: segmentTasks.filter((t) => t.status === "COMPLETED").length,
+    };
+  });
 
   const matchesFilter = (task: Task): boolean =>
     statusFilter.value === "ALL" || task.status === statusFilter.value;
@@ -99,8 +189,8 @@ export const useTasksStore = defineStore("tasks", () => {
     return query === "" || task.title.toLowerCase().includes(query);
   };
 
-  /** Tasks for the Tasks workspace list: filter + search applied,
-   * completed work sinks to the bottom. Pinned tasks always float to top. */
+  /** Tasks for the Tasks workspace list: conjunction of date segment, status filter,
+   *  and search query (AC-UI-012). Completed work sinks to bottom; pinned tasks float to top. */
   const visibleTasks = computed(() => {
     if (previewEmpty.value) return [];
     const statusOrder: Record<TaskStatus, number> = {
@@ -111,7 +201,12 @@ export const useTasksStore = defineStore("tasks", () => {
       CANCELLED: 4,
     };
     return tasks.value
-      .filter((task) => matchesFilter(task) && matchesSearch(task))
+      .filter(
+        (task) =>
+          matchesDateSegment(task, dateSegment.value) &&
+          matchesFilter(task) &&
+          matchesSearch(task),
+      )
       .slice()
       .sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;
@@ -201,8 +296,8 @@ export const useTasksStore = defineStore("tasks", () => {
 
   function addTask(draft: NewTaskDraft): Task | null {
     lastError.value = null;
-    /** UI-only creation destination (spec §12.1); undefined = Inbox. */
-    const destination = draft.destination ?? "INBOX";
+    /** UI-only creation destination (spec §12.1); defaults to PLANNED. */
+    const destination = draft.destination ?? "PLANNED";
 
     if (USE_MOCK) {
       const now = new Date().toISOString();
@@ -240,9 +335,11 @@ export const useTasksStore = defineStore("tasks", () => {
       priority: draft.priority ?? undefined,
       estimatedDurationMinutes: draft.estimatedMinutes,
     });
-    if (destination !== "INBOX") {
-      current = current.then((created) => tasksApi.plan(created.id));
-    }
+    // If backend created with legacy INBOX, ensure it plans
+    current = current.then((created) => {
+      if (created.status === "INBOX") return tasksApi.plan(created.id);
+      return created;
+    });
     if (destination === "IN_PROGRESS") {
       current = current.then((planned) => tasksApi.start(planned.id));
     }
@@ -473,41 +570,94 @@ export const useTasksStore = defineStore("tasks", () => {
       });
   }
 
-  function toggleTaskComplete(taskId: string): void {
+  /** Reschedule or clear a task's due date (Plan 015, AC-UI-013, AC-UI-014).
+   *  Full-replace backend semantics: preserves existing attributes and updates dueDate. */
+  async function setDueDate(
+    taskId: string,
+    dueDate: string | null,
+  ): Promise<void> {
     const task = taskById(taskId);
     if (!task) return;
     lastError.value = null;
 
     if (USE_MOCK) {
-      const now = new Date().toISOString();
-      lastUndoable.value = {
-        kind: task.status === "COMPLETED" ? "reopen" : "complete",
-        taskId,
-        task: { ...task },
-      };
+      task.dueDate = dueDate;
+      task.updatedAt = new Date().toISOString();
+      return;
+    }
 
+    try {
+      const updated = await tasksApi.update(taskId, {
+        title: task.title,
+        description: task.description,
+        dueDate,
+        priority: task.priority ?? null,
+        energy: task.energy ?? null,
+        estimatedDurationMinutes: task.estimatedMinutes,
+      });
+      const live = taskById(taskId);
+      if (live) Object.assign(live, taskResponseToTask(updated));
+    } catch (error: unknown) {
+      lastError.value = errorMessage(error);
+    }
+  }
+
+  function toggleTaskComplete(taskId: string): void {
+    const task = taskById(taskId);
+    if (!task) return;
+    lastError.value = null;
+
+    const previousTask = { ...task };
+    const now = new Date().toISOString();
+    lastUndoable.value = {
+      kind: task.status === "COMPLETED" ? "reopen" : "complete",
+      taskId,
+      task: previousTask,
+    };
+
+    if (USE_MOCK) {
       if (task.status === "COMPLETED") {
-        task.status = "PLANNED";
+        task.status = "IN_PROGRESS";
         task.completedAt = null;
       } else {
         task.status = "COMPLETED";
         task.completedAt = now;
       }
       task.updatedAt = now;
+      showToast({
+        kind: previousTask.status === "COMPLETED" ? "reopen" : "complete",
+        title: task.title,
+      });
       return;
     }
 
-    // Real mode: server-confirmed, no optimistic flip, no undo
-    // (backend has no un-complete transition — plan 002).
-    tasksApi
-      .complete(taskId)
-      .then((updated) => {
-        const live = taskById(taskId);
-        if (live) Object.assign(live, taskResponseToTask(updated));
-      })
-      .catch((error: unknown) => {
-        lastError.value = errorMessage(error);
-      });
+    // Real API mode: supports both completing and uncompleting (Micro-Rewind)
+    if (task.status === "COMPLETED") {
+      tasksApi
+        .uncomplete(taskId, "IN_PROGRESS")
+        .then((updated) => {
+          const live = taskById(taskId);
+          if (live) Object.assign(live, taskResponseToTask(updated));
+        })
+        .catch((error: unknown) => {
+          lastError.value = errorMessage(error);
+        });
+    } else {
+      tasksApi
+        .complete(taskId)
+        .then((updated) => {
+          const live = taskById(taskId);
+          if (live) Object.assign(live, taskResponseToTask(updated));
+        })
+        .catch((error: unknown) => {
+          lastError.value = errorMessage(error);
+        });
+    }
+
+    showToast({
+      kind: previousTask.status === "COMPLETED" ? "reopen" : "complete",
+      title: task.title,
+    });
   }
 
   function undoLast(): Task | null {
@@ -516,16 +666,53 @@ export const useTasksStore = defineStore("tasks", () => {
     const task = taskById(last.taskId);
     if (!task) return null;
 
+    const previousStatus = last.task.status;
     Object.assign(task, last.task);
     task.updatedAt = new Date().toISOString();
 
-    if (last.kind === "create") {
-      tasks.value = tasks.value.filter((t) => t.id !== last.taskId);
+    if (USE_MOCK) {
+      if (last.kind === "create") {
+        tasks.value = tasks.value.filter((t) => t.id !== last.taskId);
+      }
       lastUndoable.value = null;
-      return null;
+      return task;
+    }
+
+    // Real mode inverse action
+    if (last.kind === "complete") {
+      tasksApi
+        .uncomplete(
+          last.taskId,
+          previousStatus === "IN_PROGRESS" ? "IN_PROGRESS" : "PLANNED",
+        )
+        .then((res) => {
+          Object.assign(task, taskResponseToTask(res));
+        })
+        .catch((err) => {
+          lastError.value = errorMessage(err);
+        });
+    } else if (last.kind === "reopen") {
+      tasksApi
+        .complete(last.taskId)
+        .then((res) => {
+          Object.assign(task, taskResponseToTask(res));
+        })
+        .catch((err) => {
+          lastError.value = errorMessage(err);
+        });
+    } else if (last.kind === "create") {
+      tasksApi
+        .delete(last.taskId)
+        .then(() => {
+          tasks.value = tasks.value.filter((t) => t.id !== last.taskId);
+        })
+        .catch((err) => {
+          lastError.value = errorMessage(err);
+        });
     }
 
     lastUndoable.value = null;
+    dismissToast();
     return task;
   }
 
@@ -542,9 +729,13 @@ export const useTasksStore = defineStore("tasks", () => {
     status,
     searchQuery,
     statusFilter,
+    dateSegment,
+    todayISO,
+    tomorrowISO,
     visibleTasks,
     inboxTasks,
     inboxCount,
+    segmentCounts,
     filterCounts,
     hasActiveSearch,
     lastError,
@@ -552,6 +743,9 @@ export const useTasksStore = defineStore("tasks", () => {
     load,
     setSearch,
     setFilter,
+    setDateSegment,
+    matchesDateSegment,
+    setDueDate,
     addInboxTask,
     addTask,
     planTask,
@@ -566,5 +760,12 @@ export const useTasksStore = defineStore("tasks", () => {
     lastUndoable,
     togglePin,
     clearError,
+    isCreateDialogOpen,
+    createDialogInitialDraft,
+    openCreateDialog,
+    closeCreateDialog,
+    toast,
+    showToast,
+    dismissToast,
   };
 });

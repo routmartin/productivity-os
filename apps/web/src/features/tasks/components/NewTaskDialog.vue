@@ -19,9 +19,10 @@ const props = withDefaults(
   defineProps<{
     open: boolean
     editing?: Task | null
+    initial?: Partial<NewTaskDraft> | null
     size?: 'md' | 'lg' | 'xl' | 'full'
   }>(),
-  { size: 'full' },
+  { size: 'full', initial: null },
 )
 
 const emit = defineEmits<{
@@ -52,7 +53,7 @@ const emptyDraft = (): NewTaskDraft => ({
 const draft = reactive<NewTaskDraft>(emptyDraft())
 /** Creation destination (Tasks & Inbox UI spec §12.1) — create mode only;
  *  the store chains sanctioned plan/start transitions after create. */
-const destination = ref<Destination>('INBOX')
+const destination = ref<Destination>('PLANNED')
 const isSubmitting = ref(false)
 const titleInput = ref<{ $el: HTMLElement } | null>(null)
 
@@ -136,8 +137,7 @@ const PRIORITIES: { value: Priority; label: string }[] = [
 ]
 
 const DESTINATIONS: { value: Destination; label: string }[] = [
-  { value: 'INBOX', label: 'Inbox' },
-  { value: 'PLANNED', label: 'Plan today' },
+  { value: 'PLANNED', label: 'Planned' },
   { value: 'IN_PROGRESS', label: 'Start now' },
 ]
 
@@ -159,7 +159,7 @@ watch(
     if (isOpen) {
       isInitializing = true
       Object.assign(draft, emptyDraft())
-      destination.value = 'INBOX'
+      destination.value = 'PLANNED'
       projectValue.value = ''
       goalValue.value = ''
       dueValue.value = ''
@@ -195,6 +195,18 @@ watch(
         durationValue.value = task.estimatedMinutes ? String(task.estimatedMinutes) : ''
         timeValue.value = task.scheduledTime ?? ''
         recurrenceValue.value = task.recurrence ?? ''
+      } else if (props.initial) {
+        if (props.initial.dueDate !== undefined) {
+          draft.dueDate = props.initial.dueDate
+          dueValue.value = props.initial.dueDate ?? ''
+        }
+        if (props.initial.title) {
+          draft.title = props.initial.title
+        }
+        if (props.initial.projectId) {
+          draft.projectId = props.initial.projectId
+          projectValue.value = props.initial.projectId
+        }
       }
 
       isSubmitting.value = false

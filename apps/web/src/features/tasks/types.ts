@@ -67,9 +67,18 @@ export interface NewTaskDraft {
   estimatedMinutes: number | null;
   scheduledTime?: string | null;
   recurrence?: string | null;
-  /** UI-only (Tasks & Inbox UI spec §12.1): where a created task should
-   * land. The backend create always yields INBOX; the store chains the
-   * sanctioned plan/start transitions per destination. Undefined = INBOX.
-   * Never sent to the API. */
-  destination?: "INBOX" | "PLANNED" | "IN_PROGRESS";
+  /** UI-only (Tasks UI spec §12.1): initial scheduling/state.
+   * Default = PLANNED. Optional Start now = IN_PROGRESS. */
+  destination?: "PLANNED" | "IN_PROGRESS" | "INBOX";
 }
+
+/** Primary temporal date segments (Plan 015, Tasks UI spec §7). */
+export type DateSegment = "ALL" | "TODAY" | "UPCOMING" | "BACKLOG";
+
+export const DATE_SEGMENT_LABELS: Record<DateSegment, string> = {
+  ALL: "All",
+  TODAY: "Today",
+  UPCOMING: "Upcoming",
+  BACKLOG: "Backlog",
+};
+

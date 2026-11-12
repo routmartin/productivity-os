@@ -182,18 +182,22 @@ public final class APIClient: APIRequesting, @unchecked Sendable {
     // MARK: - Silent refresh (single flight)
 
     private func refreshAccessToken() async -> Bool {
-        let existing = lock.withLock { refreshTask }
-        if let existing {
-            return await existing.value
+        let (task, isLeader): (Task<Bool, Never>, Bool) = lock.withLock {
+            if let existing = refreshTask {
+                return (existing, false)
+            }
+            let newTask = Task<Bool, Never> { [session, config, authSession] in
+                await Self.performRefresh(session: session, config: config, authSession: authSession)
+            }
+            refreshTask = newTask
+            return (newTask, true)
         }
-        let task = Task<Bool, Never> { [session, config, authSession] in
-            await Self.performRefresh(session: session, config: config, authSession: authSession)
-        }
-        lock.withLock { refreshTask = task }
 
         let result = await task.value
-        lock.withLock {
-            refreshTask = nil
+        if isLeader {
+            lock.withLock {
+                refreshTask = nil
+            }
         }
         return result
     }

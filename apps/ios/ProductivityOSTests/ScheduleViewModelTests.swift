@@ -394,4 +394,37 @@ final class ScheduleViewModelTests: XCTestCase {
         XCTAssertEqual(resultNode?.id, serverUUID)
         XCTAssertEqual(viewModel.nodes.first?.id, serverUUID)
     }
+
+    func testScheduleNodeTimeAndDurationProperties() async {
+        let viewModel = makeViewModel()
+        await viewModel.loadData()
+
+        // Verify wake anchor time
+        let wakeNode = viewModel.nodes.first { $0.type == .anchor && $0.anchorKind == "wake" }
+        XCTAssertNotNil(wakeNode)
+        XCTAssertEqual(wakeNode?.time, "06:30")
+
+        // Verify bedtime anchor target
+        let bedtimeNode = viewModel.nodes.first { $0.type == .anchor && $0.anchorKind == "bedtime" }
+        XCTAssertNotNil(bedtimeNode)
+        XCTAssertEqual(bedtimeNode?.targetTime, "22:30")
+
+        // Verify habit has duration and time
+        let habitNode = viewModel.nodes.first { $0.type == .habit && $0.time != nil }
+        XCTAssertNotNil(habitNode)
+        XCTAssertNotNil(habitNode?.durationMinutes)
+        XCTAssertGreaterThan(habitNode?.durationMinutes ?? 0, 0)
+
+        // Verify activity block has duration and scheduled time
+        let activityNode = viewModel.nodes.first { $0.type == .task }
+        XCTAssertNotNil(activityNode)
+        XCTAssertNotNil(activityNode?.durationMinutes)
+        XCTAssertGreaterThan(activityNode?.durationMinutes ?? 0, 0)
+
+        // Verify recharge block has duration
+        let rechargeNode = viewModel.nodes.first { $0.type == .recharge }
+        XCTAssertNotNil(rechargeNode)
+        XCTAssertNotNil(rechargeNode?.durationMinutes)
+        XCTAssertGreaterThan(rechargeNode?.durationMinutes ?? 0, 0)
+    }
 }

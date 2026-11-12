@@ -12,6 +12,7 @@ import com.productivityos.task.domain.TaskCancelledEvent
 import com.productivityos.task.domain.TaskCompletedEvent
 import com.productivityos.task.domain.TaskDeletedEvent
 import com.productivityos.task.domain.TaskRestoredEvent
+import com.productivityos.task.domain.TaskUncompletedEvent
 import com.productivityos.task.domain.TaskStatus
 import com.productivityos.task.dto.CreateTaskRequest
 import com.productivityos.task.dto.TaskResponse
@@ -113,6 +114,22 @@ class TaskService(
         entity.updatedAt = clock.instant()
         taskRepository.save(entity)
         eventPublisher.publishEvent(TaskCompletedEvent(taskId, userId))
+        return TaskResponse.from(entity)
+    }
+
+    fun uncomplete(taskId: UUID, userId: UUID, targetStatus: String? = null): TaskResponse {
+        val target = when (targetStatus?.trim()?.uppercase()) {
+            "PLANNED" -> TaskStatus.PLANNED
+            "IN_PROGRESS", null -> TaskStatus.IN_PROGRESS
+            else -> throw IllegalArgumentException("Target status for uncompletion must be PLANNED or IN_PROGRESS")
+        }
+        val entity = loadOwned(taskId, userId)
+        val uncompleted = entity.toDomain().uncomplete(target)
+        entity.status = uncompleted.status
+        entity.completedAt = null
+        entity.updatedAt = clock.instant()
+        taskRepository.save(entity)
+        eventPublisher.publishEvent(TaskUncompletedEvent(taskId, userId, entity.status))
         return TaskResponse.from(entity)
     }
 

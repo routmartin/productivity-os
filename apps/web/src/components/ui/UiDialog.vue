@@ -12,6 +12,10 @@ function registerDialog(id: symbol, open: boolean): void {
 function isTopmost(id: symbol): boolean {
   return openDialogs[openDialogs.length - 1] === id
 }
+
+export function hasOpenDialog(): boolean {
+  return openDialogs.length > 0
+}
 </script>
 
 <script setup lang="ts">

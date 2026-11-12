@@ -7,6 +7,7 @@ import {
   Clock,
   Flag,
   Folder,
+  FolderInput,
   Pin,
   Pencil,
   Play,
@@ -90,11 +91,26 @@ const priorityTone = computed<PillTone>(() => {
   }
 })
 
+const isOverdue = computed(() => {
+  if (!task.value?.dueDate || task.value.status === 'COMPLETED' || task.value.status === 'CANCELLED') {
+    return false
+  }
+  return task.value.dueDate < store.todayISO
+})
+
 const dueLabel = computed(() => {
   const due = task.value?.dueDate
   if (!due) return null
+  if (due === store.todayISO) return 'Today'
+  if (due === store.tomorrowISO) return 'Tomorrow'
   return formatLongDate(new Date(`${due}T00:00:00`))
 })
+
+function onSetDueDate(date: string | null) {
+  if (task.value) {
+    void store.setDueDate(task.value.id, date)
+  }
+}
 
 function onPlan() {
   const current = task.value
@@ -182,9 +198,47 @@ function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1])
         <dt><Target :size="14" :stroke-width="1.75" /> Goal</dt>
         <dd>{{ goal.title }}</dd>
       </div>
-      <div v-if="dueLabel" class="meta-row">
-        <dt><CalendarDays :size="14" :stroke-width="1.75" /> Due</dt>
-        <dd>{{ dueLabel }}</dd>
+      <div class="meta-row meta-row-vertical">
+        <div class="meta-row-header">
+          <dt><CalendarDays :size="14" :stroke-width="1.75" /> Due Date</dt>
+          <dd>
+            <UiPill v-if="isOverdue" tone="warning">Overdue · {{ dueLabel }}</UiPill>
+            <span v-else-if="dueLabel">{{ dueLabel }}</span>
+            <span v-else class="muted-val">None (Backlog)</span>
+          </dd>
+        </div>
+        <div class="reschedule-strip" role="group" aria-label="Reschedule task">
+          <button
+            type="button"
+            class="strip-btn"
+            :class="{ active: task.dueDate === store.todayISO }"
+            title="Schedule for Today"
+            @click="onSetDueDate(store.todayISO)"
+          >
+            <CalendarDays :size="13" :stroke-width="1.75" />
+            Today
+          </button>
+          <button
+            type="button"
+            class="strip-btn"
+            :class="{ active: task.dueDate === store.tomorrowISO }"
+            title="Schedule for Tomorrow"
+            @click="onSetDueDate(store.tomorrowISO)"
+          >
+            <CalendarPlus :size="13" :stroke-width="1.75" />
+            Tomorrow
+          </button>
+          <button
+            type="button"
+            class="strip-btn"
+            :class="{ active: !task.dueDate }"
+            title="Move to Backlog (clear date)"
+            @click="onSetDueDate(null)"
+          >
+            <FolderInput :size="13" :stroke-width="1.75" />
+            Backlog
+          </button>
+        </div>
       </div>
       <div v-if="task.estimatedMinutes" class="meta-row">
         <dt><Clock :size="14" :stroke-width="1.75" /> Estimate</dt>
@@ -394,6 +448,64 @@ function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1])
   gap: var(--space-4);
   padding: var(--space-3) 0;
   border-bottom: 1px solid var(--border-subtle);
+}
+
+.meta-row.meta-row-vertical {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.meta-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.muted-val {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.reschedule-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.strip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.strip-btn:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.strip-btn.active {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  border-color: var(--accent-border);
+  font-weight: 600;
 }
 
 .meta-row dt {

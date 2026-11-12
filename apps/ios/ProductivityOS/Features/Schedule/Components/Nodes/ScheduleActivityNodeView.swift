@@ -35,7 +35,7 @@ public struct ScheduleActivityNodeView: View {
             onTap?()
         } label: {
             VStack(alignment: .leading, spacing: 10) {
-                // Header row: project name + priority pill + duration
+                // Header row: project name + priority pill + prominent duration badge
                 HStack(spacing: 6) {
                     if let project = node.projectName {
                         Text(project)
@@ -61,23 +61,33 @@ public struct ScheduleActivityNodeView: View {
 
                     if let duration = node.durationMinutes {
                         HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 11))
-                            Text("\(duration)m")
-                                .font(AppTypography.captionSmall)
-                                .fontWeight(.medium)
+                            Image(systemName: "bolt.stopwatch.fill")
+                                .font(.system(size: 10, weight: .bold))
+                            Text("\(duration)m focus")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .monospacedDigit()
                         }
-                        .foregroundStyle(AppColors.textSecondary)
+                        .foregroundStyle(inFocus ? AppColors.primary : Color(hex: "4338CA"))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3.5)
+                        .background(
+                            Capsule()
+                                .fill(inFocus ? AppColors.primaryTint : Color(hex: "EEF2FF"))
+                                .overlay(
+                                    Capsule()
+                                        .stroke(inFocus ? AppColors.primary.opacity(0.3) : Color(hex: "C7D2FE").opacity(0.6), lineWidth: 0.8)
+                                )
+                        )
                     }
                 }
 
                 // Title + Subtitle
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(node.title)
                         .font(AppTypography.headline)
                         .foregroundStyle(AppColors.textPrimary)
 
-                    if let subtitle = node.subtitle {
+                    if let subtitle = node.subtitle, !subtitle.isEmpty {
                         Text(subtitle)
                             .font(AppTypography.captionSmall)
                             .foregroundStyle(AppColors.textSecondary)
@@ -85,10 +95,10 @@ public struct ScheduleActivityNodeView: View {
                     }
                 }
 
-                // Execution Action Bar
-                HStack {
-                    HStack(spacing: 6) {
-                        if inFocus {
+                // Execution Action Bar: High-visibility Scheduled Time + Focus Action
+                HStack(alignment: .center) {
+                    if inFocus {
+                        HStack(spacing: 6) {
                             Circle()
                                 .fill(AppColors.primary)
                                 .frame(width: 8, height: 8)
@@ -100,15 +110,51 @@ public struct ScheduleActivityNodeView: View {
                                     }
                                 }
 
-                            Text("In Progress")
-                                .font(AppTypography.captionSmall)
-                                .fontWeight(.bold)
+                            Text("Active Focus")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
                                 .foregroundStyle(AppColors.primary)
-                        } else {
-                            Text("Scheduled: \(node.time ?? "09:00")")
-                                .font(AppTypography.captionSmall)
-                                .foregroundStyle(AppColors.textSecondary)
+
+                            if let time = node.time {
+                                Text("• \(time)")
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .monospacedDigit()
+                                    .foregroundStyle(AppColors.primary.opacity(0.8))
+                            }
                         }
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4.5)
+                        .background(
+                            Capsule()
+                                .fill(AppColors.primaryTint)
+                        )
+                    } else {
+                        HStack(spacing: 5) {
+                            Image(systemName: "clock.badge.checkmark.fill")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(AppColors.primary)
+
+                            Text(node.time ?? "09:00")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(AppColors.textPrimary)
+
+                            if let duration = node.durationMinutes {
+                                Text("(\(duration)m)")
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .monospacedDigit()
+                                    .foregroundStyle(AppColors.textSecondary)
+                            }
+                        }
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4.5)
+                        .background(
+                            Capsule()
+                                .fill(Color(hex: "F3EFFF"))
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color(hex: "DDD6FE"), lineWidth: 0.8)
+                                )
+                        )
                     }
 
                     Spacer()
@@ -126,15 +172,15 @@ public struct ScheduleActivityNodeView: View {
                                 .font(.system(size: 10, weight: .bold))
 
                             Text(inFocus ? "Pause" : "Start")
-                                .font(AppTypography.captionSmall)
-                                .fontWeight(.semibold)
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
                         }
                         .foregroundStyle(inFocus ? .white : AppColors.primary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
                         .background(
                             Capsule()
                                 .fill(inFocus ? AppColors.primary : AppColors.primaryTint)
+                                .shadow(color: inFocus ? AppColors.primary.opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
                         )
                     }
                     .buttonStyle(.plain)

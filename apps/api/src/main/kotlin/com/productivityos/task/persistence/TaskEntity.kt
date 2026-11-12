@@ -52,7 +52,7 @@ class TaskEntity(
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var status: TaskStatus = TaskStatus.INBOX,
+    var status: TaskStatus = TaskStatus.PLANNED,
 
     @Column(name = "completed_at")
     var completedAt: Instant? = null,

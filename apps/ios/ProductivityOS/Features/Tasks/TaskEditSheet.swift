@@ -18,6 +18,7 @@ public struct TaskEditSheet: View {
 
     @State private var title: String
     @State private var description: String
+    @State private var dueDate: String?
     @State private var priority: TaskPriority?
     @State private var energy: TaskEnergy?
     @State private var durationText: String
@@ -38,6 +39,7 @@ public struct TaskEditSheet: View {
         self.onDismiss = onDismiss
         _title = State(initialValue: task.title)
         _description = State(initialValue: task.description ?? "")
+        _dueDate = State(initialValue: task.dueDate)
         _priority = State(initialValue: task.priority)
         _energy = State(initialValue: task.energy)
         _durationText = State(
@@ -55,6 +57,82 @@ public struct TaskEditSheet: View {
                 Section("Description") {
                     TextField("Optional details", text: $description, axis: .vertical)
                         .lineLimit(3...6)
+                }
+
+                Section("Due Date") {
+                    Toggle("Scheduled date", isOn: Binding(
+                        get: { dueDate != nil },
+                        set: { isScheduled in
+                            dueDate = isScheduled ? TasksViewModel.todayISO : nil
+                        }
+                    ))
+
+                    if dueDate != nil {
+                        DatePicker(
+                            "Target date",
+                            selection: selectedDateBinding,
+                            displayedComponents: [.date]
+                        )
+                        #if os(iOS)
+                        .datePickerStyle(.compact)
+                        #endif
+                    }
+
+                    HStack(spacing: AppSpacing.xs) {
+                        Button {
+                            dueDate = TasksViewModel.todayISO
+                        } label: {
+                            Text("Today")
+                                .font(AppTypography.captionSmall)
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 32)
+                                .background(isTodaySelected ? AppColors.primaryTint : AppColors.surface)
+                                .foregroundStyle(isTodaySelected ? AppColors.primary : AppColors.textPrimary)
+                                .clipShape(RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous)
+                                        .stroke(isTodaySelected ? AppColors.primary : AppColors.surfaceBorder, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            dueDate = TasksViewModel.tomorrowISO
+                        } label: {
+                            Text("Tomorrow")
+                                .font(AppTypography.captionSmall)
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 32)
+                                .background(isTomorrowSelected ? AppColors.primaryTint : AppColors.surface)
+                                .foregroundStyle(isTomorrowSelected ? AppColors.primary : AppColors.textPrimary)
+                                .clipShape(RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous)
+                                        .stroke(isTomorrowSelected ? AppColors.primary : AppColors.surfaceBorder, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            dueDate = nil
+                        } label: {
+                            Text("Clear / Backlog")
+                                .font(AppTypography.captionSmall)
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 32)
+                                .background(isBacklogSelected ? AppColors.primaryTint : AppColors.surface)
+                                .foregroundStyle(isBacklogSelected ? AppColors.primary : AppColors.textSecondary)
+                                .clipShape(RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppRadius.sm, style: .continuous)
+                                        .stroke(isBacklogSelected ? AppColors.primary : AppColors.surfaceBorder, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
 
                 Section("Priority") {
@@ -167,6 +245,32 @@ public struct TaskEditSheet: View {
         Binding(get: { energy }, set: { energy = $0 })
     }
 
+    private var isTodaySelected: Bool {
+        dueDate == TasksViewModel.todayISO
+    }
+
+    private var isTomorrowSelected: Bool {
+        dueDate == TasksViewModel.tomorrowISO
+    }
+
+    private var isBacklogSelected: Bool {
+        dueDate == nil
+    }
+
+    private var selectedDateBinding: Binding<Date> {
+        Binding(
+            get: {
+                if let dueDate, let date = TasksViewModel.isoDateFormatter.date(from: dueDate) {
+                    return date
+                }
+                return Date()
+            },
+            set: { newDate in
+                dueDate = TasksViewModel.isoDateFormatter.string(from: newDate)
+            }
+        )
+    }
+
     private let quickPresets: [Int] = [15, 30, 45, 60, 90, 120]
 
     private func presetLabel(_ minutes: Int) -> String {
@@ -203,6 +307,7 @@ public struct TaskEditSheet: View {
                 id: task.id,
                 title: trimmedTitle.isEmpty ? nil : trimmedTitle,
                 description: trimmedDescription.isEmpty ? nil : trimmedDescription,
+                dueDate: dueDate,
                 priority: priority,
                 energy: energy,
                 estimatedDurationMinutes: parsedDuration

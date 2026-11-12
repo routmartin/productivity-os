@@ -38,18 +38,20 @@ public struct TaskService: Sendable {
     }
 
     /// PUT /api/v1/tasks/{id}. Mirrors the web Tasks edit flow so the
-    /// duration (and other fields) stay in sync between web and iOS.
+    /// duration, due date (and other fields) stay in sync between web and iOS.
     public func updateTask(
         id: UUID,
-        title: String?,
-        description: String?,
-        priority: TaskPriority?,
-        energy: TaskEnergy?,
-        estimatedDurationMinutes: Int?
+        title: String? = nil,
+        description: String? = nil,
+        dueDate: String? = nil,
+        priority: TaskPriority? = nil,
+        energy: TaskEnergy? = nil,
+        estimatedDurationMinutes: Int? = nil
     ) async throws -> TaskItem {
         let body = UpdateTaskRequestBody(
             title: title,
             description: description,
+            dueDate: dueDate,
             priority: priority?.rawValue,
             energy: energy?.rawValue,
             estimatedDurationMinutes: estimatedDurationMinutes

@@ -18,6 +18,7 @@ import java.util.UUID
 import com.productivityos.task.dto.AssignProjectRequest
 import com.productivityos.task.dto.CreateTaskRequest
 import com.productivityos.task.dto.TaskResponse
+import com.productivityos.task.dto.UncompleteTaskRequest
 import com.productivityos.task.dto.UpdateTaskRequest
 import com.productivityos.task.service.TaskService
 
@@ -71,6 +72,14 @@ class TaskController(
     @PostMapping("/{id}/completion")
     fun complete(@PathVariable id: UUID): TaskResponse {
         return taskService.complete(id, currentUser.id())
+    }
+
+    @PostMapping("/{id}/uncompletion")
+    fun uncomplete(
+        @PathVariable id: UUID,
+        @RequestBody(required = false) request: UncompleteTaskRequest?
+    ): TaskResponse {
+        return taskService.uncomplete(id, currentUser.id(), request?.targetStatus)
     }
 
     @PostMapping("/{id}/cancellation")

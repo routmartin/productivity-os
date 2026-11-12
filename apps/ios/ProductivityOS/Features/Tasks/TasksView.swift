@@ -4,6 +4,7 @@ import SwiftUI
 public struct TasksView: View {
     @State private var viewModel: TasksViewModel
     @State private var projectsViewModel: ProjectsViewModel
+    @State private var editingTask: TaskItem?
     private let onSelectTask: (TaskItem) -> Void
 
     public init(
@@ -35,8 +36,17 @@ public struct TasksView: View {
                             .stroke(AppColors.surfaceBorder, lineWidth: 1)
                     )
 
-                    // Status filter chips. Defaults to "Active" so the screen always opens
-                    // focused on actionable work (spec §15).
+                    // Primary date segment picker with reactive count badges
+                    Picker("Segment", selection: $viewModel.dateSegment) {
+                        ForEach(TasksViewModel.DateSegmentFilter.allCases) { segment in
+                            let count = viewModel.segmentCounts[segment] ?? 0
+                            Text("\(segment.title) (\(count))")
+                                .tag(segment)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    // Secondary status filter chips
                     HStack(spacing: AppSpacing.xs) {
                         ForEach(TasksViewModel.TaskStatusFilter.allCases) { filter in
                             let isSelected = viewModel.statusFilter == filter
@@ -75,7 +85,7 @@ public struct TasksView: View {
                     } else if viewModel.filteredTasks.isEmpty {
                         APIStateView(
                             kind: .empty(
-                                icon: "checklist",
+                                icon: emptyIcon,
                                 title: emptyTitle,
                                 subtitle: emptySubtitle
                             )
@@ -86,7 +96,26 @@ public struct TasksView: View {
                                 title: task.title,
                                 projectName: projectsViewModel.projectName(for: task) ?? "—",
                                 priority: task.priority ?? .medium,
-                                iconName: task.isCompleted ? "checkmark.circle.fill" : "checklist"
+                                iconName: task.isCompleted ? "checkmark.circle.fill" : "checklist",
+                                dueDate: task.dueDate,
+                                onRescheduleToday: {
+                                    Task {
+                                        try? await viewModel.rescheduleTask(id: task.id, dueDate: TasksViewModel.todayISO)
+                                    }
+                                },
+                                onRescheduleTomorrow: {
+                                    Task {
+                                        try? await viewModel.rescheduleTask(id: task.id, dueDate: TasksViewModel.tomorrowISO)
+                                    }
+                                },
+                                onMoveToBacklog: {
+                                    Task {
+                                        try? await viewModel.rescheduleTask(id: task.id, dueDate: nil)
+                                    }
+                                },
+                                onEdit: {
+                                    editingTask = task
+                                }
                             ) {
                                 // Completed / cancelled tasks aren't eligible
                                 // for a focus session (spec §AC-003).
@@ -102,6 +131,14 @@ public struct TasksView: View {
             }
             .background(AppColors.canvas.ignoresSafeArea())
             .navigationTitle("Tasks")
+            .sheet(item: $editingTask) { task in
+                TaskEditSheet(
+                    task: task,
+                    onSaved: { updated in
+                        viewModel.replace(updated)
+                    }
+                )
+            }
             .task {
                 if case .idle = viewModel.loadState {
                     await viewModel.loadTasks()
@@ -117,30 +154,60 @@ public struct TasksView: View {
     }
 
     private var sectionTitle: String {
-        switch viewModel.statusFilter {
-        case .all: return "All Tasks"
-        case .active: return "Active Tasks"
-        case .completed: return "Completed Tasks"
-        case .cancelled: return "Cancelled Tasks"
+        if viewModel.statusFilter == .active {
+            switch viewModel.dateSegment {
+            case .today: return "Today"
+            case .upcoming: return "Upcoming"
+            case .backlog: return "Backlog"
+            case .all: return "All Tasks"
+            }
+        } else {
+            return "\(viewModel.dateSegment.title) • \(viewModel.statusFilter.title)"
+        }
+    }
+
+    private var emptyIcon: String {
+        if !viewModel.searchText.isEmpty { return "magnifyingglass" }
+        if viewModel.statusFilter == .completed { return "checkmark.circle" }
+        if viewModel.statusFilter == .cancelled { return "xmark.circle" }
+        switch viewModel.dateSegment {
+        case .today: return "sun.max"
+        case .upcoming: return "calendar"
+        case .backlog: return "tray"
+        case .all: return "checklist"
         }
     }
 
     private var emptyTitle: String {
         if !viewModel.searchText.isEmpty { return "No matches" }
-        switch viewModel.statusFilter {
+        if viewModel.statusFilter == .completed { return "No completed tasks" }
+        if viewModel.statusFilter == .cancelled { return "No cancelled tasks" }
+        switch viewModel.dateSegment {
+        case .today: return "Clear plate for today"
+        case .upcoming: return "No upcoming tasks"
+        case .backlog: return "Backlog is empty"
         case .all: return "No tasks yet"
-        case .active: return "No active tasks"
-        case .completed: return "No completed tasks"
-        case .cancelled: return "No cancelled tasks"
         }
     }
 
     private var emptySubtitle: String? {
-        if !viewModel.searchText.isEmpty { return nil }
-        if viewModel.statusFilter == .active {
-            return "Create a task on web or pick one from Today."
+        if !viewModel.searchText.isEmpty { return "Try adjusting your search query." }
+        if viewModel.statusFilter == .completed {
+            return "Completed tasks in this segment will appear here."
         }
-        return nil
+        if viewModel.statusFilter == .cancelled {
+            return "Cancelled tasks in this segment will appear here."
+        }
+        switch viewModel.dateSegment {
+        case .today:
+            return "No tasks scheduled for today. Pull tasks from your backlog or enjoy the calm."
+        case .upcoming:
+            return "Your future schedule is clear. Plan ahead by scheduling dates on your tasks."
+        case .backlog:
+            return "All your tasks are scheduled on the calendar. Capture new ideas anytime."
+        case .all:
+            return "Capture something you're thinking about."
+        }
     }
 }
 

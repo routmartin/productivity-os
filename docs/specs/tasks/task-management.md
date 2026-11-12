@@ -27,12 +27,15 @@ through a clear lifecycle, so that I can trust the state of my work.
 
 - The user can create a task with a title. Description, project, priority,
   estimated duration, due date, and energy level are optional.
-- A task without a project is an Inbox task.
-- The user can move a task between Inbox and a project.
+- All new tasks start directly in the Planned state (the previous separate Inbox
+  state is retired).
+- Due date is optional. Tasks without a due date represent unscheduled backlog work,
+  while tasks with a due date represent scheduled commitments.
 - The user can transition tasks through the lifecycle; invalid transitions are
   rejected.
 - Completing a task records the completion time.
-- Completed is final; cancelled tasks can be reopened and return to Planned.
+- Completed tasks are reversible via explicit uncompletion; cancelled tasks can be
+  reopened and return to Planned.
 - Cancelled tasks remain available for historical records.
 - The user can delete a task. Deletion is a soft delete: the task is hidden from
   active work, and all of its history is preserved.
@@ -45,25 +48,31 @@ through a clear lifecycle, so that I can trust the state of my work.
 
 States:
 
-- Inbox
-- Planned
+- Planned (initial state for all new tasks)
 - In Progress
 - Completed
 - Cancelled
+*(Note: Legacy Inbox state is deprecated; all tasks in Inbox are migrated to Planned)*
 
 Allowed transitions:
 
-- Inbox → Planned
 - Planned → In Progress
+- Planned → Completed
 - In Progress → Completed
-- Inbox → Cancelled
+- Completed → In Progress (uncompletion)
+- Completed → Planned (uncompletion)
+- In Progress → Planned (status demotion / pause)
 - Planned → Cancelled
 - In Progress → Cancelled
 - Cancelled → Planned
 
 Terminal state:
 
-- Completed is final. No transitions out of Completed exist.
+- Completed was formerly final; it is now reversible via explicit uncompletion
+  (`POST /api/v1/tasks/{id}/uncompletion`). Uncompleting transitions the task to
+  In Progress (default) or Planned, clears completedAt, and emits
+  `TaskUncompletedEvent`. Transitions from Completed directly to Cancelled remain
+  invalid.
 
 Any transition not listed above is invalid and must be rejected.
 
@@ -78,23 +87,27 @@ retains its underlying lifecycle state and can later be restored to it.
 1. Every Task belongs to exactly one User. A Task cannot exist without an owning
    User.
 2. A Task belongs to zero or one Project. A Task cannot belong to multiple
-   Projects.
-3. A Task without a Project is an Inbox task.
-4. A Task may move from Inbox to a Project and from a Project back to Inbox.
+   Projects. Tasks without a Project are standalone Planned tasks.
+3. All new tasks are created directly in Planned status.
+4. Due date is optional on all tasks. Tasks without a due date are unscheduled
+   backlog tasks. Tasks with a due date are scheduled tasks.
 5. A Task must have a title. All other attributes — description, project,
    priority, estimated duration, due date, and energy level — are optional.
 6. A Task cannot belong to a Project owned by another User.
 7. A User can only view and modify their own Tasks.
 8. Lifecycle transitions are limited to the allowed set. Invalid transitions are
    rejected and the Task's state remains unchanged.
-9. Completed is final. A Completed Task cannot be reopened or transitioned to any
-   other state.
+9. Completed is reversible via explicit uncompletion
+   (`POST /api/v1/tasks/{id}/uncompletion`). Uncompleting a Completed Task
+   transitions it to In Progress (default) or Planned, resets `completedAt = null`,
+   and emits `TaskUncompletedEvent`.
 10. A Cancelled Task can be reopened. Reopening returns it to Planned, regardless
     of the state it was cancelled from.
-11. When a Task is completed, the system records the completion time.
+11. When a Task is completed, the system records the completion time. When a Task
+    is uncompleted, the completion timestamp is reset to null.
 12. Cancelled Tasks are retained and remain available for historical records.
     Cancelling does not delete the Task.
-13. A Task is considered active while it is in Inbox, Planned, or In Progress and
+13. A Task is considered active while it is in Planned or In Progress and
     has not been deleted. Completed, Cancelled, and deleted Tasks are not active.
 14. AI must not silently change a Task's lifecycle state. An AI-suggested state
     change takes effect only after explicit user confirmation.
@@ -108,6 +121,9 @@ retains its underlying lifecycle state and can later be restored to it.
     regardless of its underlying lifecycle state.
 19. Lifecycle transitions apply only to non-deleted Tasks. A deleted Task must be
     restored before it can transition.
+20. Status demotion allows non-destructive task reorganization: an In Progress task
+    may be demoted to Planned. Demotion maintains task ownership, project
+    association, and historical records.
 
 ## Constraints
 
@@ -220,24 +236,27 @@ Given a task in Cancelled,
 when the user reopens the task,
 then the task transitions to Planned.
 
-### AC-017 — Completed is final
+### AC-017 *(amended)* — Task uncompletion from Completed to In Progress
 
 Given a task in Completed,
-when any lifecycle transition is attempted (including reopening or cancelling),
-then the transition is rejected, the task remains Completed, and its completion
-timestamp is unchanged.
+when the user uncompletes the task without specifying a target status,
+then the task transitions to In Progress, its completedAt timestamp is reset to
+null, a TaskUncompletedEvent is emitted, and the task becomes active again.
 
-### AC-018 — Invalid transition rejected (skipping states)
+### AC-018 — Invalid transition rejected (from Cancelled)
 
-Given a task in Inbox,
+Given a task in Cancelled,
 when the user attempts to mark the task Completed directly,
-then the transition is rejected and the task remains in Inbox.
+then the transition is rejected with 409 Conflict and the task remains Cancelled.
 
-### AC-019 — Invalid transition rejected (backwards transition)
+### AC-019 *(amended)* — Status demotion (backwards transition rules)
 
 Given a task in In Progress,
-when the user attempts to return the task to Inbox,
-then the transition is rejected and the task remains In Progress.
+when the user demotes the task,
+then the task transitions to Planned;
+and when the task is in Planned and the user demotes it,
+then the task transitions to Inbox.
+Direct demotion from In Progress directly to Inbox skipping Planned is rejected.
 
 ### AC-020 — Cancelled tasks remain available
 
@@ -308,13 +327,63 @@ Given a deleted task,
 when any lifecycle transition is attempted,
 then the transition is rejected until the task is restored.
 
+### AC-031 — Task uncompletion to Planned
+
+Given a task in Completed,
+when the user uncompletes the task specifying PLANNED as the target status,
+then the task transitions to Planned, its completedAt timestamp is reset to
+null, a TaskUncompletedEvent is emitted, and the task becomes active again.
+
+### AC-032 — Uncompletion resets completion timestamp
+
+Given a completed task with a recorded completedAt timestamp,
+when the task is uncompleted,
+then the completedAt timestamp is cleared to null and updatedAt is updated to
+the current time.
+
+### AC-033 — Uncompletion emits TaskUncompletedEvent
+
+Given a completed task owned by a user,
+when the task is uncompleted,
+then a TaskUncompletedEvent containing the taskId and userId is emitted for
+downstream domain listeners.
+
+### AC-034 — Invalid uncompletion rejected on non-completed tasks
+
+Given a task in Inbox, Planned, In Progress, or Cancelled state,
+when an uncompletion request is received,
+then the request is rejected with 409 Conflict and the task state is unchanged.
+
+### AC-035 — Status demotion from Planned to Inbox
+
+Given an active task in Planned,
+when the user demotes the task,
+then the task transitions to Inbox and updatedAt is updated.
+
+### AC-036 — Status demotion from In Progress to Planned
+
+Given an active task in In Progress,
+when the user demotes the task,
+then the task transitions to Planned and updatedAt is updated.
+
+### AC-037 — Invalid demotion rejected on Inbox tasks
+
+Given an active task in Inbox,
+when the user attempts to demote the task,
+then the transition is rejected with 409 Conflict and the task remains in Inbox.
+
 ## Edge Cases
 
-- Completing is only possible from In Progress. Attempting to complete a task
-  from Inbox or Planned is rejected (AC-018).
+- Completing is possible from Planned and In Progress. Attempting to complete a task
+  from Cancelled is rejected (AC-018).
 - A task cancelled from In Progress reopens to Planned, not back to In Progress
   (Rule 10, AC-016).
-- Reopening a completed task is impossible: Completed is final (Rule 9, AC-017).
+- Completed tasks can be uncompleted via POST /api/v1/tasks/{id}/uncompletion,
+  returning to In Progress or Planned with completedAt cleared (Rule 9, Rule 11,
+  AC-017, AC-031, AC-032, AC-033).
+- Tasks can be demoted one step backwards: In Progress to Planned, and Planned
+  to Inbox. Demoting an Inbox task is rejected (Rule 20, AC-019, AC-035, AC-036,
+  AC-037).
 - A cancelled task is never deleted and remains available for historical records
   (Rule 12, AC-020).
 - A task can be deleted from any lifecycle state, including Completed and
@@ -361,6 +430,13 @@ then the transition is rejected until the task is restored.
 - **Multi-device synchronization:** Tasks are server-persisted via REST API. Multi-device sync works automatically. Concurrent edits resolve with last-write-wins based on server receipt time, consistent with Daily Top 3 Constraint 3.
 
 ## Change History
+
+- Amended per Option 2 (Two-Tier Rewind Engine & Rituals): introduced task
+  uncompletion (COMPLETED → IN_PROGRESS or PLANNED via POST /api/v1/tasks/{id}/uncompletion)
+  resetting completedAt to null and emitting TaskUncompletedEvent; introduced
+  status demotion (IN_PROGRESS → PLANNED and PLANNED → INBOX via
+  POST /api/v1/tasks/{id}/demote). Amended Rule 9, Rule 11, AC-017, and AC-019;
+  added Rule 20 and AC-031 through AC-037.
 
 - Clarified the Inbox lifecycle resolution: a single user-initiated action may
   chain INBOX → PLANNED → IN_PROGRESS via existing endpoints (one-click Start,

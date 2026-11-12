@@ -46,10 +46,12 @@ public struct ScheduleBedtimeBanner: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(isOverflowing ? "Bedtime Shifts: \(projectedBedtime)" : "Bedtime Target: \(targetBedtime)")
                             .font(AppTypography.headline)
+                            .monospacedDigit()
                             .foregroundStyle(AppColors.textPrimary)
 
                         Text(isOverflowing ? "+\(overflowMinutes)m past target (\(targetBedtime))" : "On track for optimal 8h recovery sleep")
                             .font(AppTypography.captionSmall)
+                            .monospacedDigit()
                             .foregroundStyle(isOverflowing ? AppColors.warning : AppColors.textSecondary)
                     }
                 }
@@ -61,6 +63,7 @@ public struct ScheduleBedtimeBanner: View {
                     Text("+\(overflowMinutes)m")
                         .font(AppTypography.caption)
                         .fontWeight(.bold)
+                        .monospacedDigit()
                         .foregroundStyle(AppColors.warning)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)

@@ -7,6 +7,12 @@ data class TaskCompletedEvent(
     val userId: UUID
 )
 
+data class TaskUncompletedEvent(
+    val taskId: UUID,
+    val userId: UUID,
+    val targetStatus: TaskStatus = TaskStatus.IN_PROGRESS
+)
+
 data class TaskCancelledEvent(
     val taskId: UUID,
     val userId: UUID

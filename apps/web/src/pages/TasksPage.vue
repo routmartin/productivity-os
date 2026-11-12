@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   CalendarDays,
   Check,
-  CheckCircle2,
   Clock,
   FolderKanban,
   LayoutGrid,
@@ -14,7 +13,6 @@ import {
   Repeat,
   Search,
   SearchX,
-  Undo2,
   X,
 } from 'lucide-vue-next'
 
@@ -25,20 +23,19 @@ import SectionHeader from '@/components/shared/SectionHeader.vue'
 import SkeletonBlock from '@/components/shared/SkeletonBlock.vue'
 import SurfaceCard from '@/components/shared/SurfaceCard.vue'
 import UiButton from '@/components/ui/UiButton.vue'
-import { formatClockTime, toISODate } from '@/lib/utils/date'
+import { formatClockTime } from '@/lib/utils/date'
 import { formatMinutes } from '@/lib/utils/duration'
 import type { PreviewState } from '@/features/planning/types'
-import NewTaskDialog from '@/features/tasks/components/NewTaskDialog.vue'
+import TaskDateSegments from '@/features/tasks/components/TaskDateSegments.vue'
 import TaskFilters from '@/features/tasks/components/TaskFilters.vue'
 import TaskListRow from '@/features/tasks/components/TaskListRow.vue'
 import TaskPrioritySegments from '@/features/tasks/components/TaskPrioritySegments.vue'
 import { useProjectsStore } from '@/features/projects/store'
 import { useTasksStore } from '@/features/tasks/store'
-import type { Task } from '@/features/tasks/types'
-import { useMock } from '@/lib/mock'
-import { showPreviewNote } from '@/lib/preview'
+import type { DateSegment, Task } from '@/features/tasks/types'
 
 const route = useRoute()
+const router = useRouter()
 const store = useTasksStore()
 const projectsStore = useProjectsStore()
 const panel = useContextPanelStore()
@@ -54,6 +51,57 @@ const openTaskId = computed(() => {
   const value = route.query.open
   return typeof value === 'string' && value ? value : null
 })
+
+/* ---------------- View & grouping controls ---------------- */
+
+type ViewMode = 'list' | 'grid'
+type GroupMode = 'date' | 'project'
+
+const viewMode = ref<ViewMode>('list')
+const groupMode = ref<GroupMode>('project')
+const userOverrodeGrouping = ref(false)
+
+function setManualGroupMode(mode: GroupMode) {
+  userOverrodeGrouping.value = true
+  groupMode.value = mode
+}
+
+function applyAdaptiveGrouping(segment: DateSegment) {
+  if (userOverrodeGrouping.value) return
+  if (segment === 'UPCOMING') {
+    groupMode.value = 'date'
+  } else if (segment === 'BACKLOG') {
+    groupMode.value = 'project'
+  } else if (segment === 'TODAY') {
+    groupMode.value = 'project'
+  } else if (segment === 'ALL') {
+    groupMode.value = 'project'
+  }
+}
+
+function parseSegmentQuery(param: unknown): DateSegment | null {
+  if (typeof param !== 'string') return null
+  const lower = param.toLowerCase()
+  if (lower === 'all') return 'ALL'
+  if (lower === 'today') return 'TODAY'
+  if (lower === 'upcoming') return 'UPCOMING'
+  if (lower === 'backlog') return 'BACKLOG'
+  return null
+}
+
+function onSegmentChange(segment: DateSegment) {
+  store.setDateSegment(segment)
+  applyAdaptiveGrouping(segment)
+  const currentQuery = typeof route.query.segment === 'string' ? route.query.segment.toLowerCase() : null
+  if (currentQuery !== segment.toLowerCase()) {
+    void router.replace({
+      query: {
+        ...route.query,
+        segment: segment.toLowerCase(),
+      },
+    })
+  }
+}
 
 /** `?preview=loading|error|empty` forces a UI state for design review.
  *  No task is auto-opened on arrival — the panel only opens when the user
@@ -74,10 +122,49 @@ async function loadAndSelect(preview: PreviewState) {
   }
 }
 
-onMounted(() => loadAndSelect(previewFromQuery()))
+onMounted(() => {
+  const querySegment = parseSegmentQuery(route.query.segment)
+  if (querySegment) {
+    store.setDateSegment(querySegment)
+    applyAdaptiveGrouping(querySegment)
+  } else {
+    // D2: Default to TODAY
+    store.setDateSegment('TODAY')
+    applyAdaptiveGrouping('TODAY')
+  }
+  void loadAndSelect(previewFromQuery())
+})
+
 watch(
   () => route.query.preview,
   () => loadAndSelect(previewFromQuery()),
+)
+
+// Synchronize URL query parameter with segment tab changes
+watch(
+  () => route.query.segment,
+  (newParam) => {
+    const parsed = parseSegmentQuery(newParam)
+    if (parsed && parsed !== store.dateSegment) {
+      store.setDateSegment(parsed)
+      applyAdaptiveGrouping(parsed)
+    }
+  },
+)
+
+watch(
+  () => store.dateSegment,
+  (newSegment) => {
+    const currentQuery = typeof route.query.segment === 'string' ? route.query.segment.toLowerCase() : null
+    if (currentQuery !== newSegment.toLowerCase()) {
+      void router.replace({
+        query: {
+          ...route.query,
+          segment: newSegment.toLowerCase(),
+        },
+      })
+    }
+  },
 )
 
 // A search result picked while already on this page opens the panel live.
@@ -90,53 +177,99 @@ watch(
 )
 
 const searchInput = ref<HTMLInputElement | null>(null)
-const dialogOpen = ref(false)
 
 const isLoading = computed(() => store.status === 'loading' || store.status === 'idle')
 
-/** Which empty state to show, in priority order. */
-const emptyKind = computed<'search' | 'filter' | null>(() => {
-  if (store.visibleTasks.length > 0) return null
-  return store.hasActiveSearch ? 'search' : 'filter'
-})
+interface EmptyStateConfig {
+  icon: typeof SearchX
+  title: string
+  description: string
+  actionKind: 'clear-search' | 'clear-filter' | 'create'
+  actionLabel: string
+}
 
-const emptyCopy = computed(() => {
-  if (emptyKind.value === 'search') {
+/** Segment-specific contextual empty states (AC-UI-015). */
+const emptyState = computed<EmptyStateConfig | null>(() => {
+  if (store.visibleTasks.length > 0) return null
+
+  // 1. Search query active
+  if (store.hasActiveSearch) {
     return {
+      icon: SearchX,
       title: 'No tasks found.',
       description: `Nothing matches "${store.searchQuery.trim()}". Try a different search.`,
+      actionKind: 'clear-search',
+      actionLabel: 'Clear search',
     }
   }
-  if (store.statusFilter === 'ALL') {
+
+  // 2. Status filter active within segment
+  if (store.statusFilter !== 'ALL') {
     return {
-      title: 'No tasks yet.',
-      description: "Capture something you're thinking about.",
+      icon: ListChecks,
+      title: 'Nothing here.',
+      description: 'No tasks with this status right now.',
+      actionKind: 'clear-filter',
+      actionLabel: 'Clear filter',
     }
   }
-  return {
-    title: 'Nothing here.',
-    description: 'No tasks with this status right now.',
+
+  // 3. Date segment empty
+  switch (store.dateSegment) {
+    case 'TODAY':
+      return {
+        icon: CalendarDays,
+        title: 'All caught up for today.',
+        description: 'No tasks scheduled for today. Pull tasks from your backlog or enjoy the calm.',
+        actionKind: 'create',
+        actionLabel: 'Schedule for Today',
+      }
+    case 'UPCOMING':
+      return {
+        icon: CalendarDays,
+        title: 'No upcoming tasks.',
+        description: 'Your future schedule is clear. Plan ahead by scheduling dates on your tasks.',
+        actionKind: 'create',
+        actionLabel: 'Plan a Task',
+      }
+    case 'BACKLOG':
+      return {
+        icon: FolderKanban,
+        title: 'Backlog is clear.',
+        description: 'All your tasks are scheduled on the calendar. Capture new ideas anytime.',
+        actionKind: 'create',
+        actionLabel: 'Capture Task',
+      }
+    case 'ALL':
+    default:
+      return {
+        icon: ListChecks,
+        title: 'No tasks yet.',
+        description: "Capture something you're thinking about.",
+        actionKind: 'create',
+        actionLabel: 'New Task',
+      }
   }
 })
 
-/* ---------------- View & grouping controls ---------------- */
-
-type ViewMode = 'list' | 'grid'
-type GroupMode = 'date' | 'project'
-
-const viewMode = ref<ViewMode>('list')
-const groupMode = ref<GroupMode>('project')
+function openCreateForCurrentSegment() {
+  if (store.dateSegment === 'TODAY') {
+    store.openCreateDialog({ dueDate: store.todayISO })
+  } else if (store.dateSegment === 'UPCOMING') {
+    store.openCreateDialog({ dueDate: store.tomorrowISO })
+  } else if (store.dateSegment === 'BACKLOG') {
+    store.openCreateDialog({ dueDate: null })
+  } else {
+    store.openCreateDialog({ dueDate: store.todayISO })
+  }
+}
 
 /* ---------------- Grouping (shared by list + grid) ---------------- */
 
-const todayISO = computed(() => toISODate(new Date()))
-
 function dayLabelFor(iso: string): { dayLabel: string; isToday: boolean } {
-  const today = todayISO.value
-  if (iso === today) return { dayLabel: 'Today', isToday: true }
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  if (iso === toISODate(tomorrow)) return { dayLabel: 'Tomorrow', isToday: false }
+  if (iso === store.todayISO) return { dayLabel: 'Today', isToday: true }
+  if (iso === store.tomorrowISO) return { dayLabel: 'Tomorrow', isToday: false }
+  if (iso < store.todayISO) return { dayLabel: 'Overdue', isToday: false }
   const date = new Date(`${iso}T00:00:00`)
   const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date)
   return { dayLabel: weekday, isToday: false }
@@ -215,7 +348,7 @@ const projectGroups = computed<ProjectGroup[]>(() => {
         name: project.name,
         color: project.color,
         tasks,
-        isToday: tasks.some(t => toISODate(new Date(t.dueDate ?? '')) === todayISO.value),
+        isToday: tasks.some((t) => t.dueDate === store.todayISO),
       })
       byProject.delete(project.id)
     }
@@ -226,7 +359,7 @@ const projectGroups = computed<ProjectGroup[]>(() => {
       name: 'No project',
       color: null,
       tasks,
-      isToday: tasks.some(t => toISODate(new Date(t.dueDate ?? '')) === todayISO.value),
+      isToday: tasks.some((t) => t.dueDate === store.todayISO),
     })
   }
   return ordered
@@ -263,72 +396,32 @@ function onClearSearch() {
   searchInput.value?.focus()
 }
 
-function onCreateTask(draft: Parameters<typeof store.addTask>[0]) {
-  store.addTask(draft)
-  // Real mode persists through POST /api/v1/tasks; the preview note only
-  // applies to design-review (mock) builds.
-  if (useMock('TASKS')) {
-    showPreviewNote('Task captured locally — it will sync once the Task API is connected.')
-  }
-}
-
-/** The backend completes tasks only from IN_PROGRESS (task domain
- *  lifecycle); mock mode keeps the design-review toggle + undo. */
 function canToggleComplete(task: Task): boolean {
-  return (useMock('TASKS') || task.status === 'IN_PROGRESS') && task.status !== 'COMPLETED'
+  return task.status !== 'CANCELLED'
 }
 
 function onRetry() {
   store.load(null)
 }
-
-/* ---------------- Completion toast ---------------- */
-
-interface ToastState {
-  title: string
-  kind: 'complete' | 'reopen' | 'create'
-}
-
-const toast = ref<ToastState | null>(null)
-let toastTimer: ReturnType<typeof setTimeout> | undefined
-let toastWatchStopped = false
-
-watch(
-  () => store.lastUndoable,
-  (last) => {
-    if (!last || toastWatchStopped) return
-    if (last.kind === 'complete') {
-      showToast({ title: last.task.title, kind: 'complete' })
-    } else if (last.kind === 'reopen') {
-      showToast({ title: last.task.title, kind: 'reopen' })
-    }
-  },
-)
-
-function showToast(state: ToastState) {
-  toast.value = state
-  clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => (toast.value = null), 5000)
-}
-
-function onUndo() {
-  toastWatchStopped = true
-  store.undoLast()
-  toast.value = null
-  setTimeout(() => (toastWatchStopped = false), 0)
-}
 </script>
 
 <template>
   <div class="tasks-page">
-  
+    <!-- Date Segments (Primary Temporal Navigation - §7.2, AC-UI-010) + New Task CTA -->
+    <div class="top-nav-bar">
+      <TaskDateSegments
+        :active="store.dateSegment"
+        :counts="store.segmentCounts"
+        @change="onSegmentChange"
+      />
 
-    <!-- New task -->
-    <div class="hero-actions">
-      <UiButton variant="primary" @click="dialogOpen = true">
-        <Plus :size="16" :stroke-width="2" />
-        New Task
-      </UiButton>
+      <div class="hero-actions">
+        <UiButton variant="primary" @click="openCreateForCurrentSegment">
+          <Plus :size="16" :stroke-width="2" />
+          <span>New Task</span>
+          <kbd class="kbd tnum">c</kbd>
+        </UiButton>
+      </div>
     </div>
 
     <!-- Toolbar: filters prominent on the left, search + view controls subtle on the right
@@ -369,7 +462,7 @@ function onUndo() {
               type="button"
               class="seg-btn"
               :class="{ active: groupMode === 'date' }"
-              @click="groupMode = 'date'"
+              @click="setManualGroupMode('date')"
             >
               <CalendarDays :size="14" :stroke-width="1.75" />
               Date
@@ -378,7 +471,7 @@ function onUndo() {
               type="button"
               class="seg-btn"
               :class="{ active: groupMode === 'project' }"
-              @click="groupMode = 'project'"
+              @click="setManualGroupMode('project')"
             >
               <FolderKanban :size="14" :stroke-width="1.75" />
               Project
@@ -442,15 +535,15 @@ function onUndo() {
       @retry="onRetry"
     />
 
-    <!-- Empty / no results -->
+    <!-- Empty / no results (AC-UI-015) -->
     <EmptyState
-      v-else-if="emptyKind"
-      :icon="emptyKind === 'search' ? SearchX : ListChecks"
-      :title="emptyCopy.title"
-      :description="emptyCopy.description"
+      v-else-if="emptyState"
+      :icon="emptyState.icon"
+      :title="emptyState.title"
+      :description="emptyState.description"
     >
       <UiButton
-        v-if="emptyKind === 'search'"
+        v-if="emptyState.actionKind === 'clear-search'"
         variant="ghost"
         size="sm"
         class="empty-action"
@@ -458,9 +551,24 @@ function onUndo() {
       >
         Clear search
       </UiButton>
-      <UiButton v-else variant="primary" size="sm" class="empty-action" @click="dialogOpen = true">
+      <UiButton
+        v-else-if="emptyState.actionKind === 'clear-filter'"
+        variant="ghost"
+        size="sm"
+        class="empty-action"
+        @click="store.setFilter('ALL')"
+      >
+        Clear filter
+      </UiButton>
+      <UiButton
+        v-else
+        variant="primary"
+        size="sm"
+        class="empty-action"
+        @click="openCreateForCurrentSegment"
+      >
         <Plus :size="14" :stroke-width="2" />
-        New Task
+        {{ emptyState.actionLabel }}
       </UiButton>
     </EmptyState>
 
@@ -559,23 +667,6 @@ function onUndo() {
         </div>
       </SurfaceCard>
     </TransitionGroup>
-
-    <NewTaskDialog :open="dialogOpen" @close="dialogOpen = false" @create="onCreateTask" />
-
-    <!-- Completion toast -->
-    <Transition name="toast">
-      <div v-if="toast" class="completion-toast" role="status">
-        <span class="toast-icon">
-          <CheckCircle2 v-if="toast.kind === 'complete'" :size="14" :stroke-width="2.5" />
-          <Undo2 v-else :size="14" :stroke-width="2.5" />
-        </span>
-        <span class="toast-text">
-          <strong>{{ toast.kind === 'complete' ? 'Task completed' : 'Task reopened' }}</strong>
-          <span class="toast-title">{{ toast.title }}</span>
-        </span>
-        <button class="undo" type="button" @click="onUndo">Undo</button>
-      </div>
-    </Transition>
   </div>
 </template>
 
@@ -591,11 +682,38 @@ function onUndo() {
 
 /* ---------- Search & actions ---------- */
 
+.top-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
 .hero-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
+}
+
+.hero-actions .kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  margin-left: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: var(--on-accent);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: middle;
 }
 
 .search {

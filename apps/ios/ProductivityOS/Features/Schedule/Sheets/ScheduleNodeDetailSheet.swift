@@ -51,13 +51,16 @@ public struct ScheduleNodeDetailSheet: View {
 
                             if let time = node.time ?? node.targetTime {
                                 HStack(spacing: 4) {
-                                    Image(systemName: "clock")
-                                        .font(.system(size: 11))
+                                    Image(systemName: "clock.fill")
+                                        .font(.system(size: 10, weight: .bold))
                                     Text(time)
-                                        .font(AppTypography.captionSmall)
-                                        .fontWeight(.semibold)
+                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .monospacedDigit()
                                 }
-                                .foregroundStyle(AppColors.textSecondary)
+                                .foregroundStyle(AppColors.primary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(AppColors.primaryTint))
                             }
                         }
 
@@ -72,6 +75,9 @@ public struct ScheduleNodeDetailSheet: View {
                                 .foregroundStyle(AppColors.textSecondary)
                         }
                     }
+
+                    // Prominent Hero Time & Duration Block
+                    timeAndDurationHeroCard
 
                     Divider()
 
@@ -310,6 +316,217 @@ public struct ScheduleNodeDetailSheet: View {
         )
     }
 
+    // MARK: - Time & Duration Hero Block
+
+    @ViewBuilder
+    private var timeAndDurationHeroCard: some View {
+        let startTime = node.time ?? node.targetTime
+        let duration = node.durationMinutes
+        let calculatedEnd = (startTime != nil && duration != nil) ? calculateEndTime(startTime: startTime!, durationMinutes: duration!) : nil
+        let endTime = calculatedEnd ?? node.projectedTime
+
+        if startTime != nil || duration != nil {
+            VStack(spacing: 14) {
+                // Top Header Row
+                HStack(alignment: .center) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.badge.fill")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(AppColors.primary)
+
+                        Text("TIME & DURATION")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppColors.primary)
+                            .tracking(0.6)
+                    }
+
+                    Spacer()
+
+                    if let duration {
+                        HStack(spacing: 4) {
+                            Image(systemName: "hourglass")
+                                .font(.system(size: 10, weight: .bold))
+                            Text("\(duration) min")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                        }
+                        .foregroundStyle(AppColors.primary)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(AppColors.primaryTint))
+                    }
+                }
+
+                // Center Hero Time Row
+                if let startTime, let endTime {
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("START")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundStyle(AppColors.textTertiary)
+                                .tracking(0.5)
+
+                            Text(startTime)
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(AppColors.textPrimary)
+                        }
+
+                        Spacer()
+
+                        VStack(spacing: 3) {
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(AppColors.primary)
+
+                            if let duration {
+                                Text(formatDuration(duration))
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .monospacedDigit()
+                                    .foregroundStyle(AppColors.textSecondary)
+                            }
+                        }
+                        .padding(.horizontal, 8)
+
+                        Spacer()
+
+                        VStack(alignment: .trailing, spacing: 3) {
+                            Text(node.type == .anchor ? "PROJECTED" : "END")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundStyle(AppColors.textTertiary)
+                                .tracking(0.5)
+
+                            Text(endTime)
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(AppColors.textPrimary)
+                        }
+                    }
+                    .padding(.vertical, 2)
+
+                    // Visual Duration Timeline Bar
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color(hex: "F1F5F9"))
+                                .frame(height: 8)
+
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color(hex: "818CF8"), AppColors.primary],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: max(geo.size.width * min(1.0, Double(duration ?? 30) / 120.0), 28), height: 8)
+                        }
+                    }
+                    .frame(height: 8)
+
+                    // Timeline footer labels
+                    HStack {
+                        Text(startTime)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(AppColors.textSecondary)
+
+                        Spacer()
+
+                        if let duration {
+                            Text("\(duration) minute allocated window")
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundStyle(AppColors.textSecondary)
+                        }
+
+                        Spacer()
+
+                        Text(endTime)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(AppColors.textSecondary)
+                    }
+                } else if let startTime {
+                    // Start time only (e.g. Wake anchor)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("SCHEDULED MILESTONE")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundStyle(AppColors.textTertiary)
+                                .tracking(0.5)
+
+                            Text(startTime)
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(AppColors.textPrimary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: node.anchorKind == "wake" ? "sun.horizon.fill" : "clock.fill")
+                            .font(.system(size: 32))
+                            .foregroundStyle(AppColors.primary.opacity(0.8))
+                    }
+                } else if let duration {
+                    // Duration only
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("ESTIMATED DURATION")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundStyle(AppColors.textTertiary)
+                                .tracking(0.5)
+
+                            Text("\(duration) min")
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(AppColors.textPrimary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "timer")
+                            .font(.system(size: 32))
+                            .foregroundStyle(AppColors.primary.opacity(0.8))
+                    }
+                }
+            }
+            .padding(AppSpacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous)
+                    .fill(AppColors.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous)
+                            .stroke(AppColors.surfaceBorder, lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+            )
+        }
+    }
+
+    private func calculateEndTime(startTime: String, durationMinutes: Int) -> String? {
+        let clean = startTime.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = clean.components(separatedBy: ":")
+        guard parts.count >= 2,
+              let startHours = Int(parts[0].trimmingCharacters(in: .whitespaces)),
+              let startMins = Int(parts[1].prefix(2).trimmingCharacters(in: .whitespaces)) else {
+            return nil
+        }
+        let totalStartMinutes = (startHours * 60) + startMins
+        let totalEndMinutes = (totalStartMinutes + durationMinutes) % (24 * 60)
+        let endHours = totalEndMinutes / 60
+        let endMins = totalEndMinutes % 60
+        return String(format: "%02d:%02d", endHours, endMins)
+    }
+
+    private func formatDuration(_ minutes: Int) -> String {
+        if minutes >= 60 {
+            let hours = minutes / 60
+            let remaining = minutes % 60
+            return remaining > 0 ? "\(hours)h \(remaining)m" : "\(hours)h"
+        }
+        return "\(minutes)m"
+    }
+
     private var metadataAttributesCard: some View {
         VStack(spacing: 10) {
             HStack {
@@ -323,6 +540,20 @@ public struct ScheduleNodeDetailSheet: View {
                     .foregroundStyle(AppColors.textPrimary)
             }
 
+            if let time = node.time ?? node.targetTime {
+                HStack {
+                    Text("Scheduled Time")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                    Spacer()
+                    Text(time)
+                        .font(AppTypography.caption)
+                        .fontWeight(.bold)
+                        .monospacedDigit()
+                        .foregroundStyle(AppColors.textPrimary)
+                }
+            }
+
             if let duration = node.durationMinutes {
                 HStack {
                     Text("Duration")
@@ -331,7 +562,8 @@ public struct ScheduleNodeDetailSheet: View {
                     Spacer()
                     Text("\(duration) minutes")
                         .font(AppTypography.caption)
-                        .fontWeight(.medium)
+                        .fontWeight(.bold)
+                        .monospacedDigit()
                         .foregroundStyle(AppColors.textPrimary)
                 }
             }
