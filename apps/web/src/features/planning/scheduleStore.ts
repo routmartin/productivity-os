@@ -8,11 +8,13 @@ import type {
   HabitStreakDay,
   PreviewState,
   ScheduleEdge,
+  ScheduleEdgeType,
   ScheduleGraph,
   ScheduleLayoutMode,
   ScheduleNode,
   SchedulePhase,
   SchedulePhaseId,
+  UpdateStepPayload,
 } from './types'
 
 const STORAGE_KEY = 'productivity-os:schedule-layout'
@@ -439,11 +441,20 @@ export const useScheduleStore = defineStore('schedule', () => {
 
     // In the sample day, base overflow is 45m if afternoon/evening pending
     // As items complete, overflow shrinks proportionally
-    let newOverflow = 0
+    let baseOverflow = 0
     if (pendingHabits > 0 || incompleteTasks > 0) {
       // 15m per pending habit/task up to max 45m
-      newOverflow = Math.min(45, (pendingHabits + incompleteTasks) * 15)
+      baseOverflow = Math.min(45, (pendingHabits + incompleteTasks) * 15)
     }
+
+    // Additional duration overflow beyond standard 285m total planned task time (if any)
+    const totalTaskMinutes = taskNodes.value.reduce(
+      (sum, t) => sum + (t.durationMinutes ?? t.totalMinutes ?? 60),
+      0,
+    )
+    const durationDelta = Math.max(0, totalTaskMinutes - 285)
+
+    const newOverflow = baseOverflow + durationDelta
 
     graph.value.overflowMinutes = newOverflow
 
@@ -755,8 +766,174 @@ export const useScheduleStore = defineStore('schedule', () => {
     return newNode
   }
 
+  function rewireEdges(): void {
+    if (!graph.value || graph.value.nodes.length < 2) return
+
+    const newEdges: ScheduleEdge[] = []
+    for (let i = 0; i < graph.value.nodes.length - 1; i++) {
+      const from = graph.value.nodes[i]
+      const to = graph.value.nodes[i + 1]
+      const edgeType: ScheduleEdgeType =
+        from.phase !== to.phase
+          ? 'phase'
+          : from.type === 'habit' && to.type === 'habit'
+            ? 'prerequisite'
+            : 'sequential'
+      const existing = graph.value.edges.find(
+        (e) => e.fromNodeId === from.id && e.toNodeId === to.id,
+      )
+      newEdges.push({
+        id: `e-${from.id}-${to.id}`,
+        fromNodeId: from.id,
+        toNodeId: to.id,
+        type: edgeType,
+        active: existing ? existing.active : Boolean(from.completed),
+      })
+    }
+    graph.value.edges = newEdges
+  }
+
   async function addNode(phaseId: string, stepData: Omit<AddStepPayload, 'phaseId'>): Promise<ScheduleNode> {
     return addStep({ phaseId, ...stepData })
+  }
+
+  // Schedule Step Update & In-Place Editing (Spec AC-010, AC-011, AC-012)
+  async function updateStep(
+    stepId: string,
+    payload: UpdateStepPayload,
+  ): Promise<ScheduleNode> {
+    if (!graph.value) {
+      throw new Error('Schedule graph is not loaded')
+    }
+
+    const nodeIndex = graph.value.nodes.findIndex((n) => n.id === stepId)
+    if (nodeIndex === -1) {
+      throw new Error(`Schedule node not found: ${stepId}`)
+    }
+
+    const targetNode = graph.value.nodes[nodeIndex]
+
+    // 1. Guard against anchor node updates (Spec AC-011)
+    if (
+      targetNode.type === 'anchor' ||
+      targetNode.anchorKind != null ||
+      stepId.startsWith('anchor-')
+    ) {
+      throw new Error('Anchor node update is not allowed')
+    }
+
+    errorMessage.value = null
+
+    // 2. Snapshot previous state for optimistic rollback
+    const prevNodes = JSON.parse(JSON.stringify(graph.value.nodes))
+    const prevEdges = JSON.parse(JSON.stringify(graph.value.edges))
+    const prevOverflow = graph.value.overflowMinutes
+    const prevProjectedBedtime = graph.value.projectedBedtime
+
+    // 3. Mutate node in nodes
+    targetNode.title = payload.title.trim()
+    if (payload.subtitle !== undefined) {
+      targetNode.subtitle = payload.subtitle.trim() || undefined
+    }
+    if (payload.timeSlot !== undefined) {
+      targetNode.time = payload.timeSlot.trim() || null
+    }
+    const duration = payload.durationMinutes ?? payload.totalMinutes
+    if (duration !== undefined) {
+      targetNode.durationMinutes = duration
+      if (targetNode.type === 'task') {
+        targetNode.totalMinutes = duration
+      }
+    }
+    if (payload.notes !== undefined) {
+      targetNode.notes = payload.notes.trim() || undefined
+    }
+    if (payload.iconName !== undefined) {
+      targetNode.icon = payload.iconName
+    }
+
+    // 4. If phase changed, repartition and rewire edges dynamically (Spec AC-012)
+    const phaseChanged = Boolean(payload.phase && payload.phase !== targetNode.phase)
+    if (phaseChanged) {
+      const rawPhase = payload.phase!.toLowerCase()
+      const newPhase: SchedulePhaseId =
+        rawPhase === 'evening' ? 'bedtime' : (rawPhase as SchedulePhaseId)
+      targetNode.phase = newPhase
+
+      // Remove from current position
+      graph.value.nodes.splice(nodeIndex, 1)
+
+      // Repartition: find insertion index for newPhase
+      let insertIndex = graph.value.nodes.length
+      if (newPhase === 'bedtime') {
+        const bedtimeAnchorIdx = graph.value.nodes.findIndex(
+          (n) => n.type === 'anchor' && n.anchorKind === 'bedtime',
+        )
+        if (bedtimeAnchorIdx !== -1) {
+          insertIndex = bedtimeAnchorIdx
+        }
+      } else {
+        let lastPhaseIdx = -1
+        for (let i = 0; i < graph.value.nodes.length; i++) {
+          if (graph.value.nodes[i].phase === newPhase) {
+            lastPhaseIdx = i
+          }
+        }
+        if (lastPhaseIdx !== -1) {
+          insertIndex = lastPhaseIdx + 1
+        } else {
+          const phaseOrder: SchedulePhaseId[] = ['morning', 'deep-focus', 'afternoon', 'bedtime']
+          const currentTargetOrder = phaseOrder.indexOf(newPhase)
+          const nextPhaseNodeIdx = graph.value.nodes.findIndex(
+            (n) => phaseOrder.indexOf(n.phase) > currentTargetOrder,
+          )
+          if (nextPhaseNodeIdx !== -1) {
+            insertIndex = nextPhaseNodeIdx
+          }
+        }
+      }
+
+      graph.value.nodes.splice(insertIndex, 0, targetNode)
+
+      // Re-assign order numbers
+      graph.value.nodes.forEach((n, idx) => {
+        n.order = idx + 1
+      })
+
+      // Rewire edges dynamically
+      rewireEdges()
+    }
+
+    // 5. Trigger bedtime recalculation
+    recalculateBedtime()
+
+    // In preview mode, keep local simulation
+    if (previewMode.value !== null) {
+      return targetNode
+    }
+
+    // 6. Call scheduleApi.updateStep. Roll back on error.
+    try {
+      const serverUpdated = await scheduleApi.updateStep(stepId, {
+        ...payload,
+        date: payload.date ?? graph.value.date,
+      })
+      if (serverUpdated) {
+        Object.assign(targetNode, serverUpdated)
+      }
+      return targetNode
+    } catch (err) {
+      // Rollback to snapshot on error
+      graph.value.nodes = prevNodes
+      graph.value.edges = prevEdges
+      graph.value.overflowMinutes = prevOverflow
+      graph.value.projectedBedtime = prevProjectedBedtime
+      recalculateBedtime()
+
+      errorMessage.value =
+        err instanceof Error ? err.message : 'Failed to update step on server'
+      throw err
+    }
   }
 
   // Node Deletion from Schedule (Spec AC-008, Plan AC-C05)
@@ -921,8 +1098,10 @@ export const useScheduleStore = defineStore('schedule', () => {
     stopFocus,
     addStep,
     addNode,
+    updateStep,
     deleteNode,
     recalculateBedtime,
+    rewireEdges,
     load,
   }
 })
