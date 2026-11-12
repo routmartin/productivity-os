@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved for Implementation
+Verified & Complete
 
 ## Specification
 
@@ -343,16 +343,16 @@ Returns the updated `ScheduleNodeDTO`:
 
 Per `AGENTS.md`, each milestone must be verified before presenting completion:
 
-- [ ] **Backend Verification (`apps/api`):**
+- [x] **Backend Verification (`apps/api`):**
   - Run `./gradlew :apps:api:test` — all unit and integration tests must pass.
   - Verify error response format matching ADR-005 structured error standard (`code`, `message`, `traceId`).
-- [ ] **Web Frontend Verification (`apps/web`):**
+- [x] **Web Frontend Verification (`apps/web`):**
   - Run `pnpm run typecheck` — zero TypeScript compilation errors.
   - Run `pnpm run lint` — zero ESLint violations.
   - Run `pnpm run test:unit` — all store and component tests pass.
-- [ ] **iOS Verification (`apps/ios`):**
+- [x] **iOS Verification (`apps/ios`):**
   - Run `swift test --package-path apps/ios` — all unit tests pass.
-- [ ] **Review Loop:**
+- [x] **Review Loop:**
   - Execute independent review via `scripts/agent-review.sh` or `code-reviewer` agent.
 
 ---

@@ -268,7 +268,9 @@ class ScheduleService(
         if (entryOpt.isPresent) {
             val entry = entryOpt.get()
             entry.title = request.title.trim()
-            entry.subtitle = request.subtitle?.trim()
+            if (request.subtitle != null) {
+                entry.subtitle = request.subtitle.trim()
+            }
             if (!request.phase.isNullOrBlank()) {
                 entry.phase = request.phase
             }
@@ -303,7 +305,9 @@ class ScheduleService(
         if (habitOpt.isPresent) {
             val habit = habitOpt.get()
             habit.title = request.title.trim()
-            habit.subtitle = request.subtitle?.trim()
+            if (request.subtitle != null) {
+                habit.subtitle = request.subtitle.trim()
+            }
             if (!request.iconName.isNullOrBlank()) {
                 habit.icon = request.iconName.trim()
             }
