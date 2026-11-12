@@ -122,6 +122,19 @@ All visual layouts render from the same underlying daily activity graph for a gi
 - **Node Deletion & Reordering:**
   - Nodes can be removed from today's plan via the Context Drawer ("Delete from Today"). Removing a habit does not corrupt historical streak logs.
 
+### 7. Step Details Update & Live Sync
+- **In-Place Step Mutation:**
+  - Clicking any custom node (Habit, Activity Block, Recharge Break) allows editing its core attributes: title, subtitle, phase, target time / time slot, duration in minutes, notes, and icon (for habits).
+  - Editing can be initiated directly within the Step Detail Dialog (`UiDialog size="full"` on web, inspection sheet on iOS).
+  - Saving the updated step persists the changes via `PUT /api/v1/schedule/steps/{id}`.
+- **Topological Edge Rewiring & Phase Transitions:**
+  - If a step's phase is changed (e.g. from `morning` to `deep-focus` or `afternoon`), the step is re-assigned to the new phase container across all visual layouts (`Spine`, `Journey`, `Matrix`).
+  - Connecting graph edges are dynamically re-routed to preserve sequential ordering and avoid orphan links or broken DAG trajectories.
+- **Bedtime Projection Recalculation:**
+  - Modifying duration or completion expectations automatically triggers the Bedtime Projection Engine to re-evaluate overflow minutes and update the Bedtime anchor node.
+- **Circadian Anchor Protection:**
+  - Circadian anchor nodes (`anchor-wake` and `anchor-bedtime`) are immutable boundary anchors and cannot be mutated via step update endpoints.
+
 ---
 
 ## Rules
@@ -132,6 +145,9 @@ All visual layouts render from the same underlying daily activity graph for a gi
 4. **State Parity Across Layouts:** All three layouts project the exact same underlying state. An action taken in one layout (e.g. check habit, start activity) immediately reflects if the user switches to another layout.
 5. **Non-Destructive Habit Toggle:** Unchecking an accidentally checked habit reverses completion and restores the previous streak count without corrupting historical logs.
 6. **Bedtime Invariant:** Every day has a configured Target Bedtime (defaulting to 22:30 if unset).
+7. **Anchor Immutability Protection:** Circadian anchor nodes (`anchor-wake` and `anchor-bedtime`) are permanent boundary milestones and cannot be deleted or mutated via generic step endpoints. Any attempt to update an anchor node via `PUT /api/v1/schedule/steps/{id}` is rejected with `400 Bad Request` (`ANCHOR_UPDATE_NOT_ALLOWED`).
+8. **Step Mutation Parity:** Updating a step immediately synchronizes across all three layout projections (`Spine`, `Journey`, `Matrix`) without full page reloads.
+9. **Habit Blueprint Propagation:** Updating a habit's definition (title, duration, target time, notes) updates the recurring blueprint in `schedule_habits`, whereas updating an activity block modifies the specific date's entry in `schedule_entries`.
 
 ---
 
@@ -193,6 +209,32 @@ All visual layouts render from the same underlying daily activity graph for a gi
 - **Then** the schedule graph is automatically pre-populated with the user's recurring Blueprint (wake anchor, morning habit stack, default activity blocks, and bedtime anchor),
 - **And** all blueprint items are displayed ready for immediate tracking or customization.
 
+### AC-010: Step Details Update & Real-Time Sync
+- **Given** an existing custom step or habit on the schedule link-map,
+- **When** the user edits its title, subtitle, duration, target time, or protocol notes and confirms the update,
+- **Then** the updated step details persist to the backend via `PUT /api/v1/schedule/steps/{id}` returning HTTP `200 OK` with the updated `ScheduleNodeDTO`,
+- **And** the step node on the canvas immediately reflects the updated attributes across all layout views (`Spine`, `Journey`, `Matrix`),
+- **And** the bedtime projection engine recalculates any shift based on the updated duration,
+- **And** adjacent connecting edges remain cleanly wired without orphaned links.
+
+### AC-011: Anchor Immutability Protection on Update
+- **Given** an anchor node (`anchor-wake` or `anchor-bedtime`),
+- **When** a client sends a `PUT /api/v1/schedule/steps/{id}` targeting the anchor ID,
+- **Then** the server rejects the request with HTTP `400 Bad Request` and structured error code `ANCHOR_UPDATE_NOT_ALLOWED`,
+- **And** the anchor node attributes (e.g., wake `06:30`, bedtime `22:30`) remain unchanged in the graph.
+
+### AC-012: Step Phase Reassignment & Topological Rewiring
+- **Given** a schedule step currently assigned to a specific phase (e.g., `morning`),
+- **When** the user updates the step's phase to another valid phase (e.g., `deep-focus` or `afternoon`),
+- **Then** the step moves into the target phase container across all visual layouts (`Spine`, `Journey`, `Matrix`),
+- **And** topological connecting edges dynamically rewire so that the moved node is placed in chronological sequence within the new phase without orphan edges.
+
+### AC-013: User Isolation on Step Update (ADR-004)
+- **Given** User A and User B,
+- **When** User A attempts to update a step or habit owned by User B via `PUT /api/v1/schedule/steps/{id}`,
+- **Then** the server responds with HTTP `404 Not Found` without disclosing the resource's existence,
+- **And** User B's schedule record remains completely unmodified.
+
 ---
 
 ## Edge Cases
@@ -225,3 +267,4 @@ All visual layouts render from the same underlying daily activity graph for a gi
 - **2026-11-11:** *(Clarification)* Decoupled Schedule from Tasks, Daily Top 3, and Focus Sessions; established Schedule as a fully independent domain.
 - **2026-11-11:** Added Daily Blueprint engine and In-Line `+` creation workflows (AC-007, AC-008, AC-009).
 - **2026-11-11:** Replaced right slide-out panel with full-size, big modal dialog (`UiDialog size="full"`) for step details (AC-006, AC-008).
+- **2026-11-12:** Added step update requirement, anchor immutability protection, phase reassignment, and user isolation acceptance criteria (AC-010, AC-011, AC-012, AC-013).
