@@ -24,7 +24,7 @@ final class GoalServiceTests: XCTestCase {
             200
         ))
 
-        let goals = try await GoalService(apiClient: mock).listGoals()
+        let goals = try await GoalService(apiClient: mock, cache: APICache()).listGoals()
 
         XCTAssertEqual(goals.count, 1)
         XCTAssertEqual(goals[0].title, "Build the best version of Productivity OS")
@@ -56,7 +56,7 @@ final class GoalServiceTests: XCTestCase {
         ))
 
         let id = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
-        let goal = try await GoalService(apiClient: mock).getGoal(id: id)
+        let goal = try await GoalService(apiClient: mock, cache: APICache()).getGoal(id: id)
 
         XCTAssertEqual(goal.title, "Financial Freedom")
         XCTAssertEqual(goal.status, .active)
@@ -72,7 +72,7 @@ final class GoalServiceTests: XCTestCase {
         let mock = MockAPIClient()
         mock.defaultResponse = .success((Data("[]".utf8), 200))
 
-        let goals = try await GoalService(apiClient: mock).listGoals()
+        let goals = try await GoalService(apiClient: mock, cache: APICache()).listGoals()
         XCTAssertTrue(goals.isEmpty)
     }
 }
@@ -91,7 +91,7 @@ final class ProjectServiceTests: XCTestCase {
         ))
 
         let projectId = UUID(uuidString: "B1111111-1111-1111-1111-111111111111")!
-        let tasks = try await ProjectService(apiClient: mock).listTasks(projectId: projectId)
+        let tasks = try await ProjectService(apiClient: mock, cache: APICache()).listTasks(projectId: projectId)
 
         XCTAssertEqual(tasks.count, 2)
         XCTAssertEqual(tasks[0].status, .completed)

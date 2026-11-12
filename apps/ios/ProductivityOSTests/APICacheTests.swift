@@ -98,6 +98,7 @@ final class APICacheTests: XCTestCase {
     }
 
     func testServiceUpdateTaskEvictsRelatedPrefixes() async throws {
+        await APICache.shared.reset()
         let mock = MockAPIClient()
         let taskID = UUID()
         mock.scriptedResponses = [
@@ -105,7 +106,6 @@ final class APICacheTests: XCTestCase {
             .success((Data("[]".utf8), 200)), // projects
             .success((Data("[]".utf8), 200)), // goals
             .success((Data("[]".utf8), 200)), // tasks
-            .success((Data("[]".utf8), 200)), // daily-top-three
             // Then the PUT
             .success((
                 Data("""
@@ -142,7 +142,7 @@ final class APICacheTests: XCTestCase {
         _ = try await goals.listGoals()
         _ = try await tasks.listActiveTasks()
 
-        // 3 cache populates + 1 PUT + 3 repopulates after eviction = 7
-        XCTAssertEqual(mock.recordedRequests.count, 7)
+        // 3 initial reads + 1 PUT + 2 repopulates (projects & tasks; goals stays cached) = 6
+        XCTAssertEqual(mock.recordedRequests.count, 6)
     }
 }

@@ -141,6 +141,6 @@ final class TodayViewModelTests: XCTestCase {
 
         let expectedSeconds = TimeInterval(8 * 60 * 60 + realDurationSeconds)
         XCTAssertEqual(viewModel.todayFocusedSeconds, expectedSeconds, accuracy: 60)
-        XCTAssertLessThan(viewModel.weeklyFocusFormatted, "10h 0m")
+        XCTAssertEqual(viewModel.weeklyFocusFormatted, "8h 25m")
     }
 }

@@ -95,3 +95,72 @@ public struct UpdateTaskRequestBody: Codable, Sendable {
         self.estimatedDurationMinutes = estimatedDurationMinutes
     }
 }
+
+// MARK: - Schedule wire contracts (backend: ScheduleController / schedule/dto)
+
+public struct ToggleHabitRequestBody: Codable, Sendable {
+    public let date: String?
+
+    public init(date: String? = nil) {
+        self.date = date
+    }
+}
+
+public struct ToggleHabitResponse: Codable, Sendable {
+    public let habitId: UUID
+    public let completed: Bool
+    public let streak: Int
+    public let history: [HabitStreakDay]
+    public let updatedEdges: [ScheduleEdge]
+    public let projectedBedtime: String
+    public let overflowMinutes: Int
+
+    public init(
+        habitId: UUID,
+        completed: Bool,
+        streak: Int,
+        history: [HabitStreakDay],
+        updatedEdges: [ScheduleEdge],
+        projectedBedtime: String,
+        overflowMinutes: Int
+    ) {
+        self.habitId = habitId
+        self.completed = completed
+        self.streak = streak
+        self.history = history
+        self.updatedEdges = updatedEdges
+        self.projectedBedtime = projectedBedtime
+        self.overflowMinutes = overflowMinutes
+    }
+}
+
+public struct AddScheduleStepRequestBody: Codable, Sendable {
+    public let date: String?
+    public let phase: String
+    public let type: String
+    public let title: String
+    public let subtitle: String?
+    public let timeSlot: String?
+    public let durationMinutes: Int?
+    public let iconName: String?
+
+    public init(
+        date: String? = nil,
+        phase: String,
+        type: String,
+        title: String,
+        subtitle: String? = nil,
+        timeSlot: String? = nil,
+        durationMinutes: Int? = nil,
+        iconName: String? = nil
+    ) {
+        self.date = date
+        self.phase = phase
+        self.type = type
+        self.title = title
+        self.subtitle = subtitle
+        self.timeSlot = timeSlot
+        self.durationMinutes = durationMinutes
+        self.iconName = iconName
+    }
+}

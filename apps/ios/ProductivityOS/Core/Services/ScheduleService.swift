@@ -2,31 +2,80 @@ import Foundation
 
 public protocol ScheduleServicing: Sendable {
     func loadSchedule(for date: Date) async throws -> ScheduleGraph
+    func toggleHabit(habitId: UUID, for date: Date) async throws -> ToggleHabitResponse
+    func addStep(_ payload: AddStepPayload, for date: Date) async throws -> ScheduleNode
+    func deleteStep(id: String) async throws
     func createDefaultBlueprint(for dateString: String) -> ScheduleGraph
 }
 
 public final class ScheduleService: ScheduleServicing {
     public static let shared = ScheduleService()
 
-    public init() {}
-
-    public func loadSchedule(for date: Date) async throws -> ScheduleGraph {
+    private static let isoDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        let dateString = formatter.string(from: date)
-        return createDefaultBlueprint(for: dateString)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        return formatter
+    }()
+
+    private let apiClient: APIRequesting
+
+    public init(apiClient: APIRequesting = APIClient.shared) {
+        self.apiClient = apiClient
+    }
+
+    public func loadSchedule(for date: Date) async throws -> ScheduleGraph {
+        let dateString = Self.isoDateFormatter.string(from: date)
+
+        do {
+            let remoteGraph: ScheduleGraph = try await apiClient.request(AppEndpoint.getSchedule(date: dateString))
+            return remoteGraph
+        } catch let apiError as APIError {
+            if case .unauthorized = apiError {
+                throw apiError
+            }
+            return createDefaultBlueprint(for: dateString)
+        } catch {
+            return createDefaultBlueprint(for: dateString)
+        }
+    }
+
+    public func toggleHabit(habitId: UUID, for date: Date) async throws -> ToggleHabitResponse {
+        let dateString = Self.isoDateFormatter.string(from: date)
+        let body = ToggleHabitRequestBody(date: dateString)
+        let encoded = try APIClient.encodedBody(body)
+        return try await apiClient.request(AppEndpoint.toggleHabit(id: habitId, body: encoded))
+    }
+
+    public func addStep(_ payload: AddStepPayload, for date: Date) async throws -> ScheduleNode {
+        let dateString = Self.isoDateFormatter.string(from: date)
+        let body = AddScheduleStepRequestBody(
+            date: dateString,
+            phase: payload.phaseId.rawValue,
+            type: payload.type.rawValue,
+            title: payload.title,
+            subtitle: payload.subtitle,
+            timeSlot: payload.timeSlot,
+            durationMinutes: payload.totalMinutes,
+            iconName: payload.iconName
+        )
+        let encoded = try APIClient.encodedBody(body)
+        return try await apiClient.request(AppEndpoint.addScheduleStep(body: encoded))
+    }
+
+    public func deleteStep(id: String) async throws {
+        _ = try await apiClient.send(AppEndpoint.deleteScheduleStep(id: id))
     }
 
     private static func generateHistory(streakDays: Int) -> [HabitStreakDay] {
         var days: [HabitStreakDay] = []
         let calendar = Calendar.current
         let today = Date()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
 
         for i in (0..<14).reversed() {
             if let d = calendar.date(byAdding: .day, value: -i, to: today) {
-                let dateStr = formatter.string(from: d)
+                let dateStr = Self.isoDateFormatter.string(from: d)
                 let completed = i < streakDays
                 days.append(HabitStreakDay(date: dateStr, completed: completed))
             }

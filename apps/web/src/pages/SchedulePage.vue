@@ -9,6 +9,7 @@ import {
   Plus,
   RotateCcw,
   Sparkles,
+  X,
 } from 'lucide-vue-next'
 
 import EmptyState from '@/components/shared/EmptyState.vue'
@@ -45,12 +46,13 @@ function previewFromQuery(): PreviewState {
 }
 
 async function load(preview: PreviewState) {
-  await scheduleStore.load(preview)
+  const dateParam = typeof route.query.date === 'string' ? route.query.date : undefined
+  await scheduleStore.load(preview, dateParam)
 }
 
 onMounted(() => load(previewFromQuery()))
 watch(
-  () => route.query.preview,
+  () => [route.query.preview, route.query.date],
   () => load(previewFromQuery()),
 )
 
@@ -71,6 +73,17 @@ const activeLayoutComponent = computed(() => {
 })
 
 const formattedDate = computed(() => {
+  if (scheduleStore.graph?.date) {
+    const parts = scheduleStore.graph.date.split('-').map(Number)
+    if (parts.length === 3 && !parts.some(isNaN)) {
+      const dateObj = new Date(parts[0], parts[1] - 1, parts[2])
+      return new Intl.DateTimeFormat('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      }).format(dateObj)
+    }
+  }
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
     month: 'long',
@@ -79,11 +92,17 @@ const formattedDate = computed(() => {
 })
 
 function onRetry() {
-  scheduleStore.load(null)
+  const dateParam = typeof route.query.date === 'string' ? route.query.date : undefined
+  scheduleStore.load(null, dateParam)
+}
+
+function onDismissError() {
+  scheduleStore.errorMessage = null
 }
 
 function onLoadSample() {
-  scheduleStore.load(null)
+  const dateParam = typeof route.query.date === 'string' ? route.query.date : undefined
+  scheduleStore.load(null, dateParam)
 }
 </script>
 
@@ -106,13 +125,33 @@ function onLoadSample() {
     <div v-else-if="isError" class="content-narrow">
       <ErrorState
         title="Schedule didn't load"
-        description="Your daily schedule link-map could not be loaded. Your data is safe — try loading it again."
+        :description="scheduleStore.errorMessage ?? 'Your daily schedule link-map could not be loaded. Your data is safe — try loading it again.'"
         @retry="onRetry"
       />
     </div>
 
     <!-- Main Schedule Content -->
     <template v-else>
+      <!-- Transient Action Error Banner (e.g. rollback or delete failure) -->
+      <div
+        v-if="scheduleStore.errorMessage"
+        class="schedule-error-banner"
+        role="alert"
+      >
+        <div class="error-banner-content">
+          <AlertTriangle :size="16" class="error-banner-icon" />
+          <span class="error-banner-text">{{ scheduleStore.errorMessage }}</span>
+        </div>
+        <button
+          type="button"
+          class="error-banner-dismiss"
+          aria-label="Dismiss error notification"
+          @click="onDismissError"
+        >
+          <X :size="14" />
+        </button>
+      </div>
+
       <header class="schedule-header">
         <div class="header-left">
           <span class="date-badge">
@@ -216,6 +255,62 @@ function onLoadSample() {
   margin: 0 auto;
   padding-top: var(--space-8);
   width: 100%;
+}
+
+/* Error Banner */
+.schedule-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--danger-soft);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--danger);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  animation: bannerSlideDown 0.2s var(--ease-out);
+}
+
+.error-banner-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.error-banner-icon {
+  flex-shrink: 0;
+}
+
+.error-banner-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+
+.error-banner-dismiss:hover {
+  opacity: 1;
+  background: rgba(240, 90, 90, 0.15);
+}
+
+@keyframes bannerSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Skeleton Loading */

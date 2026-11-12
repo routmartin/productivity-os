@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
+import { todayISODate } from './api'
+import { scheduleApi } from './scheduleApi'
 import type {
   AddStepPayload,
   HabitStreakDay,
@@ -14,6 +16,10 @@ import type {
 } from './types'
 
 const STORAGE_KEY = 'productivity-os:schedule-layout'
+
+function isUuid(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+}
 
 function getSavedLayout(): ScheduleLayoutMode {
   if (typeof window === 'undefined') return 'spine'
@@ -379,6 +385,8 @@ export const useScheduleStore = defineStore('schedule', () => {
   const activeLayout = ref<ScheduleLayoutMode>(getSavedLayout())
   const selectedNodeId = ref<string | null>(null)
   const activeTaskId = ref<string | null>(null)
+  const errorMessage = ref<string | null>(null)
+  const previewMode = ref<PreviewState>(null)
 
   // Getters
   const nodes = computed(() => graph.value?.nodes ?? [])
@@ -473,14 +481,25 @@ export const useScheduleStore = defineStore('schedule', () => {
     selectedNodeId.value = nodeId
   }
 
-  // Habit Stacking and Edge Illumination (Spec AC-002, AC-005)
-  function toggleHabit(nodeIdOrHabitId: string): void {
+  // Habit Stacking and Edge Illumination (Spec AC-002, AC-005, Plan AC-C02, AC-C03)
+  async function toggleHabit(nodeIdOrHabitId: string): Promise<void> {
     if (!graph.value) return
     const habit = graph.value.nodes.find(
       (n) => n.id === nodeIdOrHabitId || n.habitId === nodeIdOrHabitId,
     )
     if (!habit || habit.type !== 'habit') return
 
+    errorMessage.value = null
+
+    // 1. Snapshot previous state for optimistic rollback
+    const prevCompleted = habit.completed
+    const prevStreak = habit.streak
+    const prevHistory = habit.history ? JSON.parse(JSON.stringify(habit.history)) : undefined
+    const prevEdges = JSON.parse(JSON.stringify(graph.value.edges))
+    const prevOverflow = graph.value.overflowMinutes
+    const prevProjectedBedtime = graph.value.projectedBedtime
+
+    // 2. Optimistic local mutation
     const nextCompleted = !habit.completed
     habit.completed = nextCompleted
 
@@ -504,6 +523,63 @@ export const useScheduleStore = defineStore('schedule', () => {
     })
 
     recalculateBedtime()
+
+    // In preview mode or if habit has no valid UUID (legacy mock data), keep local simulation
+    const targetHabitId = habit.habitId ?? habit.id
+    if (previewMode.value !== null || !isUuid(targetHabitId)) {
+      return
+    }
+
+    // 3. Authoritative server sync
+    try {
+      const response = await scheduleApi.toggleHabit(targetHabitId, {
+        date: graph.value.date,
+      })
+
+      habit.completed = response.completed
+      habit.streak = response.streak
+      habit.history = response.history
+      graph.value.overflowMinutes = response.overflowMinutes
+      graph.value.projectedBedtime = response.projectedBedtime
+
+      if (response.updatedEdges && response.updatedEdges.length > 0) {
+        response.updatedEdges.forEach((updatedEdge) => {
+          const edgeIndex = graph.value!.edges.findIndex(
+            (e) =>
+              e.id === updatedEdge.id ||
+              (e.fromNodeId === updatedEdge.fromNodeId && e.toNodeId === updatedEdge.toNodeId),
+          )
+          if (edgeIndex !== -1) {
+            graph.value!.edges[edgeIndex] = {
+              ...graph.value!.edges[edgeIndex],
+              ...updatedEdge,
+            }
+          }
+        })
+      }
+
+      const bedtime = graph.value.nodes.find(
+        (n) => n.type === 'anchor' && n.anchorKind === 'bedtime',
+      )
+      if (bedtime) {
+        bedtime.overflowMinutes = response.overflowMinutes
+        bedtime.projectedTime = response.projectedBedtime
+      }
+    } catch (err) {
+      // 4. Rollback to snapshot on network / server failure (AC-C03)
+      habit.completed = prevCompleted
+      habit.streak = prevStreak
+      habit.history = prevHistory
+      graph.value.edges = prevEdges
+      graph.value.overflowMinutes = prevOverflow
+      graph.value.projectedBedtime = prevProjectedBedtime
+
+      recalculateBedtime()
+
+      errorMessage.value =
+        err instanceof Error ? err.message : 'Network failure toggling habit. Changes rolled back.'
+      console.error('Failed to sync habit toggle with server:', err)
+    }
   }
 
   // Native Activity Execution State (Autonomous to Schedule)
@@ -529,8 +605,8 @@ export const useScheduleStore = defineStore('schedule', () => {
     activeTaskId.value = null
   }
 
-  // Schedule Creation & Blueprint Engine (Spec AC-007)
-  function addStep(payload: AddStepPayload): ScheduleNode {
+  // Schedule Creation & Blueprint Engine (Spec AC-007, Plan AC-C04)
+  async function addStep(payload: AddStepPayload): Promise<ScheduleNode> {
     if (!graph.value) {
       graph.value = createMockScheduleGraph()
     }
@@ -539,38 +615,54 @@ export const useScheduleStore = defineStore('schedule', () => {
     const targetPhase: SchedulePhaseId =
       rawPhase === 'evening' ? 'bedtime' : (rawPhase as SchedulePhaseId)
 
-    const id = `node-${Date.now()}`
     const duration =
       payload.totalMinutes ??
       (payload.type === 'habit' ? 15 : payload.type === 'recharge' ? 15 : 60)
 
-    const newNode: ScheduleNode = {
-      id,
-      type: payload.type,
-      phase: targetPhase,
-      title: payload.title.trim(),
-      subtitle: payload.subtitle?.trim() || undefined,
-      time: payload.timeSlot?.trim() || null,
-      durationMinutes: duration,
-      order: graph.value.nodes.length + 1,
-    }
+    let newNode: ScheduleNode
 
-    if (payload.type === 'habit') {
-      newNode.habitId = id
-      newNode.icon = payload.iconName ?? 'Droplets'
-      newNode.streak = 1
-      newNode.completed = false
-      newNode.frequency = 'Daily'
-      newNode.history = generateHistory(1)
-    } else if (payload.type === 'task') {
-      newNode.taskId = `task-${Date.now()}`
-      newNode.priority = 'MEDIUM'
-      newNode.inFocus = false
-      newNode.completedMinutes = 0
-      newNode.totalMinutes = duration
-      newNode.projectName = 'Personal OS'
-    } else if (payload.type === 'recharge') {
-      newNode.rechargeKind = 'break'
+    if (previewMode.value !== null) {
+      const id = `node-${Date.now()}`
+      newNode = {
+        id,
+        type: payload.type,
+        phase: targetPhase,
+        title: payload.title.trim(),
+        subtitle: payload.subtitle?.trim() || undefined,
+        time: payload.timeSlot?.trim() || null,
+        durationMinutes: duration,
+        order: graph.value.nodes.length + 1,
+      }
+
+      if (payload.type === 'habit') {
+        newNode.habitId = id
+        newNode.icon = payload.iconName ?? 'Droplets'
+        newNode.streak = 1
+        newNode.completed = false
+        newNode.frequency = 'Daily'
+        newNode.history = generateHistory(1)
+      } else if (payload.type === 'task') {
+        newNode.taskId = `task-${Date.now()}`
+        newNode.priority = 'MEDIUM'
+        newNode.inFocus = false
+        newNode.completedMinutes = 0
+        newNode.totalMinutes = duration
+        newNode.projectName = 'Personal OS'
+      } else if (payload.type === 'recharge') {
+        newNode.rechargeKind = 'break'
+      }
+    } else {
+      // Async dispatch to backend to obtain canonical UUID (AC-C04 / D3)
+      newNode = await scheduleApi.addStep({
+        date: graph.value.date,
+        phase: targetPhase,
+        type: payload.type,
+        title: payload.title.trim(),
+        subtitle: payload.subtitle?.trim() || undefined,
+        timeSlot: payload.timeSlot?.trim() || undefined,
+        durationMinutes: duration,
+        iconName: payload.iconName,
+      })
     }
 
     // Determine insertion index in graph.nodes
@@ -621,14 +713,14 @@ export const useScheduleStore = defineStore('schedule', () => {
           id: `e-${prevNode.id}-${newNode.id}`,
           fromNodeId: prevNode.id,
           toNodeId: newNode.id,
-          type: oldEdge.type ?? 'sequential',
+          type: prevNode.phase !== newNode.phase ? 'phase' : (prevNode.type === 'habit' && newNode.type === 'habit' ? 'prerequisite' : (oldEdge.type ?? 'sequential')),
           active: Boolean(prevNode.completed),
         })
         graph.value.edges.push({
           id: `e-${newNode.id}-${nextNode.id}`,
           fromNodeId: newNode.id,
           toNodeId: nextNode.id,
-          type: oldEdge.type ?? 'sequential',
+          type: newNode.phase !== nextNode.phase ? 'phase' : (newNode.type === 'habit' && nextNode.type === 'habit' ? 'prerequisite' : (oldEdge.type ?? 'sequential')),
           active: false,
         })
       } else {
@@ -636,7 +728,7 @@ export const useScheduleStore = defineStore('schedule', () => {
           id: `e-${prevNode.id}-${newNode.id}`,
           fromNodeId: prevNode.id,
           toNodeId: newNode.id,
-          type: 'sequential',
+          type: prevNode.phase !== newNode.phase ? 'phase' : (prevNode.type === 'habit' && newNode.type === 'habit' ? 'prerequisite' : 'sequential'),
           active: Boolean(prevNode.completed),
         })
         if (nextNode.type === 'anchor' && nextNode.anchorKind === 'bedtime') {
@@ -644,7 +736,7 @@ export const useScheduleStore = defineStore('schedule', () => {
             id: `e-${newNode.id}-${nextNode.id}`,
             fromNodeId: newNode.id,
             toNodeId: nextNode.id,
-            type: 'sequential',
+            type: newNode.phase !== nextNode.phase ? 'phase' : 'sequential',
             active: false,
           })
         }
@@ -654,7 +746,7 @@ export const useScheduleStore = defineStore('schedule', () => {
         id: `e-${prevNode.id}-${newNode.id}`,
         fromNodeId: prevNode.id,
         toNodeId: newNode.id,
-        type: 'sequential',
+        type: prevNode.phase !== newNode.phase ? 'phase' : 'sequential',
         active: Boolean(prevNode.completed),
       })
     }
@@ -663,29 +755,39 @@ export const useScheduleStore = defineStore('schedule', () => {
     return newNode
   }
 
-  function addNode(phaseId: string, stepData: Omit<AddStepPayload, 'phaseId'>): ScheduleNode {
+  async function addNode(phaseId: string, stepData: Omit<AddStepPayload, 'phaseId'>): Promise<ScheduleNode> {
     return addStep({ phaseId, ...stepData })
   }
 
-  // Node Deletion from Schedule (Spec AC-008)
-  function deleteNode(nodeId: string): void {
+  // Node Deletion from Schedule (Spec AC-008, Plan AC-C05)
+  async function deleteNode(nodeId: string): Promise<void> {
     if (!graph.value) return
     const nodeIndex = graph.value.nodes.findIndex((n) => n.id === nodeId)
     if (nodeIndex === -1) return
 
     const nodeToDelete = graph.value.nodes[nodeIndex]
     // Invariant: anchors are permanent circadian milestones
-    if (nodeToDelete.type === 'anchor') return
+    if (nodeToDelete.type === 'anchor' || nodeToDelete.anchorKind != null || nodeId.startsWith('anchor-')) {
+      return
+    }
+
+    errorMessage.value = null
+
+    // 1. Snapshot previous state for rollback (AC-C05)
+    const prevNodes = [...graph.value.nodes]
+    const prevEdges = [...graph.value.edges]
+    const prevSelectedNodeId = selectedNodeId.value
+    const prevOverflow = graph.value.overflowMinutes
+    const prevProjectedBedtime = graph.value.projectedBedtime
 
     const incomingEdges = graph.value.edges.filter((e) => e.toNodeId === nodeId)
     const outgoingEdges = graph.value.edges.filter((e) => e.fromNodeId === nodeId)
 
-    // Remove all edges referencing nodeId
+    // 2. Optimistic removal & edge bridging
     graph.value.edges = graph.value.edges.filter(
       (e) => e.fromNodeId !== nodeId && e.toNodeId !== nodeId,
     )
 
-    // Re-link bridge edge between incoming and outgoing if available
     if (incomingEdges.length > 0 && outgoingEdges.length > 0) {
       const fromNodeId = incomingEdges[0].fromNodeId
       const toNodeId = outgoingEdges[0].toNodeId
@@ -694,40 +796,69 @@ export const useScheduleStore = defineStore('schedule', () => {
       )
       if (fromNodeId !== toNodeId && !alreadyConnected) {
         const fromNode = graph.value.nodes.find((n) => n.id === fromNodeId)
+        const toNode = graph.value.nodes.find((n) => n.id === toNodeId)
+        const edgeType = fromNode && toNode && fromNode.phase !== toNode.phase
+          ? 'phase'
+          : (fromNode && toNode && fromNode.type === 'habit' && toNode.type === 'habit'
+            ? 'prerequisite'
+            : (incomingEdges[0].type ?? 'sequential'))
         graph.value.edges.push({
           id: `e-${fromNodeId}-${toNodeId}`,
           fromNodeId,
           toNodeId,
-          type: incomingEdges[0].type ?? 'sequential',
+          type: edgeType,
           active: Boolean(fromNode?.completed),
         })
       }
     }
 
-    // Remove node
     graph.value.nodes.splice(nodeIndex, 1)
 
-    // Clear selection if selected
     if (selectedNodeId.value === nodeId) {
       selectedNodeId.value = null
     }
 
     recalculateBedtime()
+
+    // In preview mode or non-UUID legacy mock node, skip server call
+    if (previewMode.value !== null || !isUuid(nodeId)) {
+      return
+    }
+
+    // 3. Asynchronously call backend DELETE
+    try {
+      await scheduleApi.deleteStep(nodeId)
+    } catch (err) {
+      // 4. Rollback on failure
+      graph.value.nodes = prevNodes
+      graph.value.edges = prevEdges
+      selectedNodeId.value = prevSelectedNodeId
+      graph.value.overflowMinutes = prevOverflow
+      graph.value.projectedBedtime = prevProjectedBedtime
+      recalculateBedtime()
+
+      errorMessage.value = err instanceof Error ? err.message : 'Failed to delete step from server'
+      console.error('Failed to delete step on server:', err)
+    }
   }
 
-  async function load(preview: PreviewState = null): Promise<void> {
+  async function load(preview: PreviewState = null, date?: string): Promise<void> {
+    previewMode.value = preview
+    errorMessage.value = null
+
     if (preview === 'loading') {
       status.value = 'loading'
       return
     }
     if (preview === 'error') {
       status.value = 'error'
+      errorMessage.value = 'Simulated error in preview mode'
       return
     }
     if (preview === 'empty') {
       status.value = 'empty'
       graph.value = {
-        date: new Date().toISOString().slice(0, 10),
+        date: date ?? todayISODate(),
         wakeTime: '06:30',
         targetBedtime: '22:30',
         projectedBedtime: '22:30',
@@ -740,11 +871,21 @@ export const useScheduleStore = defineStore('schedule', () => {
     }
 
     status.value = 'loading'
-    // Simulate brief calm transition
-    await new Promise((resolve) => setTimeout(resolve, 80))
-    graph.value = createMockScheduleGraph()
-    recalculateBedtime()
-    status.value = 'ready'
+    const targetDate = date ?? todayISODate()
+    try {
+      const response = await scheduleApi.getSchedule(targetDate)
+      graph.value = response
+      recalculateBedtime()
+      status.value = 'ready'
+    } catch (err) {
+      console.error('Failed to load schedule from server:', err)
+      status.value = 'error'
+      errorMessage.value = err instanceof Error ? err.message : 'Could not reach server. Check your connection.'
+      if (!graph.value) {
+        graph.value = createMockScheduleGraph()
+        graph.value.date = targetDate
+      }
+    }
   }
 
   return {
@@ -753,6 +894,8 @@ export const useScheduleStore = defineStore('schedule', () => {
     activeLayout,
     selectedNodeId,
     activeTaskId,
+    errorMessage,
+    previewMode,
     // Getters
     nodes,
     edges,

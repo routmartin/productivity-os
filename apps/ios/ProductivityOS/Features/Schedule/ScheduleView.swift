@@ -110,7 +110,9 @@ public struct ScheduleView: View {
             }
             .sheet(isPresented: $isShowingAddStepSheet) {
                 ScheduleAddStepSheet(initialPhase: addStepTargetPhase) { payload in
-                    viewModel.addStep(payload)
+                    Task {
+                        await viewModel.addStep(payload)
+                    }
                 }
             }
         }

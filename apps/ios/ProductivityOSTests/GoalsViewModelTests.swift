@@ -126,9 +126,24 @@ final class GoalsViewModelTests: XCTestCase {
     // MARK: - Overall progress
 
     func testOverallProgressTotalsAcrossVisibleProjects() {
+        var projects = SampleData.mockProjectsForGoals
+        if let idx = projects.firstIndex(where: { $0.id == UUID(uuidString: "B4444444-4444-4444-4444-444444444444")! }) {
+            projects[idx] = Project(
+                id: projects[idx].id,
+                userId: projects[idx].userId,
+                title: projects[idx].title,
+                description: projects[idx].description,
+                goalId: projects[idx].goalId,
+                status: .completed,
+                deadline: projects[idx].deadline,
+                completedAt: Date(),
+                createdAt: projects[idx].createdAt,
+                updatedAt: Date()
+            )
+        }
         let viewModel = GoalsViewModel(
             preloadGoals: SampleData.mockGoals,
-            preloadProjects: SampleData.mockProjectsForGoals,
+            preloadProjects: projects,
             preloadProjectTasks: SampleData.mockProjectTasks
         )
         let overall = viewModel.overallProgress
@@ -206,7 +221,9 @@ final class GoalsViewModelTests: XCTestCase {
         // /api/v1/projects/{id}/tasks for each project
         mock.defaultResponse = .success((Self.tasksJSON, 200))
 
-        let viewModel = GoalsViewModel(apiClient: mock, authSession: AuthSession.shared)
+        let authSession = AuthSession(keychain: KeychainManager(serviceName: "com.productivityos.test.goals"))
+        authSession.setSession(accessToken: "test-token", user: nil)
+        let viewModel = GoalsViewModel(apiClient: mock, authSession: authSession)
         await viewModel.loadData()
 
         if case .loaded = viewModel.loadState {
@@ -221,7 +238,9 @@ final class GoalsViewModelTests: XCTestCase {
         let mock = MockAPIClient()
         mock.defaultResponse = .failure(APIError.serverError(statusCode: 500, code: "boom", message: nil))
 
-        let viewModel = GoalsViewModel(apiClient: mock, authSession: AuthSession.shared)
+        let authSession = AuthSession(keychain: KeychainManager(serviceName: "com.productivityos.test.goals"))
+        authSession.setSession(accessToken: "test-token", user: nil)
+        let viewModel = GoalsViewModel(apiClient: mock, authSession: authSession)
         await viewModel.loadData()
 
         XCTAssertNotNil(viewModel.errorMessage)

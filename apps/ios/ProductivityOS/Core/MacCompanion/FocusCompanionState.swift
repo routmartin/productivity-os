@@ -59,6 +59,7 @@ public final class FocusCompanionState {
             phase = .unauthenticated
             return
         }
+        guard poller == nil else { return }
         let poller = FocusPoller(focusService: focusService)
         self.poller = poller
         self.updateListenerTask = Task { @MainActor [weak self] in

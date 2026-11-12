@@ -51,6 +51,8 @@ const durationMinutes = ref(30)
 const selectedIcon = ref('water')
 const titleError = ref<string | null>(null)
 const titleInputRef = ref<HTMLInputElement | null>(null)
+const isSubmitting = ref(false)
+const submitError = ref<string | null>(null)
 
 // Phase definitions
 interface PhaseOption {
@@ -143,6 +145,8 @@ function resetForm() {
   durationMinutes.value = 30
   selectedIcon.value = 'water'
   titleError.value = null
+  submitError.value = null
+  isSubmitting.value = false
 }
 
 watch(
@@ -181,7 +185,7 @@ function handleClose() {
   emit('close')
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   const trimmed = title.value.trim()
   if (!trimmed) {
     titleError.value = 'Please enter a title for this step'
@@ -192,18 +196,27 @@ function handleSubmit() {
   const iconItem = habitIcons.find((i) => i.id === selectedIcon.value)
   const canonicalIcon = iconItem ? iconItem.canonicalName : 'Droplets'
 
-  const createdNode = scheduleStore.addStep({
-    phaseId: selectedPhase.value,
-    type: selectedType.value,
-    title: trimmed,
-    subtitle: subtitle.value.trim() || undefined,
-    totalMinutes: selectedType.value === 'habit' ? 15 : durationMinutes.value,
-    timeSlot: timeSlot.value.trim() || undefined,
-    iconName: selectedType.value === 'habit' ? canonicalIcon : undefined,
-  })
+  isSubmitting.value = true
+  submitError.value = null
 
-  emit('created', createdNode.id)
-  emit('close')
+  try {
+    const createdNode = await scheduleStore.addStep({
+      phaseId: selectedPhase.value,
+      type: selectedType.value,
+      title: trimmed,
+      subtitle: subtitle.value.trim() || undefined,
+      totalMinutes: selectedType.value === 'habit' ? 15 : durationMinutes.value,
+      timeSlot: timeSlot.value.trim() || undefined,
+      iconName: selectedType.value === 'habit' ? canonicalIcon : undefined,
+    })
+
+    emit('created', createdNode.id)
+    emit('close')
+  } catch (err) {
+    submitError.value = err instanceof Error ? err.message : 'Failed to add step to schedule. Please try again.'
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 
@@ -215,6 +228,9 @@ function handleSubmit() {
     @close="handleClose"
   >
     <form class="add-step-form" @submit.prevent="handleSubmit">
+      <div v-if="submitError" class="submit-error-banner" role="alert">
+        {{ submitError }}
+      </div>
       <!-- 1. Phase Selector -->
       <div class="form-section">
         <label class="section-label">Schedule Phase</label>
@@ -365,12 +381,23 @@ function handleSubmit() {
 
     <template #footer>
       <div class="dialog-action-bar">
-        <UiButton variant="ghost" type="button" @click="handleClose">
+        <UiButton
+          variant="ghost"
+          type="button"
+          :disabled="isSubmitting"
+          @click="handleClose"
+        >
           Cancel
         </UiButton>
-        <UiButton variant="primary" type="button" @click="handleSubmit">
+        <UiButton
+          variant="primary"
+          type="button"
+          :loading="isSubmitting"
+          :disabled="isSubmitting"
+          @click="handleSubmit"
+        >
           <Plus :size="15" />
-          <span>Add to Schedule</span>
+          <span>{{ isSubmitting ? 'Adding...' : 'Add to Schedule' }}</span>
         </UiButton>
       </div>
     </template>
@@ -383,6 +410,16 @@ function handleSubmit() {
   flex-direction: column;
   gap: var(--space-5);
   padding: var(--space-2) 0;
+}
+
+.submit-error-banner {
+  padding: var(--space-3) var(--space-4);
+  background: var(--danger-soft);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--danger);
+  font-size: var(--text-sm);
+  font-weight: 500;
 }
 
 .form-section {

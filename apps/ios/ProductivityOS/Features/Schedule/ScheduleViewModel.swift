@@ -2,6 +2,7 @@ import Foundation
 import Observation
 
 @Observable
+@MainActor
 public final class ScheduleViewModel {
     public enum LoadState: Equatable {
         case idle
@@ -17,6 +18,8 @@ public final class ScheduleViewModel {
     public private(set) var activeLayout: ScheduleLayoutMode = .spine
     public var selectedNodeId: String?
     public private(set) var activeTaskId: String?
+    public var errorMessage: String?
+    public private(set) var currentDate: Date = Date()
 
     private let scheduleService: ScheduleServicing
 
@@ -114,7 +117,9 @@ public final class ScheduleViewModel {
     // MARK: - Actions
 
     public func loadData(date: Date = Date()) async {
+        currentDate = date
         loadState = .loading
+        errorMessage = nil
         do {
             let loadedGraph = try await scheduleService.loadSchedule(for: date)
             self.graph = loadedGraph
@@ -122,6 +127,7 @@ public final class ScheduleViewModel {
             recalculateBedtime()
         } catch {
             self.loadState = .failed(error.localizedDescription)
+            self.errorMessage = error.localizedDescription
         }
     }
 
@@ -134,7 +140,7 @@ public final class ScheduleViewModel {
         selectedNodeId = nodeId
     }
 
-    // Spec AC-002 & AC-005: Habit Stacking and Edge Illumination
+    // Spec AC-002 & AC-005: Habit Stacking and Edge Illumination (AC-C07: Optimistic update with server sync & rollback)
     public func toggleHabit(_ nodeIdOrHabitId: String) {
         guard var g = graph else { return }
         guard let index = g.nodes.firstIndex(where: {
@@ -142,6 +148,9 @@ public final class ScheduleViewModel {
         }) else { return }
 
         guard g.nodes[index].type == .habit else { return }
+
+        let snapshot = g
+        errorMessage = nil
 
         let nextCompleted = !(g.nodes[index].completed ?? false)
         g.nodes[index].completed = nextCompleted
@@ -163,6 +172,57 @@ public final class ScheduleViewModel {
 
         self.graph = g
         recalculateBedtime()
+
+        let targetUUID = (g.nodes[index].habitId.flatMap { UUID(uuidString: $0) })
+            ?? UUID(uuidString: g.nodes[index].id)
+            ?? UUID(uuidString: nodeIdOrHabitId)
+
+        if let uuid = targetUUID {
+            Task { [weak self, currentDate] in
+                guard let self else { return }
+                do {
+                    let response = try await self.scheduleService.toggleHabit(habitId: uuid, for: currentDate)
+                    self.reconcileHabit(response)
+                } catch {
+                    self.graph = snapshot
+                    self.recalculateBedtime()
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func reconcileHabit(_ response: ToggleHabitResponse) {
+        guard var g = graph else { return }
+        let uuidStr = response.habitId.uuidString.lowercased()
+        guard let index = g.nodes.firstIndex(where: {
+            $0.id.lowercased() == uuidStr || $0.habitId?.lowercased() == uuidStr
+        }) else { return }
+
+        g.nodes[index].completed = response.completed
+        g.nodes[index].streak = response.streak
+        g.nodes[index].history = response.history
+
+        // Update edges from server
+        for updatedEdge in response.updatedEdges {
+            if let edgeIdx = g.edges.firstIndex(where: { $0.id == updatedEdge.id }) {
+                g.edges[edgeIdx] = updatedEdge
+            } else if let edgeIdx = g.edges.firstIndex(where: {
+                $0.fromNodeId == updatedEdge.fromNodeId && $0.toNodeId == updatedEdge.toNodeId
+            }) {
+                g.edges[edgeIdx].active = updatedEdge.active
+            }
+        }
+
+        g.projectedBedtime = response.projectedBedtime
+        g.overflowMinutes = response.overflowMinutes
+
+        if let bedtimeIdx = g.nodes.firstIndex(where: { $0.type == .anchor && $0.anchorKind == "bedtime" }) {
+            g.nodes[bedtimeIdx].overflowMinutes = response.overflowMinutes
+            g.nodes[bedtimeIdx].projectedTime = response.projectedBedtime
+        }
+
+        self.graph = g
     }
 
     // Spec AC-003: Native Activity Execution State
@@ -188,15 +248,67 @@ public final class ScheduleViewModel {
         self.graph = g
     }
 
-    // Spec AC-007: In-Line Step Creation
+    // Spec AC-007 / AC-C08: In-Line Step Creation
     @discardableResult
-    public func addStep(_ payload: AddStepPayload) -> ScheduleNode? {
-        guard var g = graph else {
+    public func addStep(_ payload: AddStepPayload) async -> ScheduleNode? {
+        if graph == nil {
             let blueprint = scheduleService.createDefaultBlueprint(for: "today")
             self.graph = blueprint
-            return addStep(payload)
         }
+        do {
+            let serverNode = try await scheduleService.addStep(payload, for: currentDate)
+            return insertNodeAndRewire(serverNode, phaseId: payload.phaseId)
+        } catch {
+            errorMessage = error.localizedDescription
+            let localNode = createLocalNode(for: payload)
+            return insertNodeAndRewire(localNode, phaseId: payload.phaseId)
+        }
+    }
 
+    @discardableResult
+    public func addStepSync(_ payload: AddStepPayload) -> ScheduleNode? {
+        if graph == nil {
+            let blueprint = scheduleService.createDefaultBlueprint(for: "today")
+            self.graph = blueprint
+        }
+        let localNode = createLocalNode(for: payload)
+        let inserted = insertNodeAndRewire(localNode, phaseId: payload.phaseId)
+        Task { [weak self, currentDate] in
+            guard let self else { return }
+            if let serverNode = try? await self.scheduleService.addStep(payload, for: currentDate) {
+                self.reconcileCreatedNode(tempId: localNode.id, serverNode: serverNode)
+            }
+        }
+        return inserted
+    }
+
+    @discardableResult
+    public func addStep(_ payload: AddStepPayload) -> ScheduleNode? {
+        addStepSync(payload)
+    }
+
+    private func reconcileCreatedNode(tempId: String, serverNode: ScheduleNode) {
+        guard var g = graph else { return }
+        guard let idx = g.nodes.firstIndex(where: { $0.id == tempId }) else { return }
+        g.nodes[idx] = serverNode
+        for i in 0..<g.edges.count {
+            let edge = g.edges[i]
+            let newFrom = edge.fromNodeId == tempId ? serverNode.id : edge.fromNodeId
+            let newTo = edge.toNodeId == tempId ? serverNode.id : edge.toNodeId
+            if newFrom != edge.fromNodeId || newTo != edge.toNodeId {
+                g.edges[i] = ScheduleEdge(
+                    id: "e-\(newFrom)-\(newTo)",
+                    fromNodeId: newFrom,
+                    toNodeId: newTo,
+                    type: edge.type,
+                    active: edge.active
+                )
+            }
+        }
+        self.graph = g
+    }
+
+    private func createLocalNode(for payload: AddStepPayload) -> ScheduleNode {
         let id = "node-\(Int(Date().timeIntervalSince1970 * 1000))"
         let duration = payload.totalMinutes ?? (payload.type == .habit ? 15 : payload.type == .recharge ? 15 : 60)
 
@@ -208,7 +320,7 @@ public final class ScheduleViewModel {
             subtitle: payload.subtitle?.trimmingCharacters(in: .whitespacesAndNewlines),
             time: payload.timeSlot?.trimmingCharacters(in: .whitespacesAndNewlines),
             durationMinutes: duration,
-            order: g.nodes.count + 1
+            order: (graph?.nodes.count ?? 0) + 1
         )
 
         if payload.type == .habit {
@@ -228,16 +340,24 @@ public final class ScheduleViewModel {
         } else if payload.type == .recharge {
             newNode.rechargeKind = "break"
         }
+        return newNode
+    }
+
+    @discardableResult
+    private func insertNodeAndRewire(_ newNode: ScheduleNode, phaseId: SchedulePhaseId) -> ScheduleNode {
+        guard var g = graph else {
+            return newNode
+        }
 
         var insertIndex = g.nodes.count
-        if payload.phaseId == .bedtime {
+        if phaseId == .bedtime {
             if let bedtimeIdx = g.nodes.firstIndex(where: { $0.type == .anchor && $0.anchorKind == "bedtime" }) {
                 insertIndex = bedtimeIdx
             }
         } else {
             var lastPhaseIdx = -1
             for (idx, node) in g.nodes.enumerated() {
-                if node.phase == payload.phaseId {
+                if node.phase == phaseId {
                     lastPhaseIdx = idx
                 }
             }
@@ -245,7 +365,7 @@ public final class ScheduleViewModel {
                 insertIndex = lastPhaseIdx + 1
             } else {
                 let phaseOrder: [SchedulePhaseId] = [.morning, .deepFocus, .afternoon, .bedtime]
-                let currentTargetOrder = phaseOrder.firstIndex(of: payload.phaseId) ?? 0
+                let currentTargetOrder = phaseOrder.firstIndex(of: phaseId) ?? 0
                 if let nextPhaseNodeIdx = g.nodes.firstIndex(where: {
                     (phaseOrder.firstIndex(of: $0.phase) ?? 0) > currentTargetOrder
                 }) {
@@ -311,13 +431,17 @@ public final class ScheduleViewModel {
         return newNode
     }
 
-    // Spec AC-008: Node Deletion from Schedule
+    // Spec AC-008 / AC-C08: Node Deletion from Schedule with Anchor Protection & API Sync
     public func deleteNode(_ nodeId: String) {
+        guard !nodeId.hasPrefix("anchor-") else { return }
         guard var g = graph else { return }
         guard let nodeIndex = g.nodes.firstIndex(where: { $0.id == nodeId }) else { return }
 
         let nodeToDelete = g.nodes[nodeIndex]
-        guard nodeToDelete.type != .anchor else { return } // Anchors are permanent
+        guard nodeToDelete.type != .anchor, nodeToDelete.anchorKind == nil else { return } // Anchors are permanent
+
+        let snapshot = g
+        errorMessage = nil
 
         let incomingEdges = g.edges.filter { $0.toNodeId == nodeId }
         let outgoingEdges = g.edges.filter { $0.fromNodeId == nodeId }
@@ -349,6 +473,17 @@ public final class ScheduleViewModel {
 
         self.graph = g
         recalculateBedtime()
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.scheduleService.deleteStep(id: nodeId)
+            } catch {
+                self.graph = snapshot
+                self.recalculateBedtime()
+                self.errorMessage = error.localizedDescription
+            }
+        }
     }
 
     public func recalculateBedtime() {

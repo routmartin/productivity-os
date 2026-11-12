@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import {
   AlertTriangle,
   ArrowRight,
@@ -45,9 +45,18 @@ function toggleActivity() {
   }
 }
 
-function handleDelete() {
+const isDeleting = ref(false)
+
+async function handleDelete() {
   if (!node.value || node.value.type === 'anchor') return
-  scheduleStore.deleteNode(node.value.id)
+  const idToDelete = node.value.id
+  isDeleting.value = true
+  try {
+    close()
+    await scheduleStore.deleteNode(idToDelete)
+  } finally {
+    isDeleting.value = false
+  }
 }
 
 const kindLabel = computed(() => {
@@ -371,10 +380,11 @@ const consistencyPercent = computed(() => {
           type="button"
           class="delete-step-btn"
           title="Delete from Today"
+          :disabled="isDeleting"
           @click="handleDelete"
         >
           <Trash2 :size="15" />
-          <span>Delete from Today</span>
+          <span>{{ isDeleting ? 'Deleting...' : 'Delete from Today' }}</span>
         </button>
         <div v-else />
 

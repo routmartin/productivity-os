@@ -15,7 +15,7 @@ final class TaskServiceTests: XCTestCase {
             200
         ))
 
-        let tasks = try await TaskService(apiClient: mock).listActiveTasks()
+        let tasks = try await TaskService(apiClient: mock, cache: APICache()).listActiveTasks()
 
         XCTAssertEqual(tasks.count, 2)
         XCTAssertEqual(tasks[0].title, "First")
@@ -30,7 +30,7 @@ final class TaskServiceTests: XCTestCase {
         let mock = MockAPIClient()
         mock.defaultResponse = .success((Data("[]".utf8), 200))
 
-        let tasks = try await TaskService(apiClient: mock).listActiveTasks()
+        let tasks = try await TaskService(apiClient: mock, cache: APICache()).listActiveTasks()
         XCTAssertTrue(tasks.isEmpty)
     }
 }
@@ -69,7 +69,7 @@ final class TopThreeServiceTests: XCTestCase {
             200
         ))
 
-        let items = try await TopThreeService(apiClient: mock).today()
+        let items = try await TopThreeService(apiClient: mock, cache: APICache()).today()
 
         XCTAssertEqual(items.count, 1)
         XCTAssertEqual(items[0].taskTitle, "Finish authentication")

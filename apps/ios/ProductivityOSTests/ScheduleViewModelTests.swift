@@ -4,8 +4,23 @@ import XCTest
 
 @MainActor
 final class ScheduleViewModelTests: XCTestCase {
+    private var mockAPIClient: MockAPIClient!
+    private var scheduleService: ScheduleService!
+
+    override func setUp() {
+        super.setUp()
+        mockAPIClient = MockAPIClient()
+        // Default to network error so loadSchedule falls back gracefully to default blueprint
+        mockAPIClient.defaultResponse = .failure(APIError.networkError("The Internet connection appears to be offline."))
+        scheduleService = ScheduleService(apiClient: mockAPIClient)
+    }
+
+    private func makeViewModel(initialGraph: ScheduleGraph? = nil) -> ScheduleViewModel {
+        ScheduleViewModel(scheduleService: scheduleService, initialGraph: initialGraph)
+    }
+
     func testDailyBlueprintPrePopulation() async {
-        let viewModel = ScheduleViewModel()
+        let viewModel = makeViewModel()
         await viewModel.loadData()
 
         XCTAssertEqual(viewModel.phases.count, 4)
@@ -20,7 +35,7 @@ final class ScheduleViewModelTests: XCTestCase {
     }
 
     func testLayoutSwitchingAndPersistence() {
-        let viewModel = ScheduleViewModel()
+        let viewModel = makeViewModel()
 
         viewModel.setLayout(.journey)
         XCTAssertEqual(viewModel.activeLayout, .journey)
@@ -36,7 +51,7 @@ final class ScheduleViewModelTests: XCTestCase {
     }
 
     func testHabitToggleUpdatesStreakAndOutgoingEdges() async {
-        let viewModel = ScheduleViewModel()
+        let viewModel = makeViewModel()
         await viewModel.loadData()
 
         // Find an incomplete habit: habit-afternoon-walk
@@ -68,8 +83,128 @@ final class ScheduleViewModelTests: XCTestCase {
         XCTAssertEqual(revertedEdge?.active, false)
     }
 
+    // MARK: - AC-C07: Optimistic Habit Toggle and Server Rollback
+
+    func testOptimisticHabitToggleAndRollbackOnFailure() async throws {
+        mockAPIClient.scriptedResponses = [
+            .failure(APIError.serverError(statusCode: 500, code: "INTERNAL_ERROR", message: "Database connection failed"))
+        ]
+
+        let habitUUID = UUID()
+        let habitNode = ScheduleNode(
+            id: habitUUID.uuidString,
+            type: .habit,
+            phase: .morning,
+            title: "Hydration",
+            streak: 5,
+            completed: false,
+            order: 2
+        )
+        let edge = ScheduleEdge(
+            id: "e-h-next",
+            fromNodeId: habitUUID.uuidString,
+            toNodeId: "node-next",
+            type: .sequential,
+            active: false
+        )
+        let initialGraph = ScheduleGraph(
+            date: "2026-11-12",
+            targetBedtime: "22:30",
+            phases: [SchedulePhase(id: .morning, title: "Morning", subtitle: "", timeRange: "")],
+            nodes: [habitNode],
+            edges: [edge]
+        )
+
+        let viewModel = makeViewModel(initialGraph: initialGraph)
+
+        // Step 1: Trigger toggle
+        viewModel.toggleHabit(habitUUID.uuidString)
+
+        // Step 2: Verify immediate optimistic update (<16ms)
+        let optHabit = viewModel.nodes.first { $0.id == habitUUID.uuidString }
+        XCTAssertEqual(optHabit?.completed, true)
+        XCTAssertEqual(optHabit?.streak, 6)
+        XCTAssertEqual(viewModel.edges.first { $0.id == "e-h-next" }?.active, true)
+
+        // Step 3: Wait for background sync Task to encounter simulated 500 error
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        // Step 4: Verify rollback to pre-mutation snapshot
+        let rolledBackHabit = viewModel.nodes.first { $0.id == habitUUID.uuidString }
+        XCTAssertEqual(rolledBackHabit?.completed, false)
+        XCTAssertEqual(rolledBackHabit?.streak, 5)
+        XCTAssertEqual(viewModel.edges.first { $0.id == "e-h-next" }?.active, false)
+        XCTAssertNotNil(viewModel.errorMessage)
+    }
+
+    func testHabitToggleReconcilesWithServerResponse() async throws {
+        let habitUUID = UUID()
+        let responseJSON = """
+        {
+            "habitId": "\(habitUUID.uuidString)",
+            "completed": true,
+            "streak": 25,
+            "history": [
+                { "date": "2026-11-12", "completed": true }
+            ],
+            "updatedEdges": [
+                {
+                    "id": "e-h-next",
+                    "fromNodeId": "\(habitUUID.uuidString)",
+                    "toNodeId": "node-next",
+                    "type": "sequential",
+                    "active": true
+                }
+            ],
+            "projectedBedtime": "22:30",
+            "overflowMinutes": 0
+        }
+        """
+        mockAPIClient.scriptedResponses = [
+            .success((Data(responseJSON.utf8), 200))
+        ]
+
+        let habitNode = ScheduleNode(
+            id: habitUUID.uuidString,
+            type: .habit,
+            phase: .morning,
+            title: "Hydration",
+            streak: 5,
+            completed: false,
+            order: 2
+        )
+        let edge = ScheduleEdge(
+            id: "e-h-next",
+            fromNodeId: habitUUID.uuidString,
+            toNodeId: "node-next",
+            type: .sequential,
+            active: false
+        )
+        let initialGraph = ScheduleGraph(
+            date: "2026-11-12",
+            targetBedtime: "22:30",
+            phases: [SchedulePhase(id: .morning, title: "Morning", subtitle: "", timeRange: "")],
+            nodes: [habitNode],
+            edges: [edge]
+        )
+
+        let viewModel = makeViewModel(initialGraph: initialGraph)
+
+        viewModel.toggleHabit(habitUUID.uuidString)
+
+        // Wait for background reconciliation
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        let reconciled = viewModel.nodes.first { $0.id == habitUUID.uuidString }
+        XCTAssertEqual(reconciled?.completed, true)
+        XCTAssertEqual(reconciled?.streak, 25) // Server authoritative streak
+        XCTAssertEqual(reconciled?.history?.count, 1)
+        XCTAssertEqual(viewModel.edges.first { $0.id == "e-h-next" }?.active, true)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
     func testNativeActivityFocusToggle() async {
-        let viewModel = ScheduleViewModel()
+        let viewModel = makeViewModel()
         await viewModel.loadData()
 
         // Start focus on task-top1
@@ -86,7 +221,7 @@ final class ScheduleViewModelTests: XCTestCase {
     }
 
     func testAddStepWiresEdgesAndUpdatesBedtime() async {
-        let viewModel = ScheduleViewModel()
+        let viewModel = makeViewModel()
         await viewModel.loadData()
 
         let initialNodeCount = viewModel.nodes.count
@@ -100,7 +235,7 @@ final class ScheduleViewModelTests: XCTestCase {
             iconName: "book.fill"
         )
 
-        let createdNode = viewModel.addStep(payload)
+        let createdNode = await viewModel.addStep(payload)
         XCTAssertNotNil(createdNode)
         XCTAssertEqual(viewModel.nodes.count, initialNodeCount + 1)
         XCTAssertEqual(createdNode?.title, "Morning Sunlight Reading")
@@ -110,8 +245,10 @@ final class ScheduleViewModelTests: XCTestCase {
         XCTAssertNotNil(found)
     }
 
+    // MARK: - AC-C08: Anchor Protection & Deletion Tests
+
     func testAnchorNodesCannotBeDeleted() async {
-        let viewModel = ScheduleViewModel()
+        let viewModel = makeViewModel()
         await viewModel.loadData()
 
         let initialCount = viewModel.nodes.count
@@ -128,7 +265,7 @@ final class ScheduleViewModelTests: XCTestCase {
     }
 
     func testDeleteNonAnchorNodeRemovesItAndBridgesEdges() async {
-        let viewModel = ScheduleViewModel()
+        let viewModel = makeViewModel()
         await viewModel.loadData()
 
         let initialCount = viewModel.nodes.count
@@ -144,5 +281,117 @@ final class ScheduleViewModelTests: XCTestCase {
             $0.fromNodeId == "habit-workout" && $0.toNodeId == "habit-planning"
         })
         XCTAssertNotNil(bridgedEdge)
+    }
+
+    func testDeleteNodeRollbackOnServerFailure() async throws {
+        mockAPIClient.scriptedResponses = [
+            .failure(APIError.serverError(statusCode: 500, code: "FAILED", message: "Failed to delete step"))
+        ]
+
+        let nodeUUID = UUID().uuidString
+        let testNode = ScheduleNode(
+            id: nodeUUID,
+            type: .habit,
+            phase: .morning,
+            title: "Disposable Habit",
+            order: 2
+        )
+        let edge = ScheduleEdge(id: "e-d", fromNodeId: nodeUUID, toNodeId: "anchor-bedtime", type: .sequential)
+        let initialGraph = ScheduleGraph(
+            date: "2026-11-12",
+            phases: [SchedulePhase(id: .morning, title: "Morning", subtitle: "", timeRange: "")],
+            nodes: [testNode],
+            edges: [edge]
+        )
+
+        let viewModel = makeViewModel(initialGraph: initialGraph)
+
+        // Delete node
+        viewModel.deleteNode(nodeUUID)
+
+        // Optimistically removed
+        XCTAssertNil(viewModel.nodes.first { $0.id == nodeUUID })
+
+        // Wait for background delete to fail
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        // Node and edge restored on rollback
+        XCTAssertNotNil(viewModel.nodes.first { $0.id == nodeUUID })
+        XCTAssertTrue(viewModel.edges.contains { $0.id == "e-d" })
+        XCTAssertNotNil(viewModel.errorMessage)
+    }
+
+    func testAddStepReconcilesTemporaryIdWithServerUUID() async throws {
+        let serverUUID = UUID().uuidString
+        let serverNodeJSON = """
+        {
+            "id": "\(serverUUID)",
+            "type": "habit",
+            "phase": "morning",
+            "title": "Morning Water",
+            "habitId": "\(serverUUID)",
+            "streak": 1,
+            "completed": false,
+            "order": 1
+        }
+        """
+        mockAPIClient.scriptedResponses = [
+            .success((Data(serverNodeJSON.utf8), 200))
+        ]
+
+        let initialGraph = ScheduleGraph(
+            date: "2026-11-12",
+            phases: [SchedulePhase(id: .morning, title: "Morning", subtitle: "", timeRange: "")],
+            nodes: [],
+            edges: []
+        )
+        let viewModel = makeViewModel(initialGraph: initialGraph)
+
+        let payload = AddStepPayload(phaseId: .morning, type: .habit, title: "Morning Water")
+        let localNode = viewModel.addStepSync(payload)
+        XCTAssertNotNil(localNode)
+        XCTAssertTrue(localNode?.id.hasPrefix("node-") ?? false)
+
+        // Wait for background reconciliation
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        // The temporary node id should have been reconciled to the canonical server UUID
+        XCTAssertNil(viewModel.nodes.first { $0.id == localNode?.id })
+        let serverNode = viewModel.nodes.first { $0.id == serverUUID }
+        XCTAssertNotNil(serverNode)
+        XCTAssertEqual(serverNode?.title, "Morning Water")
+    }
+
+    func testAsyncAddStepReturnsServerNodeWithUUID() async throws {
+        let serverUUID = UUID().uuidString
+        let serverNodeJSON = """
+        {
+            "id": "\(serverUUID)",
+            "type": "task",
+            "phase": "deep-focus",
+            "title": "Deep Work Sprint",
+            "taskId": "\(serverUUID)",
+            "completed": false,
+            "order": 1
+        }
+        """
+        mockAPIClient.scriptedResponses = [
+            .success((Data(serverNodeJSON.utf8), 200))
+        ]
+
+        let initialGraph = ScheduleGraph(
+            date: "2026-11-12",
+            phases: [SchedulePhase(id: .deepFocus, title: "Deep Focus", subtitle: "", timeRange: "")],
+            nodes: [],
+            edges: []
+        )
+        let viewModel = makeViewModel(initialGraph: initialGraph)
+
+        let payload = AddStepPayload(phaseId: .deepFocus, type: .task, title: "Deep Work Sprint")
+        let resultNode = await viewModel.addStep(payload)
+
+        XCTAssertNotNil(resultNode)
+        XCTAssertEqual(resultNode?.id, serverUUID)
+        XCTAssertEqual(viewModel.nodes.first?.id, serverUUID)
     }
 }

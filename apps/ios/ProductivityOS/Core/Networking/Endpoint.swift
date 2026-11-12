@@ -60,6 +60,12 @@ public enum AppEndpoint: Endpoint {
     case endFocusSession(id: UUID)
     case listFocusSessions(page: Int = 0, size: Int = 50)
 
+    // Daily Schedule (/api/v1/schedule)
+    case getSchedule(date: String)
+    case toggleHabit(id: UUID, body: Data?)
+    case addScheduleStep(body: Data)
+    case deleteScheduleStep(id: String)
+
     public var path: String {
         switch self {
         case .register:
@@ -103,24 +109,40 @@ public enum AppEndpoint: Endpoint {
             return "/api/v1/focus/\(id.uuidString.lowercased())/end"
         case .listFocusSessions:
             return "/api/v1/focus"
+
+        case .getSchedule(let date):
+            return "/api/v1/schedule/\(date)"
+        case .toggleHabit(let id, _):
+            return "/api/v1/schedule/habits/\(id.uuidString.lowercased())/toggle"
+        case .addScheduleStep:
+            return "/api/v1/schedule/steps"
+        case .deleteScheduleStep(let id):
+            return "/api/v1/schedule/steps/\(id)"
         }
     }
 
     public var method: HTTPMethod {
         switch self {
         case .register, .login, .qrExchange, .refresh, .logout,
-             .startFocusSession, .pauseFocusSession, .resumeFocusSession, .endFocusSession:
+             .startFocusSession, .pauseFocusSession, .resumeFocusSession, .endFocusSession,
+             .toggleHabit, .addScheduleStep:
             return .post
-        case .listTasks, .listProjects, .listProjectTasks, .listGoals, .getGoal, .getDailyTopThree, .getActiveFocusSession, .listFocusSessions:
+        case .listTasks, .listProjects, .listProjectTasks, .listGoals, .getGoal, .getDailyTopThree, .getActiveFocusSession, .listFocusSessions,
+             .getSchedule:
             return .get
         case .updateTask:
             return .put
+        case .deleteScheduleStep:
+            return .delete
         }
     }
 
     public var body: Data? {
         switch self {
-        case .register(let data), .login(let data), .qrExchange(let data), .startFocusSession(let data), .updateTask(_, let data):
+        case .register(let data), .login(let data), .qrExchange(let data), .startFocusSession(let data), .updateTask(_, let data),
+             .addScheduleStep(let data):
+            return data
+        case .toggleHabit(_, let data):
             return data
         default:
             return nil
