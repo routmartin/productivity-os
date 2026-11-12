@@ -431,6 +431,181 @@ public final class ScheduleViewModel {
         return newNode
     }
 
+    // Spec AC-010, AC-011, AC-012: Step Details Update, Anchor Protection & Topological Rewiring
+    @discardableResult
+    public func updateStep(id: String, payload: UpdateStepPayload) async throws -> ScheduleNode {
+        guard !id.hasPrefix("anchor-") else {
+            let error = APIError.serverError(statusCode: 400, code: "ANCHOR_UPDATE_NOT_ALLOWED", message: "Anchor node update is not allowed")
+            self.errorMessage = error.localizedDescription
+            throw error
+        }
+        guard var g = graph else {
+            let error = APIError.serverError(statusCode: 400, code: "NO_SCHEDULE", message: "No schedule loaded")
+            self.errorMessage = error.localizedDescription
+            throw error
+        }
+        guard let nodeIndex = g.nodes.firstIndex(where: { $0.id == id }) else {
+            let error = APIError.notFound
+            self.errorMessage = error.localizedDescription
+            throw error
+        }
+
+        let existingNode = g.nodes[nodeIndex]
+        guard existingNode.type != .anchor && existingNode.anchorKind == nil else {
+            let error = APIError.serverError(statusCode: 400, code: "ANCHOR_UPDATE_NOT_ALLOWED", message: "Anchor node update is not allowed")
+            self.errorMessage = error.localizedDescription
+            throw error
+        }
+
+        let snapshot = g
+        errorMessage = nil
+
+        var updatedNode = existingNode
+        updatedNode.title = payload.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let subtitle = payload.subtitle {
+            updatedNode.subtitle = subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if let timeSlot = payload.timeSlot {
+            let trimmed = timeSlot.trimmingCharacters(in: .whitespacesAndNewlines)
+            updatedNode.time = trimmed
+            if updatedNode.type == .habit {
+                updatedNode.targetTime = trimmed
+            }
+        }
+        if let duration = payload.durationMinutes {
+            updatedNode.durationMinutes = duration
+            if updatedNode.type == .task {
+                updatedNode.totalMinutes = duration
+            }
+        }
+        if let notes = payload.notes {
+            updatedNode.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if let icon = payload.iconName, updatedNode.type == .habit {
+            updatedNode.icon = icon.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        let oldPhase = existingNode.phase
+        let newPhase = payload.phaseId ?? oldPhase
+        let phaseChanged = (newPhase != oldPhase)
+        updatedNode.phase = newPhase
+
+        g.nodes[nodeIndex] = updatedNode
+        self.graph = g
+
+        if phaseChanged {
+            rewireEdges()
+        } else {
+            recalculateBedtime()
+        }
+
+        do {
+            let serverNode = try await scheduleService.updateStep(id: id, payload: payload, for: currentDate)
+            if var currentGraph = self.graph, let currentIdx = currentGraph.nodes.firstIndex(where: { $0.id == id }) {
+                currentGraph.nodes[currentIdx].title = serverNode.title
+                if let sub = serverNode.subtitle { currentGraph.nodes[currentIdx].subtitle = sub }
+                if let tm = serverNode.time { currentGraph.nodes[currentIdx].time = tm }
+                if let dur = serverNode.durationMinutes {
+                    currentGraph.nodes[currentIdx].durationMinutes = dur
+                    if currentGraph.nodes[currentIdx].type == .task {
+                        currentGraph.nodes[currentIdx].totalMinutes = dur
+                    }
+                }
+                if let n = serverNode.notes { currentGraph.nodes[currentIdx].notes = n }
+                if let ic = serverNode.icon { currentGraph.nodes[currentIdx].icon = ic }
+                self.graph = currentGraph
+            }
+            return serverNode
+        } catch {
+            self.graph = snapshot
+            recalculateBedtime()
+            self.errorMessage = error.localizedDescription
+            throw error
+        }
+    }
+
+    public func updateStepSync(id: String, payload: UpdateStepPayload) {
+        Task {
+            _ = try? await self.updateStep(id: id, payload: payload)
+        }
+    }
+
+    public func rewireEdges() {
+        guard var g = graph, g.nodes.count > 1 else { return }
+
+        let phaseOrder: [SchedulePhaseId: Int] = [
+            .morning: 0,
+            .deepFocus: 1,
+            .afternoon: 2,
+            .bedtime: 3
+        ]
+
+        var sortedNodes: [ScheduleNode] = []
+        let wakeAnchor = g.nodes.first { $0.type == .anchor && $0.anchorKind == "wake" }
+        let bedtimeAnchor = g.nodes.first { $0.type == .anchor && $0.anchorKind == "bedtime" }
+
+        if let wake = wakeAnchor {
+            sortedNodes.append(wake)
+        }
+
+        let nonAnchors = g.nodes.filter { node in
+            !(node.type == .anchor && (node.anchorKind == "wake" || node.anchorKind == "bedtime"))
+        }
+
+        let sortedNonAnchors = nonAnchors.sorted { a, b in
+            let aPhaseOrder = phaseOrder[a.phase] ?? 0
+            let bPhaseOrder = phaseOrder[b.phase] ?? 0
+            if aPhaseOrder != bPhaseOrder {
+                return aPhaseOrder < bPhaseOrder
+            }
+            return (a.order ?? 0) < (b.order ?? 0)
+        }
+        sortedNodes.append(contentsOf: sortedNonAnchors)
+
+        if let bedtime = bedtimeAnchor {
+            sortedNodes.append(bedtime)
+        }
+
+        for i in 0..<sortedNodes.count {
+            sortedNodes[i].order = i + 1
+        }
+
+        var newEdges: [ScheduleEdge] = []
+        for i in 0..<(sortedNodes.count - 1) {
+            let from = sortedNodes[i]
+            let to = sortedNodes[i + 1]
+            let existingEdge = g.edges.first { $0.fromNodeId == from.id && $0.toNodeId == to.id }
+
+            let edgeType: ScheduleEdgeType
+            if from.phase != to.phase {
+                edgeType = .phase
+            } else if let existingType = existingEdge?.type {
+                edgeType = existingType
+            } else if from.type == .habit && to.type == .habit {
+                edgeType = .prerequisite
+            } else {
+                edgeType = .sequential
+            }
+
+            let isActive = existingEdge?.active ?? (from.completed ?? false)
+
+            newEdges.append(
+                ScheduleEdge(
+                    id: "e-\(from.id)-\(to.id)",
+                    fromNodeId: from.id,
+                    toNodeId: to.id,
+                    type: edgeType,
+                    active: isActive
+                )
+            )
+        }
+
+        g.nodes = sortedNodes
+        g.edges = newEdges
+        self.graph = g
+        recalculateBedtime()
+    }
+
     // Spec AC-008 / AC-C08: Node Deletion from Schedule with Anchor Protection & API Sync
     public func deleteNode(_ nodeId: String) {
         guard !nodeId.hasPrefix("anchor-") else { return }

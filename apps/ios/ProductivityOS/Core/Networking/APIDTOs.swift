@@ -164,3 +164,34 @@ public struct AddScheduleStepRequestBody: Codable, Sendable {
         self.iconName = iconName
     }
 }
+
+public struct UpdateScheduleStepRequestBody: Codable, Sendable {
+    public let title: String
+    public let subtitle: String?
+    public let phase: String?
+    public let timeSlot: String?
+    public let durationMinutes: Int?
+    public let iconName: String?
+    public let notes: String?
+    public let date: String?
+
+    public init(
+        title: String,
+        subtitle: String? = nil,
+        phase: String? = nil,
+        timeSlot: String? = nil,
+        durationMinutes: Int? = nil,
+        iconName: String? = nil,
+        notes: String? = nil,
+        date: String? = nil
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.phase = phase
+        self.timeSlot = timeSlot
+        self.durationMinutes = durationMinutes
+        self.iconName = iconName
+        self.notes = notes
+        self.date = date
+    }
+}

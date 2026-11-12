@@ -1,27 +1,36 @@
 import SwiftUI
 
-/// Full inspection sheet for a selected schedule node (Spec AC-006, AC-008).
+/// Full inspection sheet for a selected schedule node (Spec AC-006, AC-008, AC-010).
 public struct ScheduleNodeDetailSheet: View {
-    public let node: ScheduleNode
+    @State private var currentNode: ScheduleNode
+    @State private var isShowingEditSheet = false
+
     public var onToggleHabit: (() -> Void)?
     public var onToggleFocus: (() -> Void)?
     public var onDelete: (() -> Void)?
+    public var onUpdate: ((UpdateStepPayload) -> Void)?
     @Environment(\.dismiss) private var dismiss
+
+    public var node: ScheduleNode {
+        currentNode
+    }
 
     public init(
         node: ScheduleNode,
         onToggleHabit: (() -> Void)? = nil,
         onToggleFocus: (() -> Void)? = nil,
-        onDelete: (() -> Void)? = nil
+        onDelete: (() -> Void)? = nil,
+        onUpdate: ((UpdateStepPayload) -> Void)? = nil
     ) {
-        self.node = node
+        self._currentNode = State(initialValue: node)
         self.onToggleHabit = onToggleHabit
         self.onToggleFocus = onToggleFocus
         self.onDelete = onDelete
+        self.onUpdate = onUpdate
     }
 
     private var isAnchor: Bool {
-        node.type == .anchor
+        currentNode.type == .anchor || currentNode.anchorKind != nil || currentNode.id.hasPrefix("anchor-")
     }
 
     private var isCompletedHabit: Bool {
@@ -148,6 +157,14 @@ public struct ScheduleNodeDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
+                if !isAnchor && onUpdate != nil {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Edit") {
+                            isShowingEditSheet = true
+                        }
+                    }
+                }
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         dismiss()
@@ -155,7 +172,31 @@ public struct ScheduleNodeDetailSheet: View {
                     .fontWeight(.semibold)
                 }
             }
+            .sheet(isPresented: $isShowingEditSheet) {
+                ScheduleEditStepSheet(node: currentNode) { payload in
+                    applyUpdatePayload(payload)
+                    onUpdate?(payload)
+                }
+            }
         }
+    }
+
+    private func applyUpdatePayload(_ payload: UpdateStepPayload) {
+        var updated = currentNode
+        updated.title = payload.title
+        if let sub = payload.subtitle { updated.subtitle = sub }
+        if let phase = payload.phaseId { updated.phase = phase }
+        if let time = payload.timeSlot {
+            updated.time = time
+            if updated.type == .habit { updated.targetTime = time }
+        }
+        if let duration = payload.durationMinutes {
+            updated.durationMinutes = duration
+            if updated.type == .task { updated.totalMinutes = duration }
+        }
+        if let notes = payload.notes { updated.notes = notes }
+        if let icon = payload.iconName, updated.type == .habit { updated.icon = icon }
+        currentNode = updated
     }
 
     // MARK: - Subcomponents

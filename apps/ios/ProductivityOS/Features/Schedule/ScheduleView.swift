@@ -105,6 +105,14 @@ public struct ScheduleView: View {
                     },
                     onDelete: {
                         viewModel.deleteNode(node.id)
+                    },
+                    onUpdate: { payload in
+                        Task {
+                            _ = try? await viewModel.updateStep(id: node.id, payload: payload)
+                            if let updated = viewModel.nodes.first(where: { $0.id == node.id }) {
+                                selectedNodeForDetail = updated
+                            }
+                        }
                     }
                 )
             }

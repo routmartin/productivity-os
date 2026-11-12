@@ -73,4 +73,44 @@ final class ScheduleGraphRewiringTests: XCTestCase {
         XCTAssertNotNil(bridgeEdge)
         XCTAssertEqual(bridgeEdge?.active, true)
     }
+
+    func testPhaseReassignmentRewiresGraphCleanly() {
+        let wake = ScheduleNode(id: "anchor-wake", type: .anchor, phase: .morning, title: "Wake", anchorKind: "wake", order: 1)
+        let habit = ScheduleNode(id: "h1", type: .habit, phase: .morning, title: "Habit 1", completed: true, order: 2)
+        let task = ScheduleNode(id: "t1", type: .task, phase: .deepFocus, title: "Task 1", completed: false, order: 3)
+        let bedtime = ScheduleNode(id: "anchor-bedtime", type: .anchor, phase: .bedtime, title: "Bedtime", anchorKind: "bedtime", order: 4)
+
+        let initialGraph = ScheduleGraph(
+            date: "2026-11-12",
+            phases: [
+                SchedulePhase(id: .morning, title: "Morning", subtitle: "", timeRange: ""),
+                SchedulePhase(id: .deepFocus, title: "Deep Focus", subtitle: "", timeRange: ""),
+                SchedulePhase(id: .afternoon, title: "Afternoon", subtitle: "", timeRange: ""),
+                SchedulePhase(id: .bedtime, title: "Bedtime", subtitle: "", timeRange: "")
+            ],
+            nodes: [wake, habit, task, bedtime],
+            edges: [
+                ScheduleEdge(id: "e-w-h", fromNodeId: "anchor-wake", toNodeId: "h1", type: .sequential, active: true),
+                ScheduleEdge(id: "e-h-t", fromNodeId: "h1", toNodeId: "t1", type: .phase, active: true),
+                ScheduleEdge(id: "e-t-b", fromNodeId: "t1", toNodeId: "anchor-bedtime", type: .phase, active: false)
+            ]
+        )
+
+        let viewModel = ScheduleViewModel(initialGraph: initialGraph)
+
+        // Simulate phase update on task
+        if var g = viewModel.graph, let idx = g.nodes.firstIndex(where: { $0.id == "t1" }) {
+            g.nodes[idx].phase = .afternoon
+            // Set graph temporarily then rewire
+            viewModel.updateStepSync(id: "t1", payload: UpdateStepPayload(title: "Task 1", phaseId: .afternoon))
+        }
+
+        // Verify wake is first, bedtime is last, and edges connect nodes sequentially
+        XCTAssertEqual(viewModel.nodes.first?.id, "anchor-wake")
+        XCTAssertEqual(viewModel.nodes.last?.id, "anchor-bedtime")
+        XCTAssertEqual(viewModel.edges.count, 3)
+        XCTAssertTrue(viewModel.edges.contains { $0.fromNodeId == "anchor-wake" && $0.toNodeId == "h1" })
+        XCTAssertTrue(viewModel.edges.contains { $0.fromNodeId == "h1" && $0.toNodeId == "t1" && $0.type == .phase })
+        XCTAssertTrue(viewModel.edges.contains { $0.fromNodeId == "t1" && $0.toNodeId == "anchor-bedtime" && $0.type == .phase })
+    }
 }

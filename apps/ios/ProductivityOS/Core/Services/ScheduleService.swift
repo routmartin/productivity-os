@@ -4,6 +4,7 @@ public protocol ScheduleServicing: Sendable {
     func loadSchedule(for date: Date) async throws -> ScheduleGraph
     func toggleHabit(habitId: UUID, for date: Date) async throws -> ToggleHabitResponse
     func addStep(_ payload: AddStepPayload, for date: Date) async throws -> ScheduleNode
+    func updateStep(id: String, payload: UpdateStepPayload, for date: Date) async throws -> ScheduleNode
     func deleteStep(id: String) async throws
     func createDefaultBlueprint(for dateString: String) -> ScheduleGraph
 }
@@ -62,6 +63,22 @@ public final class ScheduleService: ScheduleServicing {
         )
         let encoded = try APIClient.encodedBody(body)
         return try await apiClient.request(AppEndpoint.addScheduleStep(body: encoded))
+    }
+
+    public func updateStep(id: String, payload: UpdateStepPayload, for date: Date = Date()) async throws -> ScheduleNode {
+        let dateString = payload.date ?? Self.isoDateFormatter.string(from: date)
+        let body = UpdateScheduleStepRequestBody(
+            title: payload.title,
+            subtitle: payload.subtitle,
+            phase: payload.phaseId?.rawValue,
+            timeSlot: payload.timeSlot,
+            durationMinutes: payload.durationMinutes,
+            iconName: payload.iconName,
+            notes: payload.notes,
+            date: dateString
+        )
+        let encoded = try APIClient.encodedBody(body)
+        return try await apiClient.request(AppEndpoint.updateScheduleStep(id: id, body: encoded))
     }
 
     public func deleteStep(id: String) async throws {

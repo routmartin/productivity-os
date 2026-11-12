@@ -427,4 +427,172 @@ final class ScheduleViewModelTests: XCTestCase {
         XCTAssertNotNil(rechargeNode?.durationMinutes)
         XCTAssertGreaterThan(rechargeNode?.durationMinutes ?? 0, 0)
     }
+
+    // MARK: - AC-010, AC-011, AC-012: Step Update Tests
+
+    func testUpdateStepOptimisticMutationAndBedtimeRecalculation() async throws {
+        let viewModel = makeViewModel()
+        await viewModel.loadData()
+
+        guard let initialNode = viewModel.nodes.first(where: { $0.id == "task-top1" }) else {
+            XCTFail("Node task-top1 not found")
+            return
+        }
+
+        XCTAssertEqual(initialNode.title, "Finish authentication architecture")
+        XCTAssertEqual(initialNode.durationMinutes, 90)
+
+        let serverResponseJSON = """
+        {
+            "id": "task-top1",
+            "type": "task",
+            "phase": "deep-focus",
+            "title": "Deep Focus Architecture & System Design",
+            "subtitle": "High cognitive load · Core DB schema",
+            "time": "09:30",
+            "durationMinutes": 120,
+            "totalMinutes": 120,
+            "notes": "Ensure all FK constraints and indexes are covered.",
+            "order": 6
+        }
+        """
+        mockAPIClient.scriptedResponses = [
+            .success((Data(serverResponseJSON.utf8), 200))
+        ]
+
+        let payload = UpdateStepPayload(
+            title: "Deep Focus Architecture & System Design",
+            subtitle: "High cognitive load · Core DB schema",
+            phaseId: .deepFocus,
+            timeSlot: "09:30",
+            durationMinutes: 120,
+            notes: "Ensure all FK constraints and indexes are covered."
+        )
+
+        let updated = try await viewModel.updateStep(id: "task-top1", payload: payload)
+
+        XCTAssertEqual(updated.title, "Deep Focus Architecture & System Design")
+        XCTAssertEqual(updated.durationMinutes, 120)
+
+        // Verify state in view model
+        let nodeInVM = viewModel.nodes.first(where: { $0.id == "task-top1" })
+        XCTAssertEqual(nodeInVM?.title, "Deep Focus Architecture & System Design")
+        XCTAssertEqual(nodeInVM?.subtitle, "High cognitive load · Core DB schema")
+        XCTAssertEqual(nodeInVM?.time, "09:30")
+        XCTAssertEqual(nodeInVM?.durationMinutes, 120)
+        XCTAssertEqual(nodeInVM?.totalMinutes, 120)
+        XCTAssertEqual(nodeInVM?.notes, "Ensure all FK constraints and indexes are covered.")
+        XCTAssertNotNil(viewModel.graph?.projectedBedtime)
+    }
+
+    func testUpdateStepPhaseChangeRewiresEdgesWithoutOrphanEdges() async throws {
+        let viewModel = makeViewModel()
+        await viewModel.loadData()
+
+        guard let task = viewModel.nodes.first(where: { $0.id == "task-top1" }) else {
+            XCTFail("task-top1 not found")
+            return
+        }
+        XCTAssertEqual(task.phase, .deepFocus)
+
+        let serverResponseJSON = """
+        {
+            "id": "task-top1",
+            "type": "task",
+            "phase": "afternoon",
+            "title": "Finish authentication architecture",
+            "durationMinutes": 90,
+            "totalMinutes": 90,
+            "order": 9
+        }
+        """
+        mockAPIClient.scriptedResponses = [
+            .success((Data(serverResponseJSON.utf8), 200))
+        ]
+
+        let payload = UpdateStepPayload(
+            title: task.title,
+            phaseId: .afternoon
+        )
+
+        _ = try await viewModel.updateStep(id: "task-top1", payload: payload)
+
+        let movedTask = viewModel.nodes.first(where: { $0.id == "task-top1" })
+        XCTAssertEqual(movedTask?.phase, .afternoon)
+
+        // Verify edges are cleanly rewired and no orphaned edges exist
+        let allNodeIds = Set(viewModel.nodes.map(\.id))
+        for edge in viewModel.edges {
+            XCTAssertTrue(allNodeIds.contains(edge.fromNodeId), "Orphan edge from: \(edge.fromNodeId)")
+            XCTAssertTrue(allNodeIds.contains(edge.toNodeId), "Orphan edge to: \(edge.toNodeId)")
+        }
+
+        // Verify that edges connecting different phases have type .phase
+        for edge in viewModel.edges {
+            let from = viewModel.nodes.first { $0.id == edge.fromNodeId }
+            let to = viewModel.nodes.first { $0.id == edge.toNodeId }
+            if let from, let to, from.phase != to.phase {
+                XCTAssertEqual(edge.type, .phase)
+            }
+        }
+    }
+
+    func testUpdateStepProtectsAnchorNodesFromMutation() async {
+        let viewModel = makeViewModel()
+        await viewModel.loadData()
+
+        let initialWakeTitle = viewModel.wakeAnchor?.title
+
+        let payload = UpdateStepPayload(
+            title: "Changed Wake Title",
+            durationMinutes: 45
+        )
+
+        do {
+            _ = try await viewModel.updateStep(id: "anchor-wake", payload: payload)
+            XCTFail("Expected anchor mutation to be rejected")
+        } catch let error as APIError {
+            XCTAssertEqual(error.errorCode, "ANCHOR_UPDATE_NOT_ALLOWED")
+        } catch {
+            XCTFail("Unexpected error type: \(error)")
+        }
+
+        // State remains intact
+        XCTAssertEqual(viewModel.wakeAnchor?.title, initialWakeTitle)
+    }
+
+    func testUpdateStepRollsBackOnServerFailure() async {
+        let viewModel = makeViewModel()
+        await viewModel.loadData()
+
+        guard let initialNode = viewModel.nodes.first(where: { $0.id == "task-top1" }) else {
+            XCTFail("Node task-top1 not found")
+            return
+        }
+
+        let initialTitle = initialNode.title
+        let initialDuration = initialNode.durationMinutes
+
+        mockAPIClient.scriptedResponses = [
+            .failure(APIError.serverError(statusCode: 500, code: "INTERNAL_ERROR", message: "Server error"))
+        ]
+
+        let payload = UpdateStepPayload(
+            title: "Should Roll Back",
+            durationMinutes: 300
+        )
+
+        do {
+            _ = try await viewModel.updateStep(id: "task-top1", payload: payload)
+            XCTFail("Expected updateStep to throw on server failure")
+        } catch {
+            // Expected
+        }
+
+        // Verify state is restored to pre-mutation snapshot
+        let restoredNode = viewModel.nodes.first(where: { $0.id == "task-top1" })
+        XCTAssertEqual(restoredNode?.title, initialTitle)
+        XCTAssertEqual(restoredNode?.durationMinutes, initialDuration)
+        XCTAssertNotNil(viewModel.errorMessage)
+    }
 }
