@@ -10,7 +10,9 @@ import com.productivityos.schedule.dto.ScheduleGraphResponse
 import com.productivityos.schedule.dto.ScheduleNodeDTO
 import com.productivityos.schedule.dto.ToggleHabitRequest
 import com.productivityos.schedule.dto.ToggleHabitResponse
+import com.productivityos.schedule.dto.UpdateScheduleStepRequest
 import com.productivityos.schedule.exception.AnchorDeletionNotAllowedException
+import com.productivityos.schedule.exception.AnchorUpdateNotAllowedException
 import com.productivityos.schedule.exception.ScheduleNodeNotFoundException
 import com.productivityos.schedule.service.ScheduleService
 import com.productivityos.user.service.UserTimezoneService
@@ -25,6 +27,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -179,5 +182,101 @@ class ScheduleControllerTest {
         mockMvc.perform(delete("/api/v1/schedule/steps/$nonExistentId"))
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+    }
+
+    // AC-010: PUT /api/v1/schedule/steps/{id}
+    @Test
+    fun `updateStep returns 200 OK with updated ScheduleNodeDTO`() {
+        val stepId = UUID.randomUUID().toString()
+        val request = UpdateScheduleStepRequest(
+            title = "Deep Focus Architecture",
+            subtitle = "Core DB schema",
+            phase = "deep-focus",
+            timeSlot = "09:30",
+            durationMinutes = 90,
+            notes = "Ensure FK constraints",
+            date = date
+        )
+        val responseNode = ScheduleNodeDTO(
+            id = stepId,
+            type = "task",
+            phase = "deep-focus",
+            title = "Deep Focus Architecture",
+            subtitle = "Core DB schema",
+            time = "09:30",
+            durationMinutes = 90,
+            notes = "Ensure FK constraints",
+            order = 6
+        )
+
+        `when`(scheduleService.updateStep(userId, stepId, request)).thenReturn(responseNode)
+
+        mockMvc.perform(
+            put("/api/v1/schedule/steps/$stepId")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(stepId))
+            .andExpect(jsonPath("$.title").value("Deep Focus Architecture"))
+            .andExpect(jsonPath("$.subtitle").value("Core DB schema"))
+            .andExpect(jsonPath("$.phase").value("deep-focus"))
+            .andExpect(jsonPath("$.time").value("09:30"))
+            .andExpect(jsonPath("$.durationMinutes").value(90))
+            .andExpect(jsonPath("$.notes").value("Ensure FK constraints"))
+            .andExpect(jsonPath("$.order").value(6))
+    }
+
+    // AC-011: PUT /api/v1/schedule/steps/{anchorId} returns 400 Bad Request with ANCHOR_UPDATE_NOT_ALLOWED
+    @Test
+    fun `updateStep on anchor returns 400 Bad Request with ANCHOR_UPDATE_NOT_ALLOWED`() {
+        val request = UpdateScheduleStepRequest(title = "New Wake Time")
+        doThrow(AnchorUpdateNotAllowedException("Anchor node update is not allowed"))
+            .`when`(scheduleService).updateStep(userId, "anchor-wake", request)
+
+        mockMvc.perform(
+            put("/api/v1/schedule/steps/anchor-wake")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("ANCHOR_UPDATE_NOT_ALLOWED"))
+            .andExpect(jsonPath("$.message").value("Anchor node update is not allowed"))
+    }
+
+    // AC-013: PUT /api/v1/schedule/steps/{id} not found or foreign returns 404 Not Found
+    @Test
+    fun `updateStep not found returns 404 Not Found`() {
+        val nonExistentId = UUID.randomUUID().toString()
+        val request = UpdateScheduleStepRequest(title = "Updated Title")
+        doThrow(ScheduleNodeNotFoundException("Schedule node not found: $nonExistentId"))
+            .`when`(scheduleService).updateStep(userId, nonExistentId, request)
+
+        mockMvc.perform(
+            put("/api/v1/schedule/steps/$nonExistentId")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+    }
+
+    // Bean validation: blank title returns 400 Bad Request with VALIDATION_ERROR
+    @Test
+    fun `updateStep with blank title returns 400 Bad Request with VALIDATION_ERROR`() {
+        val stepId = UUID.randomUUID().toString()
+        val request = mapOf(
+            "title" to "   ",
+            "durationMinutes" to 60
+        )
+
+        mockMvc.perform(
+            put("/api/v1/schedule/steps/$stepId")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.details[0].field").value("title"))
     }
 }

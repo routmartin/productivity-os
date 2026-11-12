@@ -10,7 +10,9 @@ import com.productivityos.schedule.dto.ScheduleGraphResponse
 import com.productivityos.schedule.dto.ScheduleNodeDTO
 import com.productivityos.schedule.dto.SchedulePhaseDTO
 import com.productivityos.schedule.dto.ToggleHabitResponse
+import com.productivityos.schedule.dto.UpdateScheduleStepRequest
 import com.productivityos.schedule.exception.AnchorDeletionNotAllowedException
+import com.productivityos.schedule.exception.AnchorUpdateNotAllowedException
 import com.productivityos.schedule.exception.ScheduleNodeNotFoundException
 import com.productivityos.schedule.persistence.ScheduleEntryEntity
 import com.productivityos.schedule.persistence.ScheduleEntryRepository
@@ -236,6 +238,117 @@ class ScheduleService(
             habit.deletedAt = clock.instant()
             scheduleHabitRepository.save(habit)
             return
+        }
+
+        throw ScheduleNodeNotFoundException("Schedule node not found: $stepId")
+    }
+
+    fun updateStep(userId: UUID, stepId: String, request: UpdateScheduleStepRequest): ScheduleNodeDTO {
+        if (stepId == ANCHOR_WAKE_ID || stepId == ANCHOR_BEDTIME_ID || stepId.startsWith("anchor-")) {
+            throw AnchorUpdateNotAllowedException("Anchor node update is not allowed")
+        }
+
+        val uuid = try {
+            UUID.fromString(stepId)
+        } catch (e: Exception) {
+            throw ScheduleNodeNotFoundException("Invalid step id: $stepId")
+        }
+
+        val validPhases = setOf(
+            SchedulePhaseId.MORNING.value,
+            SchedulePhaseId.DEEP_FOCUS.value,
+            SchedulePhaseId.AFTERNOON.value,
+            SchedulePhaseId.BEDTIME.value
+        )
+        if (request.phase != null && request.phase !in validPhases) {
+            throw IllegalArgumentException("Invalid phase: ${request.phase}. Allowed: $validPhases")
+        }
+
+        val entryOpt = scheduleEntryRepository.findByIdAndUserIdAndDeletedAtIsNull(uuid, userId)
+        if (entryOpt.isPresent) {
+            val entry = entryOpt.get()
+            entry.title = request.title.trim()
+            entry.subtitle = request.subtitle?.trim()
+            if (!request.phase.isNullOrBlank()) {
+                entry.phase = request.phase
+            }
+            if (request.timeSlot != null) {
+                entry.timeLabel = request.timeSlot.trim()
+            }
+            if (request.durationMinutes != null) {
+                entry.durationMinutes = request.durationMinutes
+            }
+            if (request.notes != null) {
+                entry.notes = request.notes.trim()
+            }
+            val saved = scheduleEntryRepository.save(entry)
+            return ScheduleNodeDTO(
+                id = saved.id.toString(),
+                type = saved.stepType,
+                phase = saved.phase,
+                title = saved.title,
+                subtitle = saved.subtitle,
+                time = saved.timeLabel,
+                durationMinutes = saved.durationMinutes,
+                inFocus = saved.inFocus,
+                completedMinutes = saved.completedMinutes,
+                totalMinutes = saved.durationMinutes,
+                rechargeKind = if (saved.stepType == ScheduleNodeType.RECHARGE.value) "break" else null,
+                notes = saved.notes,
+                order = saved.orderIndex
+            )
+        }
+
+        val habitOpt = scheduleHabitRepository.findByIdAndUserIdAndDeletedAtIsNull(uuid, userId)
+        if (habitOpt.isPresent) {
+            val habit = habitOpt.get()
+            habit.title = request.title.trim()
+            habit.subtitle = request.subtitle?.trim()
+            if (!request.iconName.isNullOrBlank()) {
+                habit.icon = request.iconName.trim()
+            }
+            if (!request.phase.isNullOrBlank()) {
+                habit.phase = request.phase
+            }
+            if (request.timeSlot != null) {
+                habit.targetTime = request.timeSlot.trim()
+            }
+            if (request.durationMinutes != null) {
+                habit.durationMinutes = request.durationMinutes
+            }
+            if (request.notes != null) {
+                habit.notes = request.notes.trim()
+            }
+            val saved = scheduleHabitRepository.save(habit)
+
+            val targetDate = request.date ?: userTimezoneService.today(userId)
+            val historyWindow = scheduleHabitOccurrenceRepository
+                .findByUserIdAndHabitIdAndCalendarDateBetween(userId, uuid, targetDate.minusDays(365), targetDate)
+                .map { it.calendarDate }
+                .toSet()
+            val isCompleted = scheduleHabitOccurrenceRepository
+                .findByUserIdAndHabitIdAndCalendarDate(userId, uuid, targetDate)
+                .isPresent
+            val streak = habitStreakCalculator.calculateStreak(historyWindow, targetDate)
+            val history = habitStreakCalculator.generate14DayHistory(historyWindow, targetDate)
+
+            return ScheduleNodeDTO(
+                id = saved.id.toString(),
+                type = ScheduleNodeType.HABIT.value,
+                phase = saved.phase,
+                title = saved.title,
+                subtitle = saved.subtitle,
+                time = saved.targetTime,
+                durationMinutes = saved.durationMinutes,
+                habitId = saved.id.toString(),
+                icon = saved.icon,
+                streak = streak,
+                completed = isCompleted,
+                frequency = "Daily",
+                history = history,
+                notes = saved.notes,
+                order = saved.orderIndex
+            )
         }
 
         throw ScheduleNodeNotFoundException("Schedule node not found: $stepId")

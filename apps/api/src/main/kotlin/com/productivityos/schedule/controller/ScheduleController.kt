@@ -6,6 +6,7 @@ import com.productivityos.schedule.dto.ScheduleGraphResponse
 import com.productivityos.schedule.dto.ScheduleNodeDTO
 import com.productivityos.schedule.dto.ToggleHabitRequest
 import com.productivityos.schedule.dto.ToggleHabitResponse
+import com.productivityos.schedule.dto.UpdateScheduleStepRequest
 import com.productivityos.schedule.service.ScheduleService
 import com.productivityos.user.service.UserTimezoneService
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
@@ -65,5 +67,14 @@ class ScheduleController(
     ): ResponseEntity<Void> {
         scheduleService.deleteStep(currentUser.id(), id)
         return ResponseEntity.noContent().build()
+    }
+
+    @PutMapping("/steps/{id}")
+    fun updateStep(
+        @PathVariable("id") id: String,
+        @Valid @RequestBody request: UpdateScheduleStepRequest
+    ): ResponseEntity<ScheduleNodeDTO> {
+        val updated = scheduleService.updateStep(currentUser.id(), id, request)
+        return ResponseEntity.ok(updated)
     }
 }

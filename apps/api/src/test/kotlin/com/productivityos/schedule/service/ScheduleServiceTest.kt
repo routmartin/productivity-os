@@ -3,7 +3,9 @@ package com.productivityos.schedule.service
 import com.productivityos.schedule.domain.ScheduleNodeType
 import com.productivityos.schedule.domain.SchedulePhaseId
 import com.productivityos.schedule.dto.AddScheduleStepRequest
+import com.productivityos.schedule.dto.UpdateScheduleStepRequest
 import com.productivityos.schedule.exception.AnchorDeletionNotAllowedException
+import com.productivityos.schedule.exception.AnchorUpdateNotAllowedException
 import com.productivityos.schedule.exception.ScheduleNodeNotFoundException
 import com.productivityos.schedule.persistence.ScheduleEntryEntity
 import com.productivityos.schedule.persistence.ScheduleEntryRepository
@@ -453,5 +455,186 @@ class ScheduleServiceTest {
         assertEquals(14, habitNode.history!!.size)
         assertEquals(date.minusDays(13).toString(), habitNode.history!!.first().date)
         assertEquals(date.toString(), habitNode.history!!.last().date)
+    }
+
+    // AC-010 / AC-012: Update ScheduleEntryEntity
+    @Test
+    fun `service updates ScheduleEntryEntity fields and preserves order`() {
+        val entryId = UUID.randomUUID()
+        val originalEntry = ScheduleEntryEntity(
+            id = entryId,
+            userId = userId,
+            calendarDate = date,
+            stepType = "task",
+            phase = "morning",
+            title = "Original Title",
+            subtitle = "Original Subtitle",
+            timeLabel = "08:00",
+            durationMinutes = 30,
+            orderIndex = 5,
+            notes = "Original notes",
+            createdAt = now
+        )
+
+        `when`(entryRepository.findByIdAndUserIdAndDeletedAtIsNull(entryId, userId))
+            .thenReturn(Optional.of(originalEntry))
+        `when`(entryRepository.save(any(ScheduleEntryEntity::class.java)))
+            .thenAnswer { it.arguments[0] as ScheduleEntryEntity }
+
+        val request = UpdateScheduleStepRequest(
+            title = "Updated Title",
+            subtitle = "Updated Subtitle",
+            phase = "deep-focus",
+            timeSlot = "09:30",
+            durationMinutes = 90,
+            notes = "Updated notes"
+        )
+
+        val result = service.updateStep(userId, entryId.toString(), request)
+
+        assertEquals(entryId.toString(), result.id)
+        assertEquals("task", result.type)
+        assertEquals("deep-focus", result.phase)
+        assertEquals("Updated Title", result.title)
+        assertEquals("Updated Subtitle", result.subtitle)
+        assertEquals("09:30", result.time)
+        assertEquals(90, result.durationMinutes)
+        assertEquals(90, result.totalMinutes)
+        assertEquals("Updated notes", result.notes)
+        assertEquals(5, result.order) // preserved orderIndex
+
+        val entryCaptor = ArgumentCaptor.forClass(ScheduleEntryEntity::class.java)
+        verify(entryRepository).save(entryCaptor.capture())
+        assertEquals("Updated Title", entryCaptor.value.title)
+        assertEquals("Updated Subtitle", entryCaptor.value.subtitle)
+        assertEquals("deep-focus", entryCaptor.value.phase)
+        assertEquals("09:30", entryCaptor.value.timeLabel)
+        assertEquals(90, entryCaptor.value.durationMinutes)
+        assertEquals("Updated notes", entryCaptor.value.notes)
+        assertEquals(5, entryCaptor.value.orderIndex)
+    }
+
+    // AC-010 / AC-012: Update ScheduleHabitEntity and retain streak
+    @Test
+    fun `service updates ScheduleHabitEntity and retains streak history`() {
+        val habitId = UUID.randomUUID()
+        val originalHabit = ScheduleHabitEntity(
+            id = habitId,
+            userId = userId,
+            title = "Morning Hydration",
+            subtitle = "Old Subtitle",
+            icon = "drop.fill",
+            phase = "morning",
+            targetTime = "06:45",
+            durationMinutes = 15,
+            orderIndex = 3,
+            notes = "Old notes",
+            createdAt = now
+        )
+
+        `when`(entryRepository.findByIdAndUserIdAndDeletedAtIsNull(habitId, userId))
+            .thenReturn(Optional.empty())
+        `when`(habitRepository.findByIdAndUserIdAndDeletedAtIsNull(habitId, userId))
+            .thenReturn(Optional.of(originalHabit))
+        `when`(habitRepository.save(any(ScheduleHabitEntity::class.java)))
+            .thenAnswer { it.arguments[0] as ScheduleHabitEntity }
+
+        val occurrenceDate1 = date.minusDays(1)
+        val occurrenceDate2 = date
+        val occurrences = listOf(
+            ScheduleHabitOccurrenceEntity(userId = userId, habitId = habitId, calendarDate = occurrenceDate1, completedAt = now),
+            ScheduleHabitOccurrenceEntity(userId = userId, habitId = habitId, calendarDate = occurrenceDate2, completedAt = now)
+        )
+        `when`(occurrenceRepository.findByUserIdAndHabitIdAndCalendarDateBetween(userId, habitId, date.minusDays(365), date))
+            .thenReturn(occurrences)
+        `when`(occurrenceRepository.findByUserIdAndHabitIdAndCalendarDate(userId, habitId, date))
+            .thenReturn(Optional.of(occurrences[1]))
+
+        val request = UpdateScheduleStepRequest(
+            title = "Advanced Hydration & Electrolytes",
+            subtitle = "Electrolyte blend",
+            iconName = "flame.fill",
+            phase = "morning",
+            timeSlot = "07:00",
+            durationMinutes = 20,
+            notes = "With mineral pinch",
+            date = date
+        )
+
+        val result = service.updateStep(userId, habitId.toString(), request)
+
+        assertEquals(habitId.toString(), result.id)
+        assertEquals("habit", result.type)
+        assertEquals("Advanced Hydration & Electrolytes", result.title)
+        assertEquals("Electrolyte blend", result.subtitle)
+        assertEquals("flame.fill", result.icon)
+        assertEquals("morning", result.phase)
+        assertEquals("07:00", result.time)
+        assertEquals(20, result.durationMinutes)
+        assertEquals("With mineral pinch", result.notes)
+        assertEquals(3, result.order) // preserved orderIndex
+        assertEquals(2, result.streak)
+        assertTrue(result.completed == true)
+        assertNotNull(result.history)
+        assertEquals(14, result.history!!.size)
+
+        val habitCaptor = ArgumentCaptor.forClass(ScheduleHabitEntity::class.java)
+        verify(habitRepository).save(habitCaptor.capture())
+        assertEquals("Advanced Hydration & Electrolytes", habitCaptor.value.title)
+        assertEquals("flame.fill", habitCaptor.value.icon)
+        assertEquals(20, habitCaptor.value.durationMinutes)
+        assertEquals(3, habitCaptor.value.orderIndex)
+    }
+
+    // AC-011: Anchor Update Rejection
+    @Test
+    fun `updateStep on anchor node throws AnchorUpdateNotAllowedException`() {
+        val request = UpdateScheduleStepRequest(title = "New Wake Time")
+        assertThrows<AnchorUpdateNotAllowedException> {
+            service.updateStep(userId, "anchor-wake", request)
+        }
+        assertThrows<AnchorUpdateNotAllowedException> {
+            service.updateStep(userId, "anchor-bedtime", request)
+        }
+        assertThrows<AnchorUpdateNotAllowedException> {
+            service.updateStep(userId, "anchor-custom", request)
+        }
+    }
+
+    // Invalid UUID
+    @Test
+    fun `updateStep with invalid uuid throws ScheduleNodeNotFoundException`() {
+        val request = UpdateScheduleStepRequest(title = "Invalid")
+        assertThrows<ScheduleNodeNotFoundException> {
+            service.updateStep(userId, "not-a-valid-uuid", request)
+        }
+    }
+
+    // AC-013: Strict User Isolation (ADR-004)
+    @Test
+    fun `updateStep for foreign or non-existent node throws ScheduleNodeNotFoundException`() {
+        val foreignId = UUID.randomUUID()
+        `when`(entryRepository.findByIdAndUserIdAndDeletedAtIsNull(foreignId, otherUserId))
+            .thenReturn(Optional.empty())
+        `when`(habitRepository.findByIdAndUserIdAndDeletedAtIsNull(foreignId, otherUserId))
+            .thenReturn(Optional.empty())
+
+        val request = UpdateScheduleStepRequest(title = "Hacked Title")
+        assertThrows<ScheduleNodeNotFoundException> {
+            service.updateStep(otherUserId, foreignId.toString(), request)
+        }
+    }
+
+    // Phase validation
+    @Test
+    fun `service throws IllegalArgumentException on invalid phase string`() {
+        val stepId = UUID.randomUUID()
+        val request = UpdateScheduleStepRequest(
+            title = "Task",
+            phase = "invalid-phase"
+        )
+        assertThrows<IllegalArgumentException> {
+            service.updateStep(userId, stepId.toString(), request)
+        }
     }
 }

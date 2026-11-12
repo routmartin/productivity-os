@@ -7,6 +7,7 @@ import com.productivityos.auth.exception.InvalidRefreshTokenException
 import com.productivityos.project.exception.ProjectNotFoundException
 import com.productivityos.goal.exception.GoalNotFoundException
 import com.productivityos.schedule.exception.AnchorDeletionNotAllowedException
+import com.productivityos.schedule.exception.AnchorUpdateNotAllowedException
 import com.productivityos.schedule.exception.ScheduleNodeNotFoundException
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -68,6 +69,16 @@ class GlobalExceptionHandler {
         val body = ErrorResponse(
             code = "ANCHOR_DELETION_NOT_ALLOWED",
             message = ex.message ?: "Anchor node deletion is not allowed",
+            traceId = traceId()
+        )
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body)
+    }
+
+    @ExceptionHandler(AnchorUpdateNotAllowedException::class)
+    fun handleAnchorUpdateNotAllowed(ex: AnchorUpdateNotAllowedException): ResponseEntity<ErrorResponse> {
+        val body = ErrorResponse(
+            code = "ANCHOR_UPDATE_NOT_ALLOWED",
+            message = ex.message ?: "Anchor node update is not allowed",
             traceId = traceId()
         )
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body)
