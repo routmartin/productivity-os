@@ -1,0 +1,30 @@
+package com.productivityos.schedule.dto
+
+data class ScheduleNodeDTO(
+    val id: String,
+    val type: String,
+    val phase: String,
+    val title: String,
+    val subtitle: String? = null,
+    val time: String? = null,
+    val durationMinutes: Int? = null,
+    val habitId: String? = null,
+    val icon: String? = null,
+    val streak: Int? = null,
+    val completed: Boolean? = null,
+    val frequency: String? = null,
+    val history: List<HabitStreakDayDTO>? = null,
+    val taskId: String? = null,
+    val priority: String? = null,
+    val inFocus: Boolean? = null,
+    val completedMinutes: Int? = null,
+    val totalMinutes: Int? = null,
+    val projectName: String? = null,
+    val anchorKind: String? = null,
+    val targetTime: String? = null,
+    val projectedTime: String? = null,
+    val overflowMinutes: Int? = null,
+    val rechargeKind: String? = null,
+    val notes: String? = null,
+    val order: Int? = null
+)

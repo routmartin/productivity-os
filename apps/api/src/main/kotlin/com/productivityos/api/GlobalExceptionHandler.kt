@@ -6,6 +6,8 @@ import com.productivityos.auth.exception.DuplicateEmailException
 import com.productivityos.auth.exception.InvalidRefreshTokenException
 import com.productivityos.project.exception.ProjectNotFoundException
 import com.productivityos.goal.exception.GoalNotFoundException
+import com.productivityos.schedule.exception.AnchorDeletionNotAllowedException
+import com.productivityos.schedule.exception.ScheduleNodeNotFoundException
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import org.springframework.dao.DataIntegrityViolationException
@@ -49,6 +51,26 @@ class GlobalExceptionHandler {
             traceId = traceId()
         )
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body)
+    }
+
+    @ExceptionHandler(ScheduleNodeNotFoundException::class)
+    fun handleScheduleNodeNotFound(ex: ScheduleNodeNotFoundException): ResponseEntity<ErrorResponse> {
+        val body = ErrorResponse(
+            code = "NOT_FOUND",
+            message = ex.message ?: "Schedule node not found",
+            traceId = traceId()
+        )
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body)
+    }
+
+    @ExceptionHandler(AnchorDeletionNotAllowedException::class)
+    fun handleAnchorDeletionNotAllowed(ex: AnchorDeletionNotAllowedException): ResponseEntity<ErrorResponse> {
+        val body = ErrorResponse(
+            code = "ANCHOR_DELETION_NOT_ALLOWED",
+            message = ex.message ?: "Anchor node deletion is not allowed",
+            traceId = traceId()
+        )
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body)
     }
 
     @ExceptionHandler(IllegalArgumentException::class)

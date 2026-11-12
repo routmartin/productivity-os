@@ -122,6 +122,20 @@ class ArchitectureTest {
     }
 
     @ArchTest
+    fun schedule_module_depends_only_on_user_and_shared_packages(classes: JavaClasses) {
+        noClasses().that().resideInAPackage("com.productivityos.schedule..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                "com.productivityos.task..",
+                "com.productivityos.project..",
+                "com.productivityos.goal..",
+                "com.productivityos.focus..",
+                "com.productivityos.dailyplan..",
+                "com.productivityos.topthree..",
+                "com.productivityos.auth.."
+            ).check(classes)
+    }
+
+    @ArchTest
     fun controllers_depend_only_on_dto_api_and_config_outside_own_module(classes: JavaClasses) {
         classes().that().resideInAPackage("com.productivityos..controller..")
             .should().onlyDependOnClassesThat().resideInAnyPackage(
