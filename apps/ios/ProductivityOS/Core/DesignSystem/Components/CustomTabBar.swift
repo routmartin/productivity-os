@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Tab selection enum
 public enum AppTab: String, CaseIterable, Identifiable {
-    case today = "Today"
+    case schedule = "Schedule"
     case goals = "Goals"
     case focus = "Focus"
     case tasks = "Tasks"
@@ -12,7 +12,7 @@ public enum AppTab: String, CaseIterable, Identifiable {
 
     public var iconName: String {
         switch self {
-        case .today: return "house.fill"
+        case .schedule: return "calendar.day.timeline.left"
         case .goals: return "target"
         case .focus: return "scope"
         case .tasks: return "checklist"
@@ -75,7 +75,7 @@ public struct CustomTabBar: View {
 #Preview {
     VStack {
         Spacer()
-        CustomTabBar(selectedTab: .constant(.today))
+        CustomTabBar(selectedTab: .constant(.schedule))
     }
     .background(AppColors.canvas)
 }

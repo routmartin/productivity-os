@@ -54,6 +54,10 @@ public enum AppColors {
     public static let success = Color(hex: "1E9E6A")
     public static let successTint = Color(hex: "E6F6EE")
 
+    /// Warning / Overflow state (bedtime shifts, amber indicators).
+    public static let warning = Color(hex: "F59E0B")
+    public static let warningTint = Color(hex: "FEF3C7")
+
     // MARK: - Focus Mode Environment (Deep Navy & Glowing Accents)
     /// Deep dark navy background for active focus
     public static let focusCanvas = Color(hex: "08071A")

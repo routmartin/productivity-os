@@ -4,7 +4,7 @@ import SwiftUI
 /// Main coordinator view with iOS 26 Liquid Glass tab bar.
 public struct MainTabView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @State private var selectedTab: AppTab = .today
+    @State private var selectedTab: AppTab = .schedule
     @State private var focusViewModel = FocusSessionViewModel()
     @State private var projectsViewModel = ProjectsViewModel()
     @State private var isShowingFocusSheet = false
@@ -15,18 +15,8 @@ public struct MainTabView: View {
 
     public var body: some View {
         TabView(selection: $selectedTab) {
-            Tab(AppTab.today.rawValue, systemImage: AppTab.today.iconName, value: AppTab.today) {
-                TodayView(
-                    projectsViewModel: projectsViewModel,
-                    onStartFocus: { task in
-                        focusViewModel.setSelectedTask(task)
-                        isShowingFocusSheet = true
-                    },
-                    onSelectTask: { task in
-                        focusViewModel.setSelectedTask(task)
-                        isShowingFocusSheet = true
-                    }
-                )
+            Tab(AppTab.schedule.rawValue, systemImage: AppTab.schedule.iconName, value: AppTab.schedule) {
+                ScheduleView()
             }
 
             Tab(AppTab.goals.rawValue, systemImage: AppTab.goals.iconName, value: AppTab.goals) {
@@ -38,7 +28,7 @@ public struct MainTabView: View {
                     viewModel: focusViewModel,
                     projectsViewModel: projectsViewModel,
                     onDismiss: {
-                        selectedTab = .today
+                        selectedTab = .schedule
                     }
                 )
             }
@@ -160,7 +150,7 @@ public struct MainTabView: View {
             guard url.scheme == "productivityos" else { return }
             switch url.host {
             case "today":
-                selectedTab = .today
+                selectedTab = .schedule
             case "tasks":
                 selectedTab = .tasks
             case "focus":

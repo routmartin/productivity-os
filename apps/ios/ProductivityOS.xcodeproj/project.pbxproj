@@ -79,6 +79,23 @@
 		AA0000422C7F000100000001 /* FocusWidgetPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000412C7F000100000001 /* FocusWidgetPublisher.swift */; };
 		C4831DA14811725559E0B3AA /* FocusActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C746433FFCEFFE59A5954644 /* FocusActivityAttributes.swift */; };
 		ED4BDC22D3741CEC47622A16 /* FocusLiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABBA361DDA951C72D03D19E7 /* FocusLiveActivityManager.swift */; };
+		AA0000502C7F000100000001 /* Schedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000502C7F000100000001 /* Schedule.swift */; };
+		AA0000512C7F000100000001 /* BedtimeCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000512C7F000100000001 /* BedtimeCalculator.swift */; };
+		AA0000522C7F000100000001 /* ScheduleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000522C7F000100000001 /* ScheduleService.swift */; };
+		AA0000532C7F000100000001 /* ScheduleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000532C7F000100000001 /* ScheduleViewModel.swift */; };
+		AA0000542C7F000100000001 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000542C7F000100000001 /* ScheduleView.swift */; };
+		AA0000552C7F000100000001 /* ScheduleViewSwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000552C7F000100000001 /* ScheduleViewSwitcher.swift */; };
+		AA0000562C7F000100000001 /* ScheduleBedtimeBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000562C7F000100000001 /* ScheduleBedtimeBanner.swift */; };
+		AA0000572C7F000100000001 /* ScheduleAnchorNodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000572C7F000100000001 /* ScheduleAnchorNodeView.swift */; };
+		AA0000582C7F000100000001 /* ScheduleHabitNodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000582C7F000100000001 /* ScheduleHabitNodeView.swift */; };
+		AA0000592C7F000100000001 /* ScheduleActivityNodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000592C7F000100000001 /* ScheduleActivityNodeView.swift */; };
+		AA00005A2C7F000100000001 /* ScheduleRechargeNodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00005A2C7F000100000001 /* ScheduleRechargeNodeView.swift */; };
+		AA00005B2C7F000100000001 /* ScheduleEdgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00005B2C7F000100000001 /* ScheduleEdgeView.swift */; };
+		AA00005C2C7F000100000001 /* ScheduleSpineLayoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00005C2C7F000100000001 /* ScheduleSpineLayoutView.swift */; };
+		AA00005D2C7F000100000001 /* ScheduleJourneyLayoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00005D2C7F000100000001 /* ScheduleJourneyLayoutView.swift */; };
+		AA00005E2C7F000100000001 /* ScheduleMatrixLayoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00005E2C7F000100000001 /* ScheduleMatrixLayoutView.swift */; };
+		AA00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift */; };
+		AA0000602C7F000100000001 /* ScheduleAddStepSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000602C7F000100000001 /* ScheduleAddStepSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -181,6 +198,23 @@
 		C746433FFCEFFE59A5954644 /* FocusActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FocusActivityAttributes.swift; sourceTree = "<group>"; };
 		CC0000012C7F000100000001 /* ProductivityOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProductivityOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D67FC03ABE60F3ABE1D9600F /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		BB0000502C7F000100000001 /* Schedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Schedule.swift; sourceTree = "<group>"; };
+		BB0000512C7F000100000001 /* BedtimeCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BedtimeCalculator.swift; sourceTree = "<group>"; };
+		BB0000522C7F000100000001 /* ScheduleService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleService.swift; sourceTree = "<group>"; };
+		BB0000532C7F000100000001 /* ScheduleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleViewModel.swift; sourceTree = "<group>"; };
+		BB0000542C7F000100000001 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
+		BB0000552C7F000100000001 /* ScheduleViewSwitcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleViewSwitcher.swift; sourceTree = "<group>"; };
+		BB0000562C7F000100000001 /* ScheduleBedtimeBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleBedtimeBanner.swift; sourceTree = "<group>"; };
+		BB0000572C7F000100000001 /* ScheduleAnchorNodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleAnchorNodeView.swift; sourceTree = "<group>"; };
+		BB0000582C7F000100000001 /* ScheduleHabitNodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleHabitNodeView.swift; sourceTree = "<group>"; };
+		BB0000592C7F000100000001 /* ScheduleActivityNodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleActivityNodeView.swift; sourceTree = "<group>"; };
+		BB00005A2C7F000100000001 /* ScheduleRechargeNodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleRechargeNodeView.swift; sourceTree = "<group>"; };
+		BB00005B2C7F000100000001 /* ScheduleEdgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleEdgeView.swift; sourceTree = "<group>"; };
+		BB00005C2C7F000100000001 /* ScheduleSpineLayoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSpineLayoutView.swift; sourceTree = "<group>"; };
+		BB00005D2C7F000100000001 /* ScheduleJourneyLayoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleJourneyLayoutView.swift; sourceTree = "<group>"; };
+		BB00005E2C7F000100000001 /* ScheduleMatrixLayoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleMatrixLayoutView.swift; sourceTree = "<group>"; };
+		BB00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleNodeDetailSheet.swift; sourceTree = "<group>"; };
+		BB0000602C7F000100000001 /* ScheduleAddStepSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleAddStepSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -293,6 +327,7 @@
 				EE0000152C7F000100000001 /* Authentication */,
 				EE0000162C7F000100000001 /* Projects */,
 				EE0000172C7F000100000001 /* Goals */,
+				EE0000192C7F000100000001 /* Schedule */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -308,6 +343,7 @@
 				BB0000222C7F000100000001 /* FocusSessionState.swift */,
 				BB0000322C7F000100000001 /* Project.swift */,
 				BB0000372C7F000100000001 /* Goal.swift */,
+				BB0000502C7F000100000001 /* Schedule.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -382,6 +418,7 @@
 				BB0000132C7F000100000001 /* SampleData.swift */,
 				BB00002D2C7F000100000001 /* Haptics.swift */,
 				BB0000412C7F000100000001 /* FocusWidgetPublisher.swift */,
+				BB0000512C7F000100000001 /* BedtimeCalculator.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -458,6 +495,7 @@
 				BB0000302C7F000100000001 /* QRAuthenticationService.swift */,
 				BB0000332C7F000100000001 /* ProjectService.swift */,
 				BB0000382C7F000100000001 /* GoalService.swift */,
+				BB0000522C7F000100000001 /* ScheduleService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -497,6 +535,67 @@
 				BB0000402C7F000100000001 /* FocusWidgetShared.swift */,
 			);
 			path = Shared;
+			sourceTree = "<group>";
+		};
+		EE0000192C7F000100000001 /* Schedule */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000532C7F000100000001 /* ScheduleViewModel.swift */,
+				BB0000542C7F000100000001 /* ScheduleView.swift */,
+				EE00001A2C7F000100000001 /* Components */,
+				EE00001D2C7F000100000001 /* Layouts */,
+				EE00001E2C7F000100000001 /* Sheets */,
+			);
+			path = Schedule;
+			sourceTree = "<group>";
+		};
+		EE00001A2C7F000100000001 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000552C7F000100000001 /* ScheduleViewSwitcher.swift */,
+				BB0000562C7F000100000001 /* ScheduleBedtimeBanner.swift */,
+				EE00001B2C7F000100000001 /* Nodes */,
+				EE00001C2C7F000100000001 /* Connectors */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		EE00001B2C7F000100000001 /* Nodes */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000572C7F000100000001 /* ScheduleAnchorNodeView.swift */,
+				BB0000582C7F000100000001 /* ScheduleHabitNodeView.swift */,
+				BB0000592C7F000100000001 /* ScheduleActivityNodeView.swift */,
+				BB00005A2C7F000100000001 /* ScheduleRechargeNodeView.swift */,
+			);
+			path = Nodes;
+			sourceTree = "<group>";
+		};
+		EE00001C2C7F000100000001 /* Connectors */ = {
+			isa = PBXGroup;
+			children = (
+				BB00005B2C7F000100000001 /* ScheduleEdgeView.swift */,
+			);
+			path = Connectors;
+			sourceTree = "<group>";
+		};
+		EE00001D2C7F000100000001 /* Layouts */ = {
+			isa = PBXGroup;
+			children = (
+				BB00005C2C7F000100000001 /* ScheduleSpineLayoutView.swift */,
+				BB00005D2C7F000100000001 /* ScheduleJourneyLayoutView.swift */,
+				BB00005E2C7F000100000001 /* ScheduleMatrixLayoutView.swift */,
+			);
+			path = Layouts;
+			sourceTree = "<group>";
+		};
+		EE00001E2C7F000100000001 /* Sheets */ = {
+			isa = PBXGroup;
+			children = (
+				BB00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift */,
+				BB0000602C7F000100000001 /* ScheduleAddStepSheet.swift */,
+			);
+			path = Sheets;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -671,6 +770,23 @@
 				ED4BDC22D3741CEC47622A16 /* FocusLiveActivityManager.swift in Sources */,
 				AA0000412C7F000100000001 /* FocusWidgetShared.swift in Sources */,
 				AA0000422C7F000100000001 /* FocusWidgetPublisher.swift in Sources */,
+				AA0000502C7F000100000001 /* Schedule.swift in Sources */,
+				AA0000512C7F000100000001 /* BedtimeCalculator.swift in Sources */,
+				AA0000522C7F000100000001 /* ScheduleService.swift in Sources */,
+				AA0000532C7F000100000001 /* ScheduleViewModel.swift in Sources */,
+				AA0000542C7F000100000001 /* ScheduleView.swift in Sources */,
+				AA0000552C7F000100000001 /* ScheduleViewSwitcher.swift in Sources */,
+				AA0000562C7F000100000001 /* ScheduleBedtimeBanner.swift in Sources */,
+				AA0000572C7F000100000001 /* ScheduleAnchorNodeView.swift in Sources */,
+				AA0000582C7F000100000001 /* ScheduleHabitNodeView.swift in Sources */,
+				AA0000592C7F000100000001 /* ScheduleActivityNodeView.swift in Sources */,
+				AA00005A2C7F000100000001 /* ScheduleRechargeNodeView.swift in Sources */,
+				AA00005B2C7F000100000001 /* ScheduleEdgeView.swift in Sources */,
+				AA00005C2C7F000100000001 /* ScheduleSpineLayoutView.swift in Sources */,
+				AA00005D2C7F000100000001 /* ScheduleJourneyLayoutView.swift in Sources */,
+				AA00005E2C7F000100000001 /* ScheduleMatrixLayoutView.swift in Sources */,
+				AA00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift in Sources */,
+				AA0000602C7F000100000001 /* ScheduleAddStepSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
