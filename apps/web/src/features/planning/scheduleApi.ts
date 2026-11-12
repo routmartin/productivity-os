@@ -6,6 +6,7 @@ import type {
   ScheduleEdge,
   ScheduleNode,
   SchedulePhase,
+  UpdateStepPayload,
 } from './types'
 
 export interface ScheduleGraphResponse {
@@ -42,6 +43,17 @@ export interface AddScheduleStepRequest {
   timeSlot?: string
   durationMinutes?: number
   iconName?: string
+}
+
+export interface UpdateScheduleStepRequest {
+  title: string
+  subtitle?: string
+  phase?: string
+  timeSlot?: string
+  durationMinutes?: number
+  notes?: string
+  iconName?: string
+  date?: string
 }
 
 const BASE = '/schedule'
@@ -91,9 +103,32 @@ async function deleteStep(stepId: string): Promise<void> {
   return apiClient.delete<void>(`${BASE}/steps/${stepId}`)
 }
 
+async function updateStep(
+  stepId: string,
+  payload: UpdateStepPayload,
+): Promise<ScheduleNode> {
+  const durationMinutes =
+    payload.durationMinutes !== undefined
+      ? payload.durationMinutes
+      : payload.totalMinutes
+
+  const body: UpdateScheduleStepRequest = {
+    title: payload.title,
+    subtitle: payload.subtitle,
+    phase: payload.phase,
+    timeSlot: payload.timeSlot,
+    durationMinutes,
+    notes: payload.notes,
+    iconName: payload.iconName,
+    date: payload.date,
+  }
+  return apiClient.put<ScheduleNode>(`${BASE}/steps/${stepId}`, body)
+}
+
 export const scheduleApi = {
   getSchedule,
   toggleHabit,
   addStep,
   deleteStep,
+  updateStep,
 }

@@ -151,3 +151,16 @@ export interface AddStepPayload {
   iconName?: string
 }
 
+export interface UpdateStepPayload {
+  title: string
+  subtitle?: string
+  phase?: SchedulePhaseId | string
+  timeSlot?: string
+  durationMinutes?: number
+  totalMinutes?: number
+  notes?: string
+  iconName?: string
+  date?: string
+}
+
+

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   AlertTriangle,
   ArrowRight,
@@ -10,6 +10,7 @@ import {
   Clock,
   Flame,
   Globe,
+  Pencil,
   Play,
   Radio,
   Sparkles,
@@ -20,7 +21,11 @@ import {
 
 import UiButton from '@/components/ui/UiButton.vue'
 import UiDialog from '@/components/ui/UiDialog.vue'
+import UiInput from '@/components/ui/UiInput.vue'
+import UiSelect from '@/components/ui/UiSelect.vue'
+import UiTextarea from '@/components/ui/UiTextarea.vue'
 import { useScheduleStore } from '../scheduleStore'
+import type { SchedulePhaseId } from '../types'
 
 const scheduleStore = useScheduleStore()
 
@@ -28,6 +33,8 @@ const node = computed(() => scheduleStore.selectedNode)
 const isOpen = computed(() => Boolean(node.value))
 
 function close() {
+  isEditing.value = false
+  formError.value = null
   scheduleStore.selectNode(null)
 }
 
@@ -58,6 +65,123 @@ async function handleDelete() {
     isDeleting.value = false
   }
 }
+
+// In-Place Step Editing State & Methods (Spec AC-010, AC-011, AC-012)
+const isEditing = ref(false)
+const isSaving = ref(false)
+const formError = ref<string | null>(null)
+
+interface FormState {
+  title: string
+  subtitle: string
+  phase: SchedulePhaseId
+  timeSlot: string
+  durationMinutes: string
+  notes: string
+  iconName: string
+}
+
+const form = ref<FormState>({
+  title: '',
+  subtitle: '',
+  phase: 'morning',
+  timeSlot: '',
+  durationMinutes: '30',
+  notes: '',
+  iconName: 'Droplets',
+})
+
+const phaseOptions = [
+  { value: 'morning', label: 'Morning Activation' },
+  { value: 'deep-focus', label: 'Deep Focus Flow' },
+  { value: 'afternoon', label: 'Afternoon Momentum' },
+  { value: 'bedtime', label: 'Bedtime Sanctuary' },
+]
+
+const iconOptions = [
+  { value: 'Droplets', label: 'Droplets (Hydration)' },
+  { value: 'Dumbbell', label: 'Dumbbell (Workout / Movement)' },
+  { value: 'Target', label: 'Target (Planning / Focus)' },
+  { value: 'Footprints', label: 'Footprints (Walk / Stride)' },
+  { value: 'Moon', label: 'Moon (Curfew / Evening)' },
+  { value: 'BookOpen', label: 'BookOpen (Reading / Reflection)' },
+  { value: 'Coffee', label: 'Coffee (Tea / Winddown)' },
+  { value: 'Zap', label: 'Zap (Restoration / Energy)' },
+  { value: 'Sparkles', label: 'Sparkles (Deep Flow)' },
+]
+
+function initForm() {
+  if (!node.value) return
+  form.value = {
+    title: node.value.title ?? '',
+    subtitle: node.value.subtitle ?? '',
+    phase: node.value.phase ?? 'morning',
+    timeSlot: node.value.time ?? '',
+    durationMinutes: String(node.value.durationMinutes ?? node.value.totalMinutes ?? 30),
+    notes: node.value.notes ?? '',
+    iconName: node.value.icon ?? 'Droplets',
+  }
+  formError.value = null
+}
+
+function startEditing() {
+  if (!node.value || node.value.type === 'anchor') return
+  initForm()
+  isEditing.value = true
+}
+
+function cancelEditing() {
+  isEditing.value = false
+  formError.value = null
+}
+
+async function handleSave() {
+  if (!node.value) return
+  if (!form.value.title.trim()) {
+    formError.value = 'Title is required'
+    return
+  }
+  isSaving.value = true
+  formError.value = null
+  try {
+    const duration = Math.max(1, parseInt(form.value.durationMinutes, 10) || 15)
+    await scheduleStore.updateStep(node.value.id, {
+      title: form.value.title.trim(),
+      subtitle: form.value.subtitle.trim() || undefined,
+      phase: form.value.phase,
+      timeSlot: form.value.timeSlot.trim() || undefined,
+      durationMinutes: duration,
+      totalMinutes: duration,
+      notes: form.value.notes.trim() || undefined,
+      iconName: form.value.iconName,
+    })
+    isEditing.value = false
+  } catch (err) {
+    formError.value = err instanceof Error ? err.message : 'Failed to save changes'
+  } finally {
+    isSaving.value = false
+  }
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && isEditing.value) {
+    event.stopPropagation()
+    cancelEditing()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown, true)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown, true)
+})
+
+watch(node, () => {
+  isEditing.value = false
+  formError.value = null
+})
 
 const kindLabel = computed(() => {
   if (!node.value) return ''
@@ -101,7 +225,7 @@ const consistencyPercent = computed(() => {
 <template>
   <UiDialog
     :open="isOpen"
-    :title="node ? node.title : 'Step Details'"
+    :title="isEditing ? `Edit: ${node?.title ?? 'Step'}` : (node ? node.title : 'Step Details')"
     size="full"
     @close="close"
   >
@@ -122,10 +246,81 @@ const consistencyPercent = computed(() => {
         <span class="meta-pill phase-pill">
           <span>{{ phaseTitle }}</span>
         </span>
+
+        <!-- Edit Step toggle button (hidden for anchors) -->
+        <button
+          v-if="node.type !== 'anchor' && !isEditing"
+          type="button"
+          class="edit-step-btn"
+          @click="startEditing"
+        >
+          <Pencil :size="14" />
+          <span>Edit Step</span>
+        </button>
       </div>
 
+      <!-- Edit Form (when isEditing is true) -->
+      <form v-if="isEditing" class="edit-form-container" @submit.prevent="handleSave">
+        <div v-if="formError" class="form-error-banner" role="alert">
+          <AlertTriangle :size="16" />
+          <span>{{ formError }}</span>
+        </div>
+
+        <div class="edit-grid">
+          <div class="edit-col">
+            <UiInput
+              v-model="form.title"
+              label="Step Title"
+              placeholder="e.g. Deep Focus Flow or Morning Workout"
+              required
+            />
+
+            <UiInput
+              v-model="form.subtitle"
+              label="Subtitle (Optional)"
+              placeholder="e.g. High cognitive load · Core schema"
+            />
+
+            <UiSelect
+              v-model="form.phase"
+              label="Schedule Phase"
+              :options="phaseOptions"
+            />
+
+            <UiSelect
+              v-model="form.iconName"
+              label="Icon / Symbol"
+              :options="iconOptions"
+            />
+          </div>
+
+          <div class="edit-col">
+            <UiInput
+              v-model="form.timeSlot"
+              label="Scheduled Time"
+              type="time"
+              placeholder="e.g. 09:30"
+            />
+
+            <UiInput
+              v-model="form.durationMinutes"
+              label="Duration (minutes)"
+              type="number"
+              placeholder="30"
+            />
+
+            <UiTextarea
+              v-model="form.notes"
+              label="Protocol & Execution Guidance"
+              placeholder="Enter notes, execution cues, or protocol instructions..."
+              :rows="4"
+            />
+          </div>
+        </div>
+      </form>
+
       <!-- Main 2-Column Desktop Grid -->
-      <div class="detail-grid">
+      <div v-else class="detail-grid">
         <!-- Left Column: Primary Content & Actions -->
         <div class="main-column">
           <section class="intro-card">
@@ -374,7 +569,27 @@ const consistencyPercent = computed(() => {
 
     <!-- Dialog Footer -->
     <template #footer>
-      <div class="dialog-footer-actions">
+      <div v-if="isEditing" class="dialog-footer-actions">
+        <UiButton
+          variant="subtle"
+          size="lg"
+          type="button"
+          :disabled="isSaving"
+          @click="cancelEditing"
+        >
+          Cancel
+        </UiButton>
+        <UiButton
+          variant="primary"
+          size="lg"
+          type="button"
+          :loading="isSaving"
+          @click="handleSave"
+        >
+          Save Changes
+        </UiButton>
+      </div>
+      <div v-else class="dialog-footer-actions">
         <button
           v-if="node?.type !== 'anchor'"
           type="button"
@@ -990,5 +1205,68 @@ const consistencyPercent = computed(() => {
   color: var(--danger);
   background: var(--danger-soft);
   border-color: rgba(240, 90, 90, 0.2);
+}
+
+/* Edit Mode Styles */
+.edit-step-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.edit-step-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--border-default);
+}
+
+.edit-form-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.form-error-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid rgba(240, 90, 90, 0.2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .edit-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.edit-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 </style>
