@@ -31,10 +31,10 @@ public final class QRAuthenticationService: Sendable {
         // The backend returns a standard LoginResponse on successful exchange.
         let response: AuthResponse = try await apiClient.request(AppEndpoint.qrExchange(body: body))
         
-        // Update the session: accessToken + domainUser.
-        // Refresh token is handled by HTTP-only cookie in URLSession.
+        // Update the session: accessToken + refreshToken + domainUser.
         authSession.setSession(
             accessToken: response.accessToken,
+            refreshToken: response.refreshToken,
             user: response.domainUser
         )
     }

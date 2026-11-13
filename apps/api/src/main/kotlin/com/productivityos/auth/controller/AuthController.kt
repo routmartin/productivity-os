@@ -58,6 +58,7 @@ class AuthController(
             .body(
                 LoginResponse(
                     accessToken = result.accessToken,
+                    refreshToken = result.refreshToken,
                     user = UserResponse.from(result.user)
                 )
             )
@@ -69,11 +70,19 @@ class AuthController(
             ?: return ResponseEntity.status(401).build()
 
         val pair = refreshTokenService.refresh(refreshToken)
-        val refreshCookie = buildRefreshCookie(pair.refreshToken, request.isSecure)
+        val responseBuilder = ResponseEntity.ok()
+        if (pair.refreshToken != null) {
+            val refreshCookie = buildRefreshCookie(pair.refreshToken, request.isSecure)
+            responseBuilder.header(org.springframework.http.HttpHeaders.SET_COOKIE, refreshCookie.toString())
+        }
 
-        return ResponseEntity.ok()
-            .header(org.springframework.http.HttpHeaders.SET_COOKIE, refreshCookie.toString())
-            .body(LoginResponse(accessToken = pair.accessToken, user = null))
+        return responseBuilder.body(
+            LoginResponse(
+                accessToken = pair.accessToken,
+                refreshToken = pair.refreshToken,
+                user = null
+            )
+        )
     }
 
     @PostMapping("/logout")
@@ -119,6 +128,7 @@ class AuthController(
             .body(
                 LoginResponse(
                     accessToken = result.accessToken,
+                    refreshToken = result.refreshToken,
                     user = UserResponse.from(result.user)
                 )
             )
@@ -136,6 +146,14 @@ class AuthController(
     }
 
     private fun extractRefreshToken(request: HttpServletRequest): String? {
-        return request.cookies?.find { it.name == "refresh_token" }?.value
+        val cookieToken = request.cookies?.find { it.name == "refresh_token" }?.value
+        if (!cookieToken.isNullOrBlank()) {
+            return cookieToken
+        }
+        val headerToken = request.getHeader("X-Refresh-Token")
+        if (!headerToken.isNullOrBlank()) {
+            return headerToken
+        }
+        return null
     }
 }

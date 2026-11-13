@@ -48,6 +48,7 @@ final class QRAuthenticationServiceTests: XCTestCase {
         let responseJson = """
         {
             "accessToken": "mock-jwt",
+            "refreshToken": "qr-mock-refresh",
             "user": \(userJson)
         }
         """
@@ -58,6 +59,7 @@ final class QRAuthenticationServiceTests: XCTestCase {
         
         XCTAssertTrue(authSession.isAuthenticated)
         XCTAssertEqual(authSession.accessToken, "mock-jwt")
+        XCTAssertEqual(authSession.refreshToken, "qr-mock-refresh")
         XCTAssertEqual(authSession.currentUser?.email, "test@example.com")
         XCTAssertEqual(mockAPIClient.recordedRequests.first?.path, "/api/v1/auth/qr/exchange")
     }

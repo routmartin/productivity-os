@@ -47,6 +47,7 @@ class TokenService(
         return try {
             val claims = Jwts.parser()
                 .verifyWith(secretKey)
+                .clock { Date.from(clock.instant()) }
                 .build()
                 .parseSignedClaims(token)
                 .payload

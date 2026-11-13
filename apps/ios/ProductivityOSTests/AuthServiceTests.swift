@@ -21,7 +21,7 @@ final class AuthServiceTests: XCTestCase {
 
     func testLoginStoresAccessTokenAndUser() async throws {
         mock.defaultResponse = .success((
-            Data(#"{"accessToken":"jwt-token","user":{"id":"11111111-1111-1111-1111-111111111111","email":"rout@productivityos.com","timezone":"Europe/Lisbon"}}"#.utf8),
+            Data(#"{"accessToken":"jwt-token","refreshToken":"refresh-secret","user":{"id":"11111111-1111-1111-1111-111111111111","email":"rout@productivityos.com","timezone":"Europe/Lisbon"}}"#.utf8),
             200
         ))
 
@@ -29,6 +29,7 @@ final class AuthServiceTests: XCTestCase {
 
         XCTAssertTrue(authSession.isAuthenticated)
         XCTAssertEqual(authSession.currentUser?.email, "rout@productivityos.com")
+        XCTAssertEqual(authSession.refreshToken, "refresh-secret")
 
         let request = try XCTUnwrap(mock.recordedRequests.first)
         XCTAssertEqual(request.path, "/api/v1/auth/login")
@@ -59,6 +60,7 @@ final class AuthServiceTests: XCTestCase {
     func testLogoutClearsSessionAndCallsEndpoint() async throws {
         authSession.setSession(
             accessToken: "token",
+            refreshToken: "refresh-token-to-clear",
             user: User(id: UUID(), email: "a@b.co", name: nil, avatarUrl: nil, createdAt: nil)
         )
         mock.defaultResponse = .success((Data(), 204))
@@ -67,17 +69,39 @@ final class AuthServiceTests: XCTestCase {
 
         XCTAssertFalse(authSession.isAuthenticated)
         XCTAssertNil(authSession.currentUser)
+        XCTAssertNil(authSession.refreshToken)
         XCTAssertEqual(mock.recordedRequests.first?.path, "/api/v1/auth/logout")
         XCTAssertEqual(mock.recordedRequests.first?.method, "POST")
     }
 
-    func testRefreshKeepsCachedProfile() throws {
-        // Backend refresh responds with user == null; the profile must survive.
+    func testRefreshKeepsCachedProfileAndRefreshTokenWhenOmitted() throws {
+        // Preset an existing refresh token
+        authSession.setSession(accessToken: "old", refreshToken: "persistent-rt", user: nil)
+
+        // Backend refresh responds with user == null and refreshToken == null (e.g. grace period hit)
         let json = Data(#"{"accessToken":"fresh","user":null}"#.utf8)
         let response = try JSONDecoder().decode(AuthResponse.self, from: json)
-        authSession.setSession(accessToken: response.accessToken, user: response.domainUser)
+        authSession.setSession(accessToken: response.accessToken, refreshToken: response.refreshToken, user: response.domainUser)
 
         XCTAssertEqual(authSession.accessToken, "fresh")
+        XCTAssertEqual(authSession.refreshToken, "persistent-rt")
         XCTAssertNil(authSession.currentUser)
+    }
+
+    func testKeychainPersistenceAcrossAuthSessionInstances() {
+        let keychainService = "com.productivityos.tests.\(UUID().uuidString)"
+        let keychain = KeychainManager(serviceName: keychainService)
+        let session1 = AuthSession(keychain: keychain)
+        session1.setSession(accessToken: "access-123", refreshToken: "refresh-456", user: nil)
+
+        // Recreate session with same keychain
+        let session2 = AuthSession(keychain: keychain)
+        XCTAssertEqual(session2.accessToken, "access-123")
+        XCTAssertEqual(session2.refreshToken, "refresh-456")
+
+        session2.logout()
+        let session3 = AuthSession(keychain: keychain)
+        XCTAssertNil(session3.accessToken)
+        XCTAssertNil(session3.refreshToken)
     }
 }

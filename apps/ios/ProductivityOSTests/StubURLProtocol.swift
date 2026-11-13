@@ -16,6 +16,7 @@ final class StubURLProtocol: URLProtocol {
         let path: String
         let method: String
         let authorizationHeader: String?
+        let refreshTokenHeader: String?
     }
 
     private static let lock = NSLock()
@@ -63,7 +64,8 @@ final class StubURLProtocol: URLProtocol {
                 RecordedRequest(
                     path: path,
                     method: method,
-                    authorizationHeader: request.value(forHTTPHeaderField: "Authorization")
+                    authorizationHeader: request.value(forHTTPHeaderField: "Authorization"),
+                    refreshTokenHeader: request.value(forHTTPHeaderField: "X-Refresh-Token")
                 )
             )
         }

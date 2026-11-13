@@ -1,10 +1,12 @@
 package com.productivityos.auth.service
 
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import com.productivityos.auth.exception.InvalidRefreshTokenException
 import com.productivityos.auth.persistence.RefreshTokenEntity
 import com.productivityos.auth.persistence.RefreshTokenRepository
@@ -16,20 +18,43 @@ import com.productivityos.auth.security.TokenService
 class RefreshTokenService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val tokenService: TokenService,
-    private val clock: Clock
+    private val clock: Clock,
+    @Value("\${app.jwt.refresh-token-grace-period-seconds:30}")
+    private val gracePeriodSeconds: Long = 30
 ) {
 
     data class TokenPair(
         val accessToken: String,
-        val refreshToken: String
+        val refreshToken: String? = null
     )
+
+    private data class CachedRotation(
+        val rawRefreshToken: String,
+        val rotatedAt: Instant
+    )
+
+    private val recentRotations = ConcurrentHashMap<String, CachedRotation>()
 
     fun refresh(presentedRefreshToken: String): TokenPair {
         val tokenHash = TokenHasher.hash(presentedRefreshToken)
         val stored = refreshTokenRepository.findByTokenHash(tokenHash)
             ?: throw InvalidRefreshTokenException()
-
         if (stored.revokedAt != null) {
+
+            val now = clock.instant()
+            val isWithinGrace = now.isBefore(stored.revokedAt!!.plusSeconds(gracePeriodSeconds))
+            if (isWithinGrace && stored.id != null) {
+                val hasActiveChild = hasActiveDescendant(stored.userId, stored.id, now)
+                if (hasActiveChild) {
+                    pruneOldRotations(now)
+                    val newAccessToken = tokenService.generateAccessToken(stored.userId)
+                    val cachedRawToken = recentRotations[tokenHash]?.rawRefreshToken
+                    return TokenPair(
+                        accessToken = newAccessToken,
+                        refreshToken = cachedRawToken
+                    )
+                }
+            }
             revokeFamily(stored)
             throw InvalidRefreshTokenException()
         }
@@ -38,7 +63,8 @@ class RefreshTokenService(
             throw InvalidRefreshTokenException()
         }
 
-        stored.revokedAt = clock.instant()
+        val now = clock.instant()
+        stored.revokedAt = now
         refreshTokenRepository.save(stored)
 
         val newAccessToken = tokenService.generateAccessToken(stored.userId)
@@ -49,11 +75,14 @@ class RefreshTokenService(
             userId = stored.userId,
             tokenHash = newRefreshTokenHash,
             deviceLabel = stored.deviceLabel,
-            createdAt = clock.instant(),
+            createdAt = now,
             expiresAt = tokenService.refreshTokenExpiry(),
             rotatedFrom = stored.id
         )
         refreshTokenRepository.save(rotated)
+
+        pruneOldRotations(now)
+        recentRotations[tokenHash] = CachedRotation(newRefreshToken, now)
 
         return TokenPair(
             accessToken = newAccessToken,
@@ -66,6 +95,7 @@ class RefreshTokenService(
         val stored = refreshTokenRepository.findByTokenHash(tokenHash) ?: return
         stored.revokedAt = clock.instant()
         refreshTokenRepository.save(stored)
+        recentRotations.remove(tokenHash)
     }
 
     fun revokeAllUserTokens(userId: UUID) {
@@ -73,6 +103,25 @@ class RefreshTokenService(
         val now = clock.instant()
         activeTokens.forEach { it.revokedAt = now }
         refreshTokenRepository.saveAll(activeTokens)
+    }
+
+    private fun pruneOldRotations(now: Instant) {
+        val threshold = now.minusSeconds(gracePeriodSeconds)
+        recentRotations.entries.removeIf { it.value.rotatedAt.isBefore(threshold) }
+    }
+
+    private fun hasActiveDescendant(userId: UUID, parentId: UUID, now: Instant): Boolean {
+        val children = refreshTokenRepository.findAllByUserIdAndRotatedFrom(userId, parentId)
+        for (child in children) {
+            if (child.revokedAt == null && now.isBefore(child.expiresAt)) {
+                return true
+            }
+            val childId = child.id
+            if (childId != null && hasActiveDescendant(userId, childId, now)) {
+                return true
+            }
+        }
+        return false
     }
 
     private fun revokeFamily(token: RefreshTokenEntity) {

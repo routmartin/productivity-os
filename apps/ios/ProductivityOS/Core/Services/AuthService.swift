@@ -21,7 +21,11 @@ public final class AuthService: @unchecked Sendable {
     public func login(email: String, password: String) async throws {
         let body = try APIClient.encodedBody(LoginRequestBody(email: email, password: password))
         let response = try await apiClient.request(AppEndpoint.login(body: body)) as AuthResponse
-        authSession.setSession(accessToken: response.accessToken, user: response.domainUser)
+        authSession.setSession(
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken,
+            user: response.domainUser
+        )
     }
 
     public func register(email: String, password: String) async throws {

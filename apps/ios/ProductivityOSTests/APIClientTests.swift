@@ -184,4 +184,41 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(authSession.accessToken, "shared-fresh")
         XCTAssertEqual(StubURLProtocol.recorded(pathContains: "/auth/refresh").count, 1)
     }
+
+    func testRefreshSendsXRefreshTokenHeaderAndRotatesRefreshToken() async throws {
+        authSession.setSession(accessToken: "expired-token", refreshToken: "initial-refresh-token", user: nil)
+        StubURLProtocol.enqueue(path: "/api/v1/tasks", status: 401)
+        StubURLProtocol.enqueue(
+            path: "/api/v1/tasks",
+            status: 200,
+            data: Data("[]".utf8)
+        )
+        StubURLProtocol.enqueue(
+            path: "/api/v1/auth/refresh",
+            status: 200,
+            data: Data(#"{"accessToken":"fresh-token","refreshToken":"rotated-refresh-token","user":null}"#.utf8)
+        )
+
+        let tasks = try await apiClient.request(AppEndpoint.listTasks()) as [TaskItem]
+        XCTAssertTrue(tasks.isEmpty)
+        XCTAssertEqual(authSession.accessToken, "fresh-token")
+        XCTAssertEqual(authSession.refreshToken, "rotated-refresh-token")
+
+        let refreshCalls = StubURLProtocol.recorded(pathContains: "/auth/refresh")
+        XCTAssertEqual(refreshCalls.count, 1)
+        XCTAssertEqual(refreshCalls[0].refreshTokenHeader, "initial-refresh-token")
+        XCTAssertNil(refreshCalls[0].authorizationHeader)
+    }
+
+    func testLogoutSendsXRefreshTokenHeader() async throws {
+        authSession.setSession(accessToken: "valid-token", refreshToken: "logout-refresh-token", user: nil)
+        StubURLProtocol.enqueue(path: "/api/v1/auth/logout", status: 204)
+
+        _ = try await apiClient.send(AppEndpoint.logout)
+
+        let logoutCalls = StubURLProtocol.recorded(pathContains: "/auth/logout")
+        XCTAssertEqual(logoutCalls.count, 1)
+        XCTAssertEqual(logoutCalls[0].refreshTokenHeader, "logout-refresh-token")
+        XCTAssertNil(logoutCalls[0].authorizationHeader)
+    }
 }

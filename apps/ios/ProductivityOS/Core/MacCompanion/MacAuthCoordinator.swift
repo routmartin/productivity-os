@@ -72,6 +72,7 @@ public struct MacAuthCoordinator: Sendable {
             let response: AuthResponse = try await apiClient.request(AppEndpoint.qrExchange(body: body))
             authSession.setSession(
                 accessToken: response.accessToken,
+                refreshToken: response.refreshToken,
                 user: response.domainUser
             )
             let email = response.domainUser?.email ?? "unknown"

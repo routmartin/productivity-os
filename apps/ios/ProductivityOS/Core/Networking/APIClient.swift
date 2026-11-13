@@ -12,8 +12,8 @@ public protocol APIRequesting: Sendable {
 /// a 401 on any non-auth endpoint triggers exactly one shared
 /// `POST /auth/refresh`; on success the original request is retried once,
 /// on failure the session is cleared (the app returns to the login screen).
-/// The refresh token travels only in the backend's HttpOnly cookie scoped to
-/// `/api/v1/auth`, handled by URLSession's cookie storage.
+/// The refresh token travels in URLSession's cookie storage and is also persisted
+/// in Apple Keychain, supplied via `X-Refresh-Token` header as a fallback.
 public final class APIClient: APIRequesting, @unchecked Sendable {
     public static let shared = APIClient()
 
@@ -149,6 +149,11 @@ public final class APIClient: APIRequesting, @unchecked Sendable {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
+        // Attach X-Refresh-Token fallback on logout endpoint
+        if endpoint.isAuthEndpoint && endpoint.path == "/api/v1/auth/logout", let token = authSession.refreshToken {
+            request.setValue(token, forHTTPHeaderField: "X-Refresh-Token")
+        }
+
         if let headers = endpoint.headers {
             for (key, value) in headers {
                 request.setValue(value, forHTTPHeaderField: key)
@@ -209,6 +214,10 @@ public final class APIClient: APIRequesting, @unchecked Sendable {
         request.httpMethod = endpoint.method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
+        if let token = authSession.refreshToken {
+            request.setValue(token, forHTTPHeaderField: "X-Refresh-Token")
+        }
+
         let data: Data, response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
@@ -225,7 +234,7 @@ public final class APIClient: APIRequesting, @unchecked Sendable {
         }
 
         // Preserve cached profile: refresh responds with user == null.
-        authSession.setSession(accessToken: decoded.accessToken, refreshToken: nil, user: nil)
+        authSession.setSession(accessToken: decoded.accessToken, refreshToken: decoded.refreshToken, user: nil)
         return true
     }
 }

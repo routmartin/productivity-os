@@ -20,6 +20,7 @@ spring:
 
 server:
   port: ${PORT:8080}
+  forward-headers-strategy: framework
 
 springdoc:
   swagger-ui:
@@ -46,5 +47,6 @@ app:
     cookie-secure: ${COOKIE_SECURE:false}
   jwt:
     secret: ${JWT_SECRET:this-is-a-dev-secret-at-least-256-bits-long-for-hmac-sha256}
-    access-token-ttl-minutes: ${JWT_ACCESS_TOKEN_TTL_MINUTES:1}
+    access-token-ttl-minutes: ${JWT_ACCESS_TOKEN_TTL_MINUTES:15}
     refresh-token-ttl-days: ${JWT_REFRESH_TOKEN_TTL_DAYS:30}
+    refresh-token-grace-period-seconds: ${JWT_REFRESH_TOKEN_GRACE_PERIOD_SECONDS:30}

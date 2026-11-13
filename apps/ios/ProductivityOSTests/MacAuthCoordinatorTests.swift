@@ -66,6 +66,7 @@ final class MacAuthCoordinatorTests: XCTestCase {
         let responseJSON = """
         {
             "accessToken": "mac-mock-jwt",
+            "refreshToken": "mac-mock-refresh",
             "user": {
                 "id": "E621E1F8-C36C-495A-93FC-0C247A3E6E5F",
                 "email": "user@example.com",
@@ -80,6 +81,7 @@ final class MacAuthCoordinatorTests: XCTestCase {
         XCTAssertEqual(result, .authenticated(email: "user@example.com"))
         XCTAssertTrue(authSession.isAuthenticated)
         XCTAssertEqual(authSession.accessToken, "mac-mock-jwt")
+        XCTAssertEqual(authSession.refreshToken, "mac-mock-refresh")
         XCTAssertEqual(authSession.currentUser?.email, "user@example.com")
         XCTAssertEqual(mockAPIClient.recordedRequests.count, 1)
         XCTAssertEqual(mockAPIClient.recordedRequests.first?.path, "/api/v1/auth/qr/exchange")

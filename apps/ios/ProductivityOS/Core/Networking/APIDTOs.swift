@@ -31,14 +31,17 @@ public struct UserDTO: Codable, Sendable {
     public let timezone: String?
 }
 
-/// Backend `LoginResponse` — used by login and refresh.
+/// Backend `LoginResponse` — used by login, refresh, and QR exchange.
 /// Refresh returns `user: null` (AuthController); the cached profile is kept.
+/// Exposes `refreshToken` for Apple Keychain persistence on native clients.
 public struct AuthResponse: Decodable, Sendable {
     public let accessToken: String
+    public let refreshToken: String?
     public let user: UserDTO?
 
-    public init(accessToken: String, user: UserDTO?) {
+    public init(accessToken: String, refreshToken: String? = nil, user: UserDTO?) {
         self.accessToken = accessToken
+        self.refreshToken = refreshToken
         self.user = user
     }
 
