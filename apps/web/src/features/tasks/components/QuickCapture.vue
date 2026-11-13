@@ -3,33 +3,58 @@ import { ref } from 'vue'
 import { CornerDownLeft, Plus } from 'lucide-vue-next'
 
 import UiButton from '@/components/ui/UiButton.vue'
+import { useTodayStore } from '@/features/planning/todayStore'
+import { useTasksStore } from '../store'
+import type { Task } from '../types'
 
-const emit = defineEmits<{ capture: [title: string] }>()
+const emit = defineEmits<{
+  capture: [title: string]
+  created: [task: Task | null]
+}>()
+
+const tasksStore = useTasksStore()
+const todayStore = useTodayStore()
 
 const title = ref('')
+const inputRef = ref<HTMLInputElement | null>(null)
 
 function onSubmit() {
   const value = title.value.trim()
   if (!value) return
+
+  const created = tasksStore.addTask({ title: value, status: 'INBOX' })
+  if (created) {
+    todayStore.recordTask(created)
+  }
   emit('capture', value)
+  emit('created', created)
   title.value = ''
+}
+
+function onEscape() {
+  title.value = ''
+  inputRef.value?.blur()
 }
 </script>
 
 <template>
   <form class="quick-capture" @submit.prevent="onSubmit">
-    <span class="prompt">
+    <span class="prompt" aria-hidden="true">
       <Plus :size="16" :stroke-width="2" />
     </span>
     <input
+      ref="inputRef"
       v-model="title"
       class="input"
       type="text"
-      placeholder="What needs to be done?"
-      aria-label="What needs to be done?"
+      data-quick-capture-input
+      placeholder="Capture a task or thought... (Press Enter to save)"
+      aria-label="Capture a task or thought... (Press Enter to save)"
+      @keydown.esc="onEscape"
     />
-    <span class="hint">
-      <kbd class="kbd tnum"><CornerDownLeft :size="11" /></kbd>
+    <span class="hint" aria-hidden="true" title="Press c to focus or Enter to save">
+      <kbd class="kbd tnum">c</kbd>
+      <kbd class="kbd tnum enter-kbd"><CornerDownLeft :size="11" /></kbd>
     </span>
     <UiButton type="submit" variant="primary" :disabled="!title.trim()">Add</UiButton>
   </form>
@@ -70,7 +95,7 @@ function onSubmit() {
   background: transparent;
   border: none;
   outline: none;
-  font-size: var(--text-xl);
+  font-size: var(--text-base);
   font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--text-primary);
@@ -81,17 +106,28 @@ function onSubmit() {
 }
 
 .hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   flex-shrink: 0;
 }
 
 .kbd {
   display: grid;
   place-items: center;
-  width: 22px;
+  min-width: 20px;
   height: 20px;
+  padding: 0 4px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   background: var(--surface-2);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: 550;
+  line-height: 1;
+}
+
+.enter-kbd {
   color: var(--text-disabled);
 }
 </style>

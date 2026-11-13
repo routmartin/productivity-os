@@ -12,10 +12,13 @@ import DailySummaryCard from '@/features/focus/components/DailySummaryCard.vue'
 import FocusTodayCard from '@/features/focus/components/FocusTodayCard.vue'
 import { useFocusStore } from '@/features/focus/store'
 import CalendarRail from '@/features/planning/components/CalendarRail.vue'
+import CapacityTelemetryCard from '@/features/planning/components/CapacityTelemetryCard.vue'
 import ScheduleTimeline from '@/features/planning/components/ScheduleTimeline.vue'
 import TopThreeSection from '@/features/planning/components/TopThreeSection.vue'
+import { useScheduleStore } from '@/features/planning/scheduleStore'
 import { useTodayStore } from '@/features/planning/todayStore'
 import type { PreviewState } from '@/features/planning/types'
+import QuickCapture from '@/features/tasks/components/QuickCapture.vue'
 import RecentActivity, { type ActivityItem } from '@/features/tasks/components/RecentActivity.vue'
 import { useTasksStore } from '@/features/tasks/store'
 
@@ -24,6 +27,7 @@ const router = useRouter()
 const today = useTodayStore()
 const tasksStore = useTasksStore()
 const focusStore = useFocusStore()
+const scheduleStore = useScheduleStore()
 const panel = useContextPanelStore()
 
 /** `?preview=loading|error|empty` forces a UI state for design review. */
@@ -38,6 +42,7 @@ async function loadAndSelect(preview: PreviewState) {
     today.load(preview),
     tasksStore.load(preview),
     focusStore.load(),
+    scheduleStore.load(preview),
   ])
   if (preview === 'loading') return
   panel.close()
@@ -51,9 +56,31 @@ watch(
 
 const isLoading = computed(() => today.status === 'loading' || today.status === 'idle')
 
-/** Dynamic AI Briefing computation based on real daily priorities and task progress. */
+/** Dynamic AI Briefing computation based on real daily priorities, capacity, and bedtime telemetry (AC-013). */
 const briefingData = computed<Briefing>(() => {
   const total = today.topThree.length
+  const completed = today.topThree.filter((e) => {
+    const t = tasksStore.taskById(e.taskId)
+    return t?.status === 'COMPLETED'
+  }).length
+
+  // Check capacity & schedule telemetry first (AC-013)
+  const isOverflowing = scheduleStore.overflowMinutes > 0
+  const isOverCapacity =
+    today.plan != null && today.plan.plannedMinutes > today.plan.focusCapacityMinutes
+
+  if (isOverflowing || isOverCapacity) {
+    const slipMinutes =
+      scheduleStore.overflowMinutes > 0
+        ? scheduleStore.overflowMinutes
+        : (today.plan ? today.plan.plannedMinutes - today.plan.focusCapacityMinutes : 0)
+    return {
+      focusCount: Math.max(1, total - completed),
+      subline: `Schedule is over capacity by ${slipMinutes}m. Bedtime projected to slip to ${scheduleStore.projectedBedtime}.`,
+      ctaLabel: 'Review Schedule',
+    }
+  }
+
   if (total === 0) {
     return {
       focusCount: 3,
@@ -61,11 +88,6 @@ const briefingData = computed<Briefing>(() => {
       ctaLabel: 'Plan My Day',
     }
   }
-
-  const completed = today.topThree.filter((e) => {
-    const t = tasksStore.taskById(e.taskId)
-    return t?.status === 'COMPLETED'
-  }).length
 
   if (completed === total) {
     return {
@@ -76,6 +98,19 @@ const briefingData = computed<Briefing>(() => {
   }
 
   const remaining = total - completed
+  const bufferMinutes = today.plan
+    ? Math.max(0, today.plan.focusCapacityMinutes - today.plan.plannedMinutes)
+    : 0
+  const bufferHours = (bufferMinutes / 60).toFixed(1)
+
+  if (scheduleStore.totalHabitsCount > 0) {
+    return {
+      focusCount: remaining,
+      subline: `You have ${bufferHours}h buffer remaining today. ${scheduleStore.completedHabitsCount} of ${scheduleStore.totalHabitsCount} habits completed.`,
+      ctaLabel: 'Plan My Day',
+    }
+  }
+
   return {
     focusCount: remaining,
     subline: `${completed} of ${total} priorities completed. Focus on your next meaningful milestone.`,
@@ -93,13 +128,28 @@ const activityItems = computed<ActivityItem[]>(() => {
     title: task.title,
     at: task.completedAt ?? task.updatedAt,
   }))
-  const created = today.unplannedTasks.slice(0, 2).map((task) => ({
-    id: `created-${task.id}`,
-    taskId: task.id,
-    kind: 'created' as const,
-    title: task.title,
-    at: task.createdAt,
-  }))
+
+  const allInbox = [
+    ...tasksStore.tasks.filter((t) => t.status === 'INBOX'),
+    ...today.unplannedTasks,
+  ]
+  const seen = new Set<string>()
+  const uniqueInbox = allInbox.filter((t) => {
+    if (seen.has(t.id)) return false
+    seen.add(t.id)
+    return true
+  })
+
+  const created = uniqueInbox
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 2)
+    .map((task) => ({
+      id: `created-${task.id}`,
+      taskId: task.id,
+      kind: 'created' as const,
+      title: task.title,
+      at: task.createdAt,
+    }))
   return [...completed, ...created]
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 4)
@@ -110,7 +160,7 @@ function onSelectTask(taskId: string) {
 }
 
 function onRetry() {
-  today.load(null)
+  void loadAndSelect(previewFromQuery())
 }
 
 /** Navigates to the Link-Map Daily Schedule for proactive day calibration. */
@@ -128,11 +178,13 @@ function onPlanMyDay() {
         <SkeletonBlock height="218px" rounded="lg" />
         <SkeletonBlock height="320px" rounded="lg" />
         <SkeletonBlock height="260px" rounded="lg" />
+        <SkeletonBlock height="62px" rounded="lg" />
         <SkeletonBlock height="220px" rounded="lg" />
       </div>
       <aside class="rail">
         <SkeletonBlock height="180px" rounded="lg" />
         <SkeletonBlock height="210px" rounded="lg" />
+        <SkeletonBlock height="180px" rounded="lg" />
         <SkeletonBlock height="150px" rounded="lg" />
         <SkeletonBlock height="168px" rounded="lg" />
       </aside>
@@ -163,7 +215,12 @@ function onPlanMyDay() {
             :active-task-id="panel.activeTaskId"
             @select="onSelectTask"
           />
-          <ScheduleTimeline :entries="today.schedule" @select="onSelectTask" />
+          <ScheduleTimeline
+            :entries="today.schedule"
+            :habits="scheduleStore.habitNodes"
+            @select="onSelectTask"
+          />
+          <QuickCapture />
           <RecentActivity :items="activityItems" @select="onSelectTask" />
         </main>
 
@@ -171,6 +228,7 @@ function onPlanMyDay() {
         <aside class="rail">
           <CalendarRail />
           <FocusTodayCard />
+          <CapacityTelemetryCard />
           <DailySummaryCard />
           <FocusTipCard />
         </aside>

@@ -11,7 +11,7 @@ import { tasksApi } from "./api";
 import { taskResponseToTask } from "./api-types";
 import type { TaskResponse } from "./api-types";
 import { mockTasks } from "./mock";
-import type { DateSegment, NewTaskDraft, Task, TaskStatus } from "./types";
+import type { CreateTaskDraft, DateSegment, NewTaskDraft, Task, TaskStatus } from "./types";
 
 export type LoadStatus = "idle" | "loading" | "ready" | "error";
 
@@ -294,28 +294,28 @@ export const useTasksStore = defineStore("tasks", () => {
     return null;
   }
 
-  function addTask(draft: NewTaskDraft): Task | null {
+  function addTask(draft: CreateTaskDraft): Task | null {
     lastError.value = null;
     /** UI-only creation destination (spec §12.1); defaults to PLANNED. */
-    const destination = draft.destination ?? "PLANNED";
+    const destination = draft.destination ?? (draft.status === "INBOX" ? "INBOX" : "PLANNED");
 
     if (USE_MOCK) {
       const now = new Date().toISOString();
       const task: Task = {
         id: nextLocalId(),
         title: draft.title,
-        description: draft.description || null,
+        description: draft.description ?? null,
         status: destination,
-        priority: draft.priority,
+        priority: draft.priority ?? null,
         energy: null,
-        estimatedMinutes: draft.estimatedMinutes,
-        dueDate: draft.dueDate,
-        projectId: draft.projectId,
+        estimatedMinutes: draft.estimatedMinutes ?? null,
+        dueDate: draft.dueDate ?? null,
+        projectId: draft.projectId ?? null,
         completedAt: null,
         createdAt: now,
         updatedAt: now,
-        scheduledTime: draft.scheduledTime,
-        recurrence: draft.recurrence,
+        scheduledTime: draft.scheduledTime ?? null,
+        recurrence: draft.recurrence ?? null,
       };
       tasks.value.unshift(task);
       return task;
@@ -330,22 +330,24 @@ export const useTasksStore = defineStore("tasks", () => {
     // lifecycle state.
     let current: Promise<TaskResponse> = tasksApi.create({
       title: draft.title,
-      description: draft.description || null,
-      dueDate: draft.dueDate,
+      description: draft.description ?? null,
+      dueDate: draft.dueDate ?? null,
       priority: draft.priority ?? undefined,
-      estimatedDurationMinutes: draft.estimatedMinutes,
+      estimatedDurationMinutes: draft.estimatedMinutes ?? null,
     });
-    // If backend created with legacy INBOX, ensure it plans
-    current = current.then((created) => {
-      if (created.status === "INBOX") return tasksApi.plan(created.id);
-      return created;
-    });
-    if (destination === "IN_PROGRESS") {
-      current = current.then((planned) => tasksApi.start(planned.id));
+    // If backend created with legacy INBOX, only transition to PLANNED if destination is not INBOX
+    if (destination !== "INBOX") {
+      current = current.then((created) => {
+        if (created.status === "INBOX") return tasksApi.plan(created.id);
+        return created;
+      });
+      if (destination === "IN_PROGRESS") {
+        current = current.then((planned) => tasksApi.start(planned.id));
+      }
     }
     if (draft.projectId) {
       current = current.then((created) =>
-        tasksApi.assignProject(created.id, { projectId: draft.projectId }),
+        tasksApi.assignProject(created.id, { projectId: draft.projectId ?? null }),
       );
     }
 

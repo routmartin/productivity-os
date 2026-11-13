@@ -70,7 +70,10 @@ export interface NewTaskDraft {
   /** UI-only (Tasks UI spec §12.1): initial scheduling/state.
    * Default = PLANNED. Optional Start now = IN_PROGRESS. */
   destination?: "PLANNED" | "IN_PROGRESS" | "INBOX";
+  status?: TaskStatus;
 }
+
+export type CreateTaskDraft = Partial<NewTaskDraft> & { title: string };
 
 /** Primary temporal date segments (Plan 015, Tasks UI spec §7). */
 export type DateSegment = "ALL" | "TODAY" | "UPCOMING" | "BACKLOG";

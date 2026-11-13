@@ -113,25 +113,27 @@ export const useTodayStore = defineStore("today", () => {
       return; // stay in the loading state for review
     }
 
+    if (preview === "error") {
+      status.value = "error";
+      lastError.value = "Simulated error in preview mode";
+      return;
+    }
+
+    if (preview === "empty") {
+      topThree.value = [];
+      plan.value = EMPTY_PLAN;
+      schedule.value = [];
+      tasks.value = [];
+      status.value = "ready";
+      return;
+    }
+
     if (USE_MOCK) {
       await delay(MOCK_LATENCY_MS);
-
-      if (preview === "error") {
-        status.value = "error";
-        return;
-      }
-
-      if (preview === "empty") {
-        topThree.value = [];
-        plan.value = EMPTY_PLAN;
-        schedule.value = [];
-        tasks.value = [];
-      } else {
-        topThree.value = mockTopThree;
-        plan.value = mockDailyPlan;
-        schedule.value = mockSchedule;
-        tasks.value = mockTasks;
-      }
+      topThree.value = mockTopThree;
+      plan.value = mockDailyPlan;
+      schedule.value = mockSchedule;
+      tasks.value = mockTasks;
       status.value = "ready";
       return;
     }
@@ -257,6 +259,16 @@ export const useTodayStore = defineStore("today", () => {
     }
   }
 
+  /** Record a newly captured task directly into Today's collection (AC-008). */
+  function recordTask(task: Task): void {
+    const existingIndex = tasks.value.findIndex((t) => t.id === task.id);
+    if (existingIndex !== -1) {
+      tasks.value[existingIndex] = task;
+    } else {
+      tasks.value.unshift(task);
+    }
+  }
+
   return {
     status,
     topThree,
@@ -273,5 +285,6 @@ export const useTodayStore = defineStore("today", () => {
     isInTopThree,
     selectForTopThree,
     removeFromTopThree,
+    recordTask,
   };
 });

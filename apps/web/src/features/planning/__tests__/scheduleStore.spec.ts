@@ -220,3 +220,76 @@ describe('scheduleStore - updateStep', () => {
     ).rejects.toThrow('Schedule node not found: non-existent-step-id')
   })
 })
+
+describe('scheduleStore - toggleHabit', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.restoreAllMocks()
+  })
+
+  it('optimistically marks pending habit as completed and increments streak (AC-002)', async () => {
+    const store = useScheduleStore()
+    store.graph = createMockScheduleGraph()
+
+    const habit = store.nodes.find((n) => n.id === 'habit-curfew')!
+    expect(habit.completed).toBe(false)
+    const prevStreak = habit.streak ?? 0
+
+    await store.toggleHabit('habit-curfew')
+
+    expect(habit.completed).toBe(true)
+    expect(habit.streak).toBe(prevStreak + 1)
+  })
+
+  it('optimistically unchecks completed habit and decrements streak (AC-003)', async () => {
+    const store = useScheduleStore()
+    store.graph = createMockScheduleGraph()
+
+    const habit = store.nodes.find((n) => n.id === 'habit-hydration')!
+    expect(habit.completed).toBe(true)
+    const prevStreak = habit.streak ?? 12
+
+    await store.toggleHabit('habit-hydration')
+
+    expect(habit.completed).toBe(false)
+    expect(habit.streak).toBe(prevStreak - 1)
+  })
+
+  it('recalculates bedtime projection and overflow on habit toggle (AC-004)', async () => {
+    const store = useScheduleStore()
+    store.graph = createMockScheduleGraph()
+
+    // Completing pending habits shrinks overflow
+    const prevOverflow = store.overflowMinutes
+    await store.toggleHabit('habit-curfew')
+    await store.toggleHabit('habit-journal')
+    await store.toggleHabit('habit-winddown')
+
+    expect(store.overflowMinutes).toBeLessThanOrEqual(prevOverflow)
+  })
+
+  it('rolls back optimistic state on backend toggle failure (AC-005)', async () => {
+    const store = useScheduleStore()
+    store.graph = createMockScheduleGraph()
+
+    // Assign a valid UUID so real mode triggers server call
+    const habit = store.nodes.find((n) => n.id === 'habit-hydration')!
+    habit.habitId = '11111111-1111-1111-1111-111111111111'
+
+    const prevCompleted = habit.completed
+    const prevStreak = habit.streak
+    const prevBedtime = store.projectedBedtime
+
+    vi.spyOn(scheduleApi, 'toggleHabit').mockRejectedValueOnce(
+      new Error('500 Internal Server Error'),
+    )
+
+    await store.toggleHabit('habit-hydration')
+
+    // Expect rollback to snapshot
+    expect(habit.completed).toBe(prevCompleted)
+    expect(habit.streak).toBe(prevStreak)
+    expect(store.projectedBedtime).toBe(prevBedtime)
+    expect(store.errorMessage).toContain('500 Internal Server Error')
+  })
+})
