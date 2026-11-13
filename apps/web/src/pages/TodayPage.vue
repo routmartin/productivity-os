@@ -1,20 +1,29 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import { useContextPanelStore } from '@/app/layouts/contextPanelStore'
 import ErrorState from '@/components/shared/ErrorState.vue'
 import SkeletonBlock from '@/components/shared/SkeletonBlock.vue'
 import AiBriefing from '@/features/ai/components/AiBriefing.vue'
-import { mockBriefing } from '@/features/ai/mock'
+import FocusTipCard from '@/features/ai/components/FocusTipCard.vue'
+import type { Briefing } from '@/features/ai/mock'
+import DailySummaryCard from '@/features/focus/components/DailySummaryCard.vue'
+import FocusTodayCard from '@/features/focus/components/FocusTodayCard.vue'
+import { useFocusStore } from '@/features/focus/store'
+import CalendarRail from '@/features/planning/components/CalendarRail.vue'
+import ScheduleTimeline from '@/features/planning/components/ScheduleTimeline.vue'
 import TopThreeSection from '@/features/planning/components/TopThreeSection.vue'
 import { useTodayStore } from '@/features/planning/todayStore'
 import type { PreviewState } from '@/features/planning/types'
 import RecentActivity, { type ActivityItem } from '@/features/tasks/components/RecentActivity.vue'
-import { showPreviewNote } from '@/lib/preview'
+import { useTasksStore } from '@/features/tasks/store'
 
 const route = useRoute()
+const router = useRouter()
 const today = useTodayStore()
+const tasksStore = useTasksStore()
+const focusStore = useFocusStore()
 const panel = useContextPanelStore()
 
 /** `?preview=loading|error|empty` forces a UI state for design review. */
@@ -25,7 +34,11 @@ function previewFromQuery(): PreviewState {
 
 /** Lands the workspace with no auto-opened panel — Today stays quiet. */
 async function loadAndSelect(preview: PreviewState) {
-  await today.load(preview)
+  await Promise.all([
+    today.load(preview),
+    tasksStore.load(preview),
+    focusStore.load(),
+  ])
   if (preview === 'loading') return
   panel.close()
 }
@@ -37,6 +50,38 @@ watch(
 )
 
 const isLoading = computed(() => today.status === 'loading' || today.status === 'idle')
+
+/** Dynamic AI Briefing computation based on real daily priorities and task progress. */
+const briefingData = computed<Briefing>(() => {
+  const total = today.topThree.length
+  if (total === 0) {
+    return {
+      focusCount: 3,
+      subline: 'Choose your top priorities to set your daily direction and anchor deep work.',
+      ctaLabel: 'Plan My Day',
+    }
+  }
+
+  const completed = today.topThree.filter((e) => {
+    const t = tasksStore.taskById(e.taskId)
+    return t?.status === 'COMPLETED'
+  }).length
+
+  if (completed === total) {
+    return {
+      focusCount: total,
+      subline: 'All daily priorities completed! Outstanding focus momentum today.',
+      ctaLabel: 'Review Schedule',
+    }
+  }
+
+  const remaining = total - completed
+  return {
+    focusCount: remaining,
+    subline: `${completed} of ${total} priorities completed. Focus on your next meaningful milestone.`,
+    ctaLabel: 'Plan My Day',
+  }
+})
 
 /** Recent work mixed with fresh captures, newest first — mirrors the
  *  reference's Completed / Created activity feed. */
@@ -68,53 +113,67 @@ function onRetry() {
   today.load(null)
 }
 
-/** "Plan My Day" is AI-assisted planning — visual-only this milestone. */
+/** Navigates to the Link-Map Daily Schedule for proactive day calibration. */
 function onPlanMyDay() {
-  showPreviewNote('AI day planning arrives in a later milestone.')
+  void router.push({ name: 'schedule' })
 }
 </script>
 
 <template>
   <div class="today-page">
-    <!-- Loading -->
+    <!-- Loading skeleton matching the 2-column layout to prevent CLS -->
     <div v-if="isLoading" class="layout" aria-busy="true" aria-label="Loading today">
       <div class="main">
         <SkeletonBlock height="34px" width="420px" rounded="md" />
         <SkeletonBlock height="218px" rounded="lg" />
-        <SkeletonBlock height="480px" rounded="lg" />
         <SkeletonBlock height="320px" rounded="lg" />
+        <SkeletonBlock height="260px" rounded="lg" />
+        <SkeletonBlock height="220px" rounded="lg" />
       </div>
-      <div class="rail">
+      <aside class="rail">
+        <SkeletonBlock height="180px" rounded="lg" />
         <SkeletonBlock height="210px" rounded="lg" />
         <SkeletonBlock height="150px" rounded="lg" />
         <SkeletonBlock height="168px" rounded="lg" />
-      </div>
+      </aside>
     </div>
 
-    <!-- Error -->
+    <!-- Error state -->
     <div v-else-if="today.status === 'error'" class="content-narrow">
       <ErrorState
         title="Today didn't load"
         description="Your plan for today could not be reached. Your data is safe — try loading it again."
         @retry="onRetry"
       />
-    </div>  
+    </div>
 
-    <!-- Ready — composition follows the approved visual reference -->
+    <!-- Ready — Dual-Rail Command Center (visual system spec §§16-25) -->
     <template v-else>
       <header class="hero">
         <h1 class="hero-title">Let's make today count.</h1>
         <p class="hero-sub">Focus on your priorities and progress will follow.</p>
       </header>
 
-      <div class="main">
-        <AiBriefing :briefing="mockBriefing" @plan="onPlanMyDay" />
-        <TopThreeSection
-          :entries="today.topThree"
-          :active-task-id="panel.activeTaskId"
-          @select="onSelectTask"
-        />
-        <RecentActivity :items="activityItems" @select="onSelectTask" />
+      <div class="layout">
+        <!-- Main Workspace (65-70%) -->
+        <main class="main">
+          <AiBriefing :briefing="briefingData" @plan="onPlanMyDay" />
+          <TopThreeSection
+            :entries="today.topThree"
+            :active-task-id="panel.activeTaskId"
+            @select="onSelectTask"
+          />
+          <ScheduleTimeline :entries="today.schedule" @select="onSelectTask" />
+          <RecentActivity :items="activityItems" @select="onSelectTask" />
+        </main>
+
+        <!-- Right Context Rail (30-35%) -->
+        <aside class="rail">
+          <CalendarRail />
+          <FocusTodayCard />
+          <DailySummaryCard />
+          <FocusTipCard />
+        </aside>
       </div>
     </template>
   </div>
@@ -152,7 +211,14 @@ function onPlanMyDay() {
   color: var(--text-tertiary);
 }
 
-/* Main workspace — full width now that the Today rail is gone (spec §17). */
+/* Main workspace + narrower right context column (spec §17) */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--rail-width);
+  gap: var(--space-6);
+  align-items: start;
+}
+
 .main {
   display: flex;
   flex-direction: column;
@@ -160,9 +226,36 @@ function onPlanMyDay() {
   min-width: 0;
 }
 
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
 /* Container queries keyed off the workspace, so opening the context panel
-   also relaxes secondary content instead of squeezing it (spec §32). */
+   also collapses columns instead of squeezing them (spec §32: reduce
+   secondary content first — typography stays readable throughout). */
+
+/* Collapse the right rail under the main workspace. */
+@container workspace (max-width: 980px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rail {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: var(--space-6);
+  }
+}
+
 @container workspace (max-width: 640px) {
+  .rail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .hero-title {
     font-size: var(--text-3xl);
   }

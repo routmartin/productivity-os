@@ -13,8 +13,8 @@ const store = useFocusStore()
   <section class="daily-summary panel">
     <SectionHeader title="Daily Summary">
       <template #actions>
-        <RouterLink :to="{ name: 'focus' }" class="header-link">
-          View full report
+        <RouterLink :to="{ name: 'schedule' }" class="header-link">
+          View schedule
           <ArrowRight :size="14" :stroke-width="2" />
         </RouterLink>
       </template>

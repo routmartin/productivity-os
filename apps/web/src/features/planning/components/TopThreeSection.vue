@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArrowRight, CalendarCheck2, Check, Flag, X } from 'lucide-vue-next'
+import { ArrowRight, CalendarCheck2, Check, Flag, Play, X } from 'lucide-vue-next'
 
 import EmptyState from '@/components/shared/EmptyState.vue'
 import SectionHeader from '@/components/shared/SectionHeader.vue'
+import { useFocusStore } from '@/features/focus/store'
 import { useProjectsStore } from '@/features/projects/store'
 import { useTasksStore } from '@/features/tasks/store'
 import type { Priority, Task } from '@/features/tasks/types'
@@ -21,6 +22,7 @@ const emit = defineEmits<{ select: [taskId: string] }>()
 const tasksStore = useTasksStore()
 const projectsStore = useProjectsStore()
 const todayStore = useTodayStore()
+const focusStore = useFocusStore()
 
 interface PriorityRow {
   position: number
@@ -60,6 +62,16 @@ function onRemove(event: MouseEvent, taskId: string) {
   event.stopPropagation()
   void todayStore.removeFromTopThree(taskId)
 }
+
+async function onStartFocus(taskId: string) {
+  const task = tasksStore.taskById(taskId)
+  if (!task) return
+  if (task.status !== 'IN_PROGRESS') {
+    await tasksStore.startTaskNow(taskId)
+  }
+  focusStore.selectTask(taskId)
+  focusStore.startFocus()
+}
 </script>
 
 <template>
@@ -96,17 +108,30 @@ function onRemove(event: MouseEvent, taskId: string) {
           {{ row.priority === 'HIGH' ? 'High' : row.priority === 'MEDIUM' ? 'Medium' : 'Low' }}
         </span>
 
-        <span
+        <!-- 1-Click direct focus launcher -->
+        <button
+          v-if="row.task.status !== 'COMPLETED'"
+          class="focus-btn"
+          type="button"
+          aria-label="Start Focus session"
+          title="Start Focus session on this task"
+          @click.stop="onStartFocus(row.task.id)"
+        >
+          <Play :size="12" :stroke-width="2.5" />
+          <span class="focus-btn-label">Focus</span>
+        </button>
+
+        <!-- Toggle task completion -->
+        <button
           class="complete-circle"
           :class="{ checked: row.task.status === 'COMPLETED' }"
-          role="button"
-          tabindex="-1"
-          aria-label="Mark complete (arrives in a later milestone)"
-          title="Completing tasks arrives in a later milestone"
-          @click.stop
+          type="button"
+          :aria-label="row.task.status === 'COMPLETED' ? 'Mark incomplete' : 'Mark complete'"
+          :title="row.task.status === 'COMPLETED' ? 'Mark incomplete' : 'Mark complete'"
+          @click.stop="tasksStore.toggleTaskComplete(row.task.id)"
         >
           <Check v-if="row.task.status === 'COMPLETED'" :size="13" :stroke-width="2.5" />
-        </span>
+        </button>
 
         <button
           class="remove-btn"
@@ -120,13 +145,18 @@ function onRemove(event: MouseEvent, taskId: string) {
       </li>
     </ol>
 
-    <EmptyState
-      v-else
-      :icon="CalendarCheck2"
-      title="No priorities chosen yet"
-      description="Pick up to three tasks that would make today a win."
-      compact
-    />
+    <div v-else class="empty-wrap">
+      <EmptyState
+        :icon="CalendarCheck2"
+        title="No priorities chosen yet"
+        description="Pick up to three tasks that would make today a win."
+        compact
+      />
+      <RouterLink :to="{ name: 'tasks' }" class="empty-action">
+        Choose from Tasks
+        <ArrowRight :size="14" :stroke-width="2" />
+      </RouterLink>
+    </div>
   </section>
 </template>
 
@@ -165,7 +195,7 @@ function onRemove(event: MouseEvent, taskId: string) {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-3);
+  padding: var(--space-3) var(--space-3);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -259,6 +289,37 @@ function onRemove(event: MouseEvent, taskId: string) {
   color: var(--text-tertiary);
 }
 
+/* 1-Click Focus launcher button */
+.focus-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent-border);
+  background: var(--surface-3);
+  color: var(--accent-strong);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.88;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.focus-btn:hover {
+  opacity: 1;
+  background: var(--surface-hover);
+  transform: translateY(-1px);
+}
+
+.focus-btn-label {
+  letter-spacing: 0.02em;
+}
+
 .complete-circle {
   display: grid;
   place-items: center;
@@ -267,7 +328,9 @@ function onRemove(event: MouseEvent, taskId: string) {
   flex-shrink: 0;
   border-radius: var(--radius-full);
   border: 1.5px solid var(--text-disabled);
+  background: transparent;
   color: #fff;
+  cursor: pointer;
   transition:
     border-color var(--duration-fast) var(--ease-out),
     background-color var(--duration-fast) var(--ease-out);
@@ -305,5 +368,35 @@ function onRemove(event: MouseEvent, taskId: string) {
 
 .remove-btn:hover {
   color: var(--danger);
+}
+
+.empty-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+}
+
+.empty-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-border);
+  background: var(--surface-2);
+  color: var(--accent-strong);
+  font-size: var(--text-sm);
+  font-weight: 550;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.empty-action:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
 }
 </style>

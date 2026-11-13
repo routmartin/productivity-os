@@ -59,8 +59,8 @@ function onKeydown(event: KeyboardEvent, taskId: string | null) {
     />
 
     <div v-if="entries.length > 0" class="footer">
-      <RouterLink :to="{ name: 'timeline' }" class="footer-link">
-        View full timeline
+      <RouterLink :to="{ name: 'schedule' }" class="footer-link">
+        View schedule
         <ArrowRight :size="14" :stroke-width="2" />
       </RouterLink>
     </div>

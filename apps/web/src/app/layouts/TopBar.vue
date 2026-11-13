@@ -52,10 +52,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onShortcutKeydown))
         <PanelLeftOpen :size="18" :stroke-width="1.75" />
       </button>
 
-      <h1 class="page-title">
+      <span class="page-title">
         {{ contextLabel }}
         <span v-if="isToday" aria-hidden="true">👋</span>
-      </h1>
+      </span>
     </div>
 
     <div class="chrome">
