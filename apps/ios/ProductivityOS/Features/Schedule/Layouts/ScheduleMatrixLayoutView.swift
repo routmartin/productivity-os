@@ -192,36 +192,53 @@ public struct ScheduleMatrixLayoutView: View {
 
     @ViewBuilder
     private func renderNode(node: ScheduleNode) -> some View {
-        switch node.type {
-        case .anchor:
-            ScheduleAnchorNodeView(
-                node: node,
-                isOverflowing: viewModel.isOverflowing,
-                onTap: { onSelectNode(node) }
-            )
-        case .habit:
-            ScheduleHabitNodeView(
-                node: node,
-                onToggleCompletion: { viewModel.toggleHabit(node.id) },
-                onTap: { onSelectNode(node) }
-            )
-        case .task:
-            ScheduleActivityNodeView(
-                node: node,
-                onToggleFocus: {
-                    if node.inFocus ?? false {
-                        viewModel.stopFocus()
-                    } else {
-                        viewModel.startFocus(node.id)
-                    }
-                },
-                onTap: { onSelectNode(node) }
-            )
-        case .recharge:
-            ScheduleRechargeNodeView(
-                node: node,
-                onTap: { onSelectNode(node) }
-            )
+        Group {
+            switch node.type {
+            case .anchor:
+                ScheduleAnchorNodeView(
+                    node: node,
+                    isOverflowing: viewModel.isOverflowing,
+                    onTap: { onSelectNode(node) }
+                )
+            case .habit:
+                ScheduleHabitNodeView(
+                    node: node,
+                    onToggleCompletion: { viewModel.toggleHabit(node.id) },
+                    onTap: { onSelectNode(node) }
+                )
+            case .task:
+                ScheduleActivityNodeView(
+                    node: node,
+                    onToggleFocus: {
+                        if node.inFocus ?? false {
+                            viewModel.stopFocus()
+                        } else {
+                            viewModel.startFocus(node.id)
+                        }
+                    },
+                    onTap: { onSelectNode(node) }
+                )
+            case .recharge:
+                ScheduleRechargeNodeView(
+                    node: node,
+                    onTap: { onSelectNode(node) }
+                )
+            }
+        }
+        .contextMenu {
+            if node.type != .anchor {
+                Button {
+                    onSelectNode(node)
+                } label: {
+                    Label("Inspect & Edit Step", systemImage: "pencil")
+                }
+
+                Button(role: .destructive) {
+                    viewModel.deleteNode(node.id)
+                } label: {
+                    Label("Delete from Today", systemImage: "trash")
+                }
+            }
         }
     }
 }

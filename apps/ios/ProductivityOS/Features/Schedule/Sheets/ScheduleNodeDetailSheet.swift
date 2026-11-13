@@ -126,6 +126,28 @@ public struct ScheduleNodeDetailSheet: View {
                     // Metadata Card
                     metadataAttributesCard
 
+                    // Edit Step Button (Protected for anchors)
+                    if !isAnchor && onUpdate != nil {
+                        Button {
+                            isShowingEditSheet = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "pencil")
+                                Text("Edit Step Details")
+                            }
+                            .font(AppTypography.body)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: AppRadius.md)
+                                    .fill(AppColors.primary)
+                            )
+                        }
+                        .padding(.top, AppSpacing.sm)
+                    }
+
                     // Destructive Delete Button (Protected for anchors)
                     if !isAnchor {
                         Button(role: .destructive) {
@@ -146,7 +168,7 @@ public struct ScheduleNodeDetailSheet: View {
                                     .fill(Color(hex: "FEF2F2"))
                             )
                         }
-                        .padding(.top, AppSpacing.sm)
+                        .padding(.top, AppSpacing.xs)
                     }
                 }
                 .padding(AppSpacing.lg)
@@ -158,11 +180,21 @@ public struct ScheduleNodeDetailSheet: View {
             #endif
             .toolbar {
                 if !isAnchor && onUpdate != nil {
-                    ToolbarItem(placement: .primaryAction) {
+                    #if os(iOS)
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Edit") {
+                            isShowingEditSheet = true
+                        }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppColors.primary)
+                    }
+                    #else
+                    ToolbarItem(placement: .cancellationAction) {
                         Button("Edit") {
                             isShowingEditSheet = true
                         }
                     }
+                    #endif
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
