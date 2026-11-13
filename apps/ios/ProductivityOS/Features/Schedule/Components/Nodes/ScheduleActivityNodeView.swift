@@ -61,7 +61,7 @@ public struct ScheduleActivityNodeView: View {
 
                     if let duration = node.durationMinutes {
                         HStack(spacing: 4) {
-                            Image(systemName: "bolt.stopwatch.fill")
+                            Image(systemName: "stopwatch.fill")
                                 .font(.system(size: 10, weight: .bold))
                             Text("\(duration)m focus")
                                 .font(.system(size: 11, weight: .bold, design: .rounded))
