@@ -15,7 +15,7 @@ public final class ScheduleViewModel {
 
     public private(set) var loadState: LoadState = .idle
     public private(set) var graph: ScheduleGraph?
-    public private(set) var activeLayout: ScheduleLayoutMode = .spine
+    public private(set) var activeLayout: ScheduleLayoutMode = .journey
     public var selectedNodeId: String?
     public private(set) var activeTaskId: String?
     public var errorMessage: String?
@@ -40,7 +40,7 @@ public final class ScheduleViewModel {
            let mode = ScheduleLayoutMode(rawValue: raw) {
             return mode
         }
-        return .spine
+        return .journey
     }
 
     // MARK: - Getters

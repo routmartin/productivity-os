@@ -23,16 +23,6 @@ public struct MainTabView: View {
                 GoalsView()
             }
 
-            Tab(AppTab.focus.rawValue, systemImage: AppTab.focus.iconName, value: AppTab.focus, role: .search) {
-                FocusPreparationView(
-                    viewModel: focusViewModel,
-                    projectsViewModel: projectsViewModel,
-                    onDismiss: {
-                        selectedTab = .schedule
-                    }
-                )
-            }
-
             Tab(AppTab.tasks.rawValue, systemImage: AppTab.tasks.iconName, value: AppTab.tasks) {
                 TasksView(
                     projectsViewModel: projectsViewModel,
@@ -154,7 +144,7 @@ public struct MainTabView: View {
             case "tasks":
                 selectedTab = .tasks
             case "focus":
-                selectedTab = .focus
+                isShowingFocusSheet = true
             case "goals":
                 selectedTab = .goals
             case "me", "profile":
@@ -163,28 +153,6 @@ public struct MainTabView: View {
                 break
             }
         }
-    }
-}
-
-extension View {
-    /// DEBUG builds: double-tap anywhere on screen to open the API request
-    /// log from anywhere in the app.
-    func devGestureToOpenRequestLog() -> some View {
-        modifier(DevGestureModifier())
-    }
-}
-
-private struct DevGestureModifier: ViewModifier {
-    @State private var isPresented = false
-
-    func body(content: Content) -> some View {
-        #if DEBUG
-        content
-            .background(DevGestureDetector { isPresented = true })
-            .sheet(isPresented: $isPresented) { DevAPIRequestLogView() }
-        #else
-        content
-        #endif
     }
 }
 

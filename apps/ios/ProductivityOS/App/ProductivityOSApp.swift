@@ -14,8 +14,6 @@ struct ProductivityOSApp: App {
                     LoginView()
                 }
             }
-            // DEBUG builds: shake or edge-swipe to open the API request log.
-            .devGestureToOpenRequestLog()
         }
     }
 }

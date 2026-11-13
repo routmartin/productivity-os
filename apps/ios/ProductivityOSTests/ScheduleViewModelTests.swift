@@ -9,10 +9,16 @@ final class ScheduleViewModelTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
+        UserDefaults.standard.removeObject(forKey: "productivity-os:schedule-layout")
         mockAPIClient = MockAPIClient()
         // Default to network error so loadSchedule falls back gracefully to default blueprint
         mockAPIClient.defaultResponse = .failure(APIError.networkError("The Internet connection appears to be offline."))
         scheduleService = ScheduleService(apiClient: mockAPIClient)
+    }
+
+    override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: "productivity-os:schedule-layout")
+        super.tearDown()
     }
 
     private func makeViewModel(initialGraph: ScheduleGraph? = nil) -> ScheduleViewModel {
@@ -32,6 +38,11 @@ final class ScheduleViewModelTests: XCTestCase {
         XCTAssertNotNil(viewModel.bedtimeAnchor)
         XCTAssertEqual(viewModel.wakeAnchor?.time, "06:30")
         XCTAssertEqual(viewModel.bedtimeAnchor?.targetTime, "22:30")
+    }
+
+    func testDefaultLayoutIsJourney() {
+        let viewModel = makeViewModel()
+        XCTAssertEqual(viewModel.activeLayout, .journey)
     }
 
     func testLayoutSwitchingAndPersistence() {

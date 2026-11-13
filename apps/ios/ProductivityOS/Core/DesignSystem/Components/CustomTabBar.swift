@@ -4,7 +4,6 @@ import SwiftUI
 public enum AppTab: String, CaseIterable, Identifiable {
     case schedule = "Schedule"
     case goals = "Goals"
-    case focus = "Focus"
     case tasks = "Tasks"
     case me = "Me"
 
@@ -14,7 +13,6 @@ public enum AppTab: String, CaseIterable, Identifiable {
         switch self {
         case .schedule: return "calendar.day.timeline.left"
         case .goals: return "target"
-        case .focus: return "scope"
         case .tasks: return "checklist"
         case .me: return "person.fill"
         }

@@ -27,51 +27,17 @@ public struct ScheduleView: View {
                         totalHabits: viewModel.totalHabitsCount
                     )
 
-                    // View Switcher (Spine | Journey | Matrix)
-                    ScheduleViewSwitcher(
-                        activeLayout: Binding(
-                            get: { viewModel.activeLayout },
-                            set: { viewModel.setLayout($0) }
-                        )
+                    // Dedicated Journey Projection Layout
+                    ScheduleJourneyLayoutView(
+                        viewModel: viewModel,
+                        onSelectNode: { node in
+                            selectedNodeForDetail = node
+                        },
+                        onAddStepInPhase: { phase in
+                            addStepTargetPhase = phase
+                            isShowingAddStepSheet = true
+                        }
                     )
-                    .padding(.vertical, 2)
-
-                    // Active Projection Layout
-                    switch viewModel.activeLayout {
-                    case .spine:
-                        ScheduleSpineLayoutView(
-                            viewModel: viewModel,
-                            onSelectNode: { node in
-                                selectedNodeForDetail = node
-                            },
-                            onAddStepInPhase: { phase in
-                                addStepTargetPhase = phase
-                                isShowingAddStepSheet = true
-                            }
-                        )
-                    case .journey:
-                        ScheduleJourneyLayoutView(
-                            viewModel: viewModel,
-                            onSelectNode: { node in
-                                selectedNodeForDetail = node
-                            },
-                            onAddStepInPhase: { phase in
-                                addStepTargetPhase = phase
-                                isShowingAddStepSheet = true
-                            }
-                        )
-                    case .matrix:
-                        ScheduleMatrixLayoutView(
-                            viewModel: viewModel,
-                            onSelectNode: { node in
-                                selectedNodeForDetail = node
-                            },
-                            onAddStepInPhase: { phase in
-                                addStepTargetPhase = phase
-                                isShowingAddStepSheet = true
-                            }
-                        )
-                    }
                 }
                 .padding(.horizontal, AppSpacing.lg)
                 .padding(.top, AppSpacing.sm)
