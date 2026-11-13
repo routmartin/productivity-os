@@ -96,6 +96,7 @@
 		AA00005E2C7F000100000001 /* ScheduleMatrixLayoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00005E2C7F000100000001 /* ScheduleMatrixLayoutView.swift */; };
 		AA00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift */; };
 		AA0000602C7F000100000001 /* ScheduleAddStepSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000602C7F000100000001 /* ScheduleAddStepSheet.swift */; };
+		AA0000612C7F000100000001 /* ScheduleEditStepSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000612C7F000100000001 /* ScheduleEditStepSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -215,6 +216,7 @@
 		BB00005E2C7F000100000001 /* ScheduleMatrixLayoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleMatrixLayoutView.swift; sourceTree = "<group>"; };
 		BB00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleNodeDetailSheet.swift; sourceTree = "<group>"; };
 		BB0000602C7F000100000001 /* ScheduleAddStepSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleAddStepSheet.swift; sourceTree = "<group>"; };
+		BB0000612C7F000100000001 /* ScheduleEditStepSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleEditStepSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -594,6 +596,7 @@
 			children = (
 				BB00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift */,
 				BB0000602C7F000100000001 /* ScheduleAddStepSheet.swift */,
+				BB0000612C7F000100000001 /* ScheduleEditStepSheet.swift */,
 			);
 			path = Sheets;
 			sourceTree = "<group>";
@@ -787,6 +790,7 @@
 				AA00005E2C7F000100000001 /* ScheduleMatrixLayoutView.swift in Sources */,
 				AA00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift in Sources */,
 				AA0000602C7F000100000001 /* ScheduleAddStepSheet.swift in Sources */,
+				AA0000612C7F000100000001 /* ScheduleEditStepSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
