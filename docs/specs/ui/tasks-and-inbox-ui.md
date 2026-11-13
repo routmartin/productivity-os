@@ -27,6 +27,38 @@ Create a desktop-first task workspace that allows users to:
 The UI should feel lightweight and fast rather than like a traditional
 project-management table.
 
+## Executive Summary & Mental Model
+
+```mermaid
+flowchart TD
+    subgraph Tier1["1. Temporal Date Segments (Top Navigation)"]
+        All["All Tasks"]
+        Today["Today (Scheduled Today + Active Overdue)"]
+        Upcoming["Upcoming (Future Due Dates)"]
+        Backlog["Backlog (Unscheduled Ideas)"]
+    end
+
+    subgraph Tier2["2. Workspace Views (Toolbar Switcher)"]
+        ListView["List View: Lightweight rows, grouped adaptively by Date or Project"]
+        BoardView["Board View: 3-Column Kanban ('To Do' · 'In Progress' · 'Done')"]
+    end
+
+    subgraph Tier3["3. Interaction & Execution Engines"]
+        DetailPanel["Contextual TaskDetailPanel (Slide-out inspection & edits)"]
+        DndEngine["Drag-and-Drop & Micro-Rewind (4px threshold, 5s Undo Toast)"]
+    end
+
+    Tier1 --> Tier2
+    Tier2 --> Tier3
+```
+
+| Component | Responsibility | Key Invariant |
+| :--- | :--- | :--- |
+| **Date Segments** | High-level temporal filtering (`ALL`, `TODAY`, `UPCOMING`, `BACKLOG`) | Overdue tasks remain active in `TODAY`; counts reactively update across tabs. |
+| **List View** | Dense scannable task rows | Grouped adaptively (Upcoming by Date; Backlog by Project). |
+| **Board View** | 3-Column Kanban workflow ("To Do", "In Progress", "Done") | Fluid drag-and-drop with 4px click/drag disambiguation and optimistic undo. |
+| **Context Panel** | Zero-navigation task inspection and modification | Opened on card click; updates server via full-replace `PUT /api/v1/tasks/{id}`. |
+
 ## 3. Design Direction
 
 Follow the existing Productivity OS visual direction:
@@ -214,6 +246,119 @@ Example:
 ```
 
 Rows should have enough spacing to remain easy to scan.
+
+### 8.1 Board View (3-Column Kanban Layout)
+
+In addition to the primary List view, the Tasks workspace provides a 3-column Kanban Board layout ("To Do", "In Progress", "Done"), replacing the legacy date-grouped grid layout.
+
+The Board view aligns with modern task management paradigms (Linear, Jira, Trello, Notion) while preserving the Calm Command Center design ethos:
+
+```
+┌────────────────────────┬────────────────────────┬────────────────────────┐
+│ To Do (5)          [+] │ In Progress (2)    [+] │ Done (12)          [+] │
+├────────────────────────┼────────────────────────┼────────────────────────┤
+│ ┌────────────────────┐ │ ┌────────────────────┐ │ ┌────────────────────┐ │
+│ │ Task Card          │ │ │ Task Card          │ │ │ Completed Card     │ │
+│ │                    │ │ │                    │ │ │ (muted, struck)    │ │
+│ └────────────────────┘ │ └────────────────────┘ │ └────────────────────┘ │
+│ ┌────────────────────┐ │                        │                        │
+│ │ Task Card          │ │                        │                        │
+│ └────────────────────┘ │                        │                        │
+└────────────────────────┴────────────────────────┴────────────────────────┘
+```
+
+#### 8.1.1 Column Mapping & Lifecycle States
+
+The 3 columns represent the fundamental active workflow lifecycle states:
+
+1. **"To Do" Column (`PLANNED`, `INBOX`):**
+   - Contains all planned tasks awaiting execution, as well as any captured inbox items.
+   - Represents the active queue of actionable commitments.
+2. **"In Progress" Column (`IN_PROGRESS`):**
+   - Contains tasks currently being actively worked on or in an active focus session.
+   - Highlights immediate focus to avoid multitasking and work-in-progress overload.
+3. **"Done" Column (`COMPLETED`):**
+   - Displays completed tasks for the active date segment with muted styling, checked indicators, and strike-through titles.
+   - Provides visible momentum and daily accomplishment records.
+
+Cancelled tasks (`CANCELLED`) and soft-deleted tasks are excluded from the active board view.
+
+#### 8.1.2 Integration with Date Segments
+
+The 3-column Kanban board operates seamlessly within the active Date Segment (`ALL`, `TODAY`, `UPCOMING`, `BACKLOG`):
+
+- **"Today's Kanban":** Displays commitments for today across To Do, In Progress, and Done.
+- **"Backlog Kanban":** Displays unscheduled ideas and queued backlog items across To Do, In Progress, and Done.
+- **"Upcoming Kanban":** Displays scheduled future tasks across the 3 workflow columns.
+- **"All Kanban":** Provides a comprehensive panoramic board across all scheduled and unscheduled commitments.
+
+Moving a task between columns transitions its lifecycle status without modifying its `dueDate`.
+
+#### 8.1.3 Responsive Behavior & Layout Structure
+
+- **Desktop (>= 1024px):** Three equal-width columns (`grid-template-columns: repeat(3, minmax(0, 1fr))`) stretching across the full content width, sharing screen space harmoniously.
+- **Compact Viewports (< 1024px):** Board gracefully shifts into a horizontal scroll container (`overflow-x: auto`) with snap alignment (`scroll-snap-type: x mandatory`), ensuring each column maintains a comfortable minimum readable width (min 320px) without cramped text or clipping.
+- **Toolbar View Toggle:** The view toggle in the page toolbar allows switching instantly between **List** (`viewMode = 'list'`) and **Board** (`viewMode = 'board'`). The secondary grouping toggle (Date vs. Project) is active in List mode; in Board mode, tasks are naturally and decisively partitioned by workflow state.
+
+#### 8.1.4 Task Board Card Anatomy (`TaskBoardCard`)
+
+Each card within a column provides immediate scannability without visual clutter:
+
+- **Completion Checkbox:** Interactive circular checkbox allowing 1-click completion toggle.
+- **Title:** Bold, high-contrast task title (struck through and muted in the Done column).
+- **Project Pill:** Subtly tinted chip indicating project association with project dot color.
+- **Metadata Chips:** Compact icons and labels for due date/overdue badge, scheduled time (`formatClockTime`), duration estimate (`formatMinutes`), and recurrence.
+- **Priority Indicator:** Segmented priority indicator (`TaskPrioritySegments`) on the right.
+- **Card Surface & Interactions:** Surface elevated with subtle borders; hover highlights border; clicking (without drag) opens the contextual `TaskDetailPanel`.
+
+### 8.2 Drag-and-Drop Lifecycle State Transitions & Interaction Model
+
+The Kanban board features smooth, tactile drag-and-drop interactions built with zero heavy external dependencies, utilizing native pointer events and accessible keyboard reordering.
+
+#### 8.2.1 Pointer Distance Threshold (Click vs. Drag Disambiguation)
+
+To prevent accidental drags when a user intends to select a card to open the `TaskDetailPanel`:
+
+- A **4-pixel movement threshold** is enforced on pointer down.
+- If the pointer releases within a 4-pixel radius of the initial down position, the interaction is treated strictly as a **Card Click**, opening or closing the contextual detail panel.
+- Once pointer movement exceeds 4 pixels, **Drag Mode** is engaged: pointer capture is established, detail panel opening is suppressed, and visual drag feedback activates.
+
+#### 8.2.2 Visual Drag Feedback & Target Indicators
+
+During an active drag:
+
+- **Elevated Preview:** The dragged card elevates with an enhanced shadow (`box-shadow: var(--shadow-panel)`), a subtle scale magnification (`scale(1.025)`), an accent border highlight (`border-color: var(--accent-border)`), and a tilt angle for physical tactile feel.
+- **Source Placeholder:** The original card slot remains visible with reduced opacity (40%) and dashed outline, keeping the column geometry stable.
+- **Drop Target Column:** The column container hovered over reflects an active drop-target state with a subtle accent background wash and border illumination.
+- **Drop Insertion Marker:** A horizontal drop indicator line (`var(--accent-strong)`) appears at the exact insertion point between cards, showing where the card will land if dropped.
+- **Motion:** Reordering cards within or across columns utilizes a FLIP (First, Last, Invert, Play) transition or Vue `<TransitionGroup>` for buttery 60fps animations.
+
+#### 8.2.3 Backend Lifecycle Transitions on Drop
+
+When a card is dropped into a target column, the application initiates the sanctioned backend API transition matching the column state:
+
+| Source Column | Target Column | Backend API Endpoint Dispatched | Lifecycle Transition |
+| :--- | :--- | :--- | :--- |
+| **To Do** | **In Progress** | `POST /api/v1/tasks/{id}/start` | `PLANNED -> IN_PROGRESS` |
+| **To Do** | **Done** | `POST /api/v1/tasks/{id}/completion` | `PLANNED -> COMPLETED` |
+| **In Progress** | **To Do** | `POST /api/v1/tasks/{id}/plan` *(status demotion)* | `IN_PROGRESS -> PLANNED` |
+| **In Progress** | **Done** | `POST /api/v1/tasks/{id}/completion` | `IN_PROGRESS -> COMPLETED` |
+| **Done** | **In Progress** | `POST /api/v1/tasks/{id}/uncompletion` (`targetStatus: "IN_PROGRESS"`) | `COMPLETED -> IN_PROGRESS` |
+| **Done** | **To Do** | `POST /api/v1/tasks/{id}/uncompletion` (`targetStatus: "PLANNED"`) | `COMPLETED -> PLANNED` |
+
+- **Optimistic State & Undo:** The UI immediately moves the card to the target column and displays the global **Undo Toast** (Section 15.5) with a 5-second countdown.
+- **Error Recovery:** If the backend rejects the transition (e.g. 409 Conflict or network loss), the card snaps back to its original column, and an error message is displayed.
+
+#### 8.2.4 Keyboard Reordering & Accessible Grab-Move-Drop
+
+Full accessibility compliance without pointer device dependency:
+
+- **Grab:** Focusing a card and pressing <kbd>Space</kbd> or <kbd>Enter</kbd> activates "Grabbed" mode.
+- **Move Columns:** Pressing <kbd>ArrowLeft</kbd> or <kbd>ArrowRight</kbd> shifts the grabbed card to the adjacent column ("To Do" ↔ "In Progress" ↔ "Done").
+- **Move Position:** Pressing <kbd>ArrowUp</kbd> or <kbd>ArrowDown</kbd> reorders the card within the column.
+- **Drop / Commit:** Pressing <kbd>Space</kbd> or <kbd>Enter</kbd> commits the move, triggering the status transition API call and releasing the card.
+- **Cancel:** Pressing <kbd>Escape</kbd> cancels the move, restoring the card to its original position without network requests.
+- **Screen Reader Announcements:** An `aria-live="assertive"` region announces grab state, current column position, and final drop confirmation.
 
 ## 9. Task Status
 
@@ -589,6 +734,19 @@ Nothing matches your active filter or search query.
 [ Clear search / filters ]
 ```
 
+### 18.6 Board Column Empty States
+
+When viewed in Board mode, individual columns that contain zero tasks display calm, encouraging placeholders reflecting the column's role:
+
+- **"To Do" Column Empty:**
+  - Message: *"Queue is clear. Capture or schedule work to plan ahead."*
+  - Action: `[ + Add to To Do ]` (opens creation dialog configured for `PLANNED`).
+- **"In Progress" Column Empty:**
+  - Message: *"Nothing in progress. Drag tasks here when you start focusing."*
+  - Action: `[ + Start a Task ]` (opens creation dialog configured for `IN_PROGRESS`).
+- **"Done" Column Empty:**
+  - Message: *"No completed tasks yet. Finish a task to see your momentum here."*
+
 ## 19. Loading States
 
 Use localized loading states.
@@ -667,66 +825,14 @@ Use subtle motion for:
 
 Avoid decorative animation.
 
-## 24. Mock Data
-
-The first implementation uses realistic mock data.
-
-Example:
-
-- Finish authentication
-- Build task dashboard
-- Review API implementation
-- Write documentation
-- Fix login validation
-- Review database schema
-- Prepare sprint review
-
-Use realistic projects and statuses.
-
-Avoid lorem ipsum or generic placeholder content.
-
-## 25. First Implementation Scope
-
-Build:
-
-- Tasks page.
-- Inbox page.
-- Search UI.
-- Filter UI.
-- New Task UI.
-- Quick Capture UI.
-- Task list.
-- Task row.
-- Task detail panel.
-- Task action menu.
-- Loading states.
-- Empty states.
-- Error states.
-- Responsive desktop behavior.
-
-Use mock data.
-
-## 26. First Implementation Exclusions
-
-Do not implement:
-
-- Real Task API integration.
-- Real authentication changes.
-- Projects functionality.
-- Goals functionality.
-- Focus functionality.
-- AI functionality.
-- Backend changes.
-- Full keyboard command system.
-- Advanced task filtering.
-- Mobile-specific optimization.
-
-## 27. Reusable Components
+## 24. Reusable Components
 
 Where appropriate, create reusable components such as:
 
 - TaskRow
 - TaskList
+- TaskBoardColumn
+- TaskBoardCard
 - TaskStatus
 - TaskPriority
 - TaskDetailPanel
@@ -757,12 +863,22 @@ Do not over-abstract simple UI elements.
 4. Should task search eventually support keyboard shortcuts?
 5. Should completed tasks appear in the default Tasks view?
 6. Should the task detail panel remain open when navigating between tasks?
-7. Should users be able to drag tasks between lifecycle/group sections?
+7. *(Resolved in Plan 019)* Should users be able to drag tasks between lifecycle/group sections? Yes, resolved via 3-column Kanban board ("To Do", "In Progress", "Done") with drag-and-drop and keyboard transitions.
 
 These should be resolved through visual iteration rather than extensive
 upfront architecture decisions.
 
 ## 30. Change History
+
+- **2026-11-13 (Plan 019 — 3-Column Kanban Board Layout & Drag-and-Drop):**
+  Amended Section 8 with Section 8.1 "Board View (3-Column Kanban Layout)" (replacing
+  date-grid with 3 columns: To Do, In Progress, Done; responsive horizontal scroll under 1024px;
+  date segments integration; board card anatomy) and Section 8.2 "Drag-and-Drop Lifecycle
+  State Transitions & Interaction Model" (4px pointer threshold disambiguating clicks from drags,
+  elevated preview, column drop target indicators, FLIP transitions, API transition mapping,
+  and keyboard grab-move-drop reordering); added Section 18.6 defining column empty states;
+  resolved Open Question 7; added reusable components `TaskBoardColumn` and `TaskBoardCard`;
+  added Acceptance Criteria `AC-UI-018` through `AC-UI-023`.
 
 - **2026-11-12 (Actionable 2 — Date Segments: Today vs. Upcoming vs. Backlog):**
   Amended Section 7 into unified date segments ("All", "Today", "Upcoming", "Backlog");
@@ -902,3 +1018,65 @@ When a date segment is selected (e.g. "Upcoming")
 Then the URL query parameter updates to `?segment=upcoming` via `router.replace` without full page reload
 And when arriving at `/tasks?segment=backlog` from a direct link, bookmark, or browser reload, the "Backlog" segment is activated on load
 And clicking browser Back/Forward transitions between the previously visited segments reactively.
+
+### AC-UI-018 — 3-Column Kanban Board Layout (To Do, In Progress, Done)
+
+Given a user viewing the Tasks workspace (`/tasks`)
+When the user toggles the view layout to "Board" in the toolbar
+Then the date-grid layout is replaced by a 3-column Kanban board displaying:
+- "To Do" column containing active `PLANNED` and `INBOX` tasks
+- "In Progress" column containing `IN_PROGRESS` tasks
+- "Done" column containing `COMPLETED` tasks
+And each column displays a header with column title, reactive task count badge, and quick "+ New Task" creation trigger
+And on viewports under 1024px width, the board enables smooth horizontal scrolling with scroll-snap without layout clipping or text overlap
+And the board respects the active top Date Segment ("All", "Today", "Upcoming", "Backlog") and search query.
+
+### AC-UI-019 — Drag-and-Drop Lifecycle State Transitions
+
+Given a task card displayed in any Kanban column
+When the user drags the task card from its source column and drops it onto a different target column
+Then the task transitions to the lifecycle state of the target column:
+- Dropping into "To Do" sets status to `PLANNED` via `POST /api/v1/tasks/{id}/plan` (from In Progress) or `POST /api/v1/tasks/{id}/uncompletion` with target `PLANNED` (from Done)
+- Dropping into "In Progress" sets status to `IN_PROGRESS` via `POST /api/v1/tasks/{id}/start` (from To Do) or `POST /api/v1/tasks/{id}/uncompletion` with target `IN_PROGRESS` (from Done)
+- Dropping into "Done" sets status to `COMPLETED` via `POST /api/v1/tasks/{id}/completion`
+And the task card immediately moves to the target column
+And an Undo Toast is displayed allowing the user to revert the transition within 5 seconds
+And if the backend rejects the transition, the card reverts to its source column with an error notification.
+
+### AC-UI-020 — Disambiguating Click (Open Details) from Drag
+
+Given a task card in the Kanban board
+When the user clicks or taps on the card without moving the pointer more than 4 pixels
+Then the contextual `TaskDetailPanel` opens for that task
+And no drag interaction or reordering is initiated
+When the user presses down and moves the pointer beyond the 4-pixel distance threshold
+Then drag mode is initiated and clicking/toggling the detail panel is suppressed upon pointer release.
+
+### AC-UI-021 — Visual Drag Feedback and Drop Target Indicators
+
+Given an active drag-and-drop interaction on a task card
+When the card is being dragged:
+- The dragged preview card renders with elevated shadow (`box-shadow: var(--shadow-panel)`), slight scaling (`scale(1.025)`), and accent border (`border-color: var(--accent-border)`)
+- The source placeholder card renders with reduced opacity (40%) and dashed border
+- When hovering over a target column, the column container highlights with subtle surface tint and accent border
+- An insertion marker (horizontal accent line or indicator slot) clearly indicates the target drop zone within the column
+And when dropped, the cards reorder with a smooth FLIP transition.
+
+### AC-UI-022 — Keyboard Reordering & Status Transition (Grab-Move-Drop)
+
+Given a focused task card in the Kanban board
+When the user presses <kbd>Space</kbd> or <kbd>Enter</kbd>
+Then the card enters "Grabbed" state, announced via `aria-live`
+And pressing <kbd>ArrowLeft</kbd> or <kbd>ArrowRight</kbd> moves the grabbed card across columns ("To Do" ↔ "In Progress" ↔ "Done"), with tasks within each column ordered deterministically (pinned tasks top, followed by alphabetical title ordering)
+And pressing <kbd>Space</kbd> or <kbd>Enter</kbd> commits the drop, triggering the corresponding status transition API call and exiting grab mode
+And pressing <kbd>Escape</kbd> cancels the grab operation and returns the card to its original position without state changes.
+
+### AC-UI-023 — Column-Specific Empty States & Quick Creation
+
+Given a Kanban column with zero matching tasks within the active date segment
+When the column renders
+Then a calm, column-specific empty placeholder is displayed:
+- For "To Do": "Queue is clear. Capture or schedule work to plan ahead."
+- For "In Progress": "Nothing in progress. Drag tasks here when you start focusing."
+- For "Done": "No completed tasks yet. Finish a task to see your momentum here."
+And clicking the column header "+ New Task" button opens the task creation dialog pre-configured with the corresponding column destination (`PLANNED` for To Do, `IN_PROGRESS` for In Progress) and current date segment `dueDate`.

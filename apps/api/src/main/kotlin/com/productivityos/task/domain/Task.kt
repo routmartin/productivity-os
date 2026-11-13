@@ -20,7 +20,7 @@ data class Task(
 ) {
 
     fun plan(): Task {
-        require(status == TaskStatus.INBOX || status == TaskStatus.PLANNED) {
+        require(status == TaskStatus.INBOX || status == TaskStatus.PLANNED || status == TaskStatus.IN_PROGRESS) {
             "Cannot transition from $status to PLANNED"
         }
         require(deletedAt == null) { "Cannot transition a deleted task" }

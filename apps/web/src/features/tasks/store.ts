@@ -11,7 +11,7 @@ import { tasksApi } from "./api";
 import { taskResponseToTask } from "./api-types";
 import type { TaskResponse } from "./api-types";
 import { mockTasks } from "./mock";
-import type { CreateTaskDraft, DateSegment, NewTaskDraft, Task, TaskStatus } from "./types";
+import type { BoardColumnId, CreateTaskDraft, DateSegment, NewTaskDraft, Task, TaskStatus } from "./types";
 
 export type LoadStatus = "idle" | "loading" | "ready" | "error";
 
@@ -68,7 +68,11 @@ export const useTasksStore = defineStore("tasks", () => {
   /** Initial draft values when opening the create dialog (Plan 015). */
   const createDialogInitialDraft = ref<Partial<NewTaskDraft> | null>(null);
   /** Global reactive undo toast state (Plan 014 D4). */
-  const toast = ref<{ kind: 'complete' | 'reopen' | 'create'; title: string } | null>(null);
+  const toast = ref<{
+    kind: 'complete' | 'reopen' | 'create' | 'transition';
+    title: string;
+    message?: string;
+  } | null>(null);
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   const todayISO = computed(() =>
@@ -81,7 +85,11 @@ export const useTasksStore = defineStore("tasks", () => {
     return toISODateInZone(tomorrow, auth.user?.timezone ?? undefined);
   });
 
-  function showToast(state: { kind: 'complete' | 'reopen' | 'create'; title: string }): void {
+  function showToast(state: {
+    kind: 'complete' | 'reopen' | 'create' | 'transition';
+    title: string;
+    message?: string;
+  }): void {
     toast.value = state;
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
@@ -213,6 +221,47 @@ export const useTasksStore = defineStore("tasks", () => {
         if (!a.pinned && b.pinned) return 1;
         return statusOrder[a.status] - statusOrder[b.status];
       });
+  });
+
+  /** Tasks partitioned into 3 Kanban columns for the board layout (Plan 019, AC-UI-018).
+   *  Filtered by active date segment and search query, ignoring statusFilter. */
+  const boardTasks = computed(() => {
+    if (previewEmpty.value) return [];
+    return tasks.value.filter(
+      (task) =>
+        matchesDateSegment(task, dateSegment.value) &&
+        matchesSearch(task) &&
+        task.status !== "CANCELLED",
+    );
+  });
+
+  const boardColumns = computed<Record<BoardColumnId, Task[]>>(() => {
+    const planned: Task[] = [];
+    const inProgress: Task[] = [];
+    const completed: Task[] = [];
+
+    for (const task of boardTasks.value) {
+      if (task.status === "PLANNED" || task.status === "INBOX") {
+        planned.push(task);
+      } else if (task.status === "IN_PROGRESS") {
+        inProgress.push(task);
+      } else if (task.status === "COMPLETED") {
+        completed.push(task);
+      }
+    }
+
+    const sortCol = (list: Task[]) =>
+      list.slice().sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return a.title.localeCompare(b.title);
+      });
+
+    return {
+      PLANNED: sortCol(planned),
+      IN_PROGRESS: sortCol(inProgress),
+      COMPLETED: sortCol(completed),
+    };
   });
 
   const hasActiveSearch = computed(() => searchQuery.value.trim().length > 0);
@@ -364,7 +413,7 @@ export const useTasksStore = defineStore("tasks", () => {
   /** Snapshot of the last destructive change, so the UI can offer Undo.
    *  Set only in mock mode — real-mode completion is one-way. */
   const lastUndoable = ref<{
-    kind: "complete" | "reopen" | "create";
+    kind: "complete" | "reopen" | "create" | "transition";
     taskId: string;
     task: Task;
   } | null>(null);
@@ -662,6 +711,112 @@ export const useTasksStore = defineStore("tasks", () => {
     });
   }
 
+  /** Transition a task directly to a target lifecycle status (Plan 019, AC-UI-019).
+   *  Invokes sanctioned API endpoints, maintains undo history, and updates UI optimistically. */
+  async function transitionTaskStatus(
+    taskId: string,
+    targetStatus: TaskStatus,
+  ): Promise<void> {
+    const task = taskById(taskId);
+    if (!task || task.status === targetStatus) return;
+    lastError.value = null;
+
+    const previousTask = { ...task };
+    const now = new Date().toISOString();
+
+    lastUndoable.value = {
+      kind:
+        targetStatus === "COMPLETED"
+          ? "complete"
+          : previousTask.status === "COMPLETED"
+            ? "reopen"
+            : "transition",
+      taskId,
+      task: previousTask,
+    };
+
+    const getToastForStatus = (status: TaskStatus, title: string) => {
+      if (status === "COMPLETED") {
+        return { kind: "complete" as const, title, message: "Task completed" };
+      }
+      if (previousTask.status === "COMPLETED") {
+        return { kind: "reopen" as const, title, message: "Task reopened" };
+      }
+      if (status === "PLANNED") {
+        return { kind: "transition" as const, title, message: "Moved to To Do" };
+      }
+      if (status === "IN_PROGRESS") {
+        return { kind: "transition" as const, title, message: "Moved to In Progress" };
+      }
+      return { kind: "transition" as const, title, message: `Moved to ${status.toLowerCase()}` };
+    };
+
+    if (USE_MOCK) {
+      task.status = targetStatus;
+      if (targetStatus === "COMPLETED") {
+        task.completedAt = now;
+      } else if (previousTask.status === "COMPLETED") {
+        task.completedAt = null;
+      }
+      task.updatedAt = now;
+      showToast(getToastForStatus(targetStatus, task.title));
+      return;
+    }
+
+    // Real API mode with optimistic update and rollback on failure
+    const rollback = () => {
+      const current = taskById(taskId);
+      if (current) Object.assign(current, previousTask);
+    };
+
+    // Optimistic mutation
+    task.status = targetStatus;
+    if (targetStatus === "COMPLETED") {
+      task.completedAt = now;
+    } else if (previousTask.status === "COMPLETED") {
+      task.completedAt = null;
+    }
+    task.updatedAt = now;
+    showToast(getToastForStatus(targetStatus, task.title));
+
+    let mutation: Promise<TaskResponse>;
+
+    try {
+      if (targetStatus === "PLANNED") {
+        if (previousTask.status === "COMPLETED") {
+          mutation = tasksApi.uncomplete(taskId, "PLANNED");
+        } else {
+          mutation = tasksApi.plan(taskId);
+        }
+      } else if (targetStatus === "IN_PROGRESS") {
+        if (previousTask.status === "COMPLETED") {
+          mutation = tasksApi.uncomplete(taskId, "IN_PROGRESS");
+        } else if (previousTask.status === "INBOX") {
+          mutation = tasksApi.plan(taskId).then(() => tasksApi.start(taskId));
+        } else {
+          mutation = tasksApi.start(taskId);
+        }
+      } else if (targetStatus === "COMPLETED") {
+        if (previousTask.status === "INBOX") {
+          mutation = tasksApi.plan(taskId).then(() => tasksApi.complete(taskId));
+        } else {
+          mutation = tasksApi.complete(taskId);
+        }
+      } else if (targetStatus === "CANCELLED") {
+        mutation = tasksApi.cancel(taskId);
+      } else {
+        return;
+      }
+
+      const updated = await mutation;
+      const live = taskById(taskId);
+      if (live) Object.assign(live, taskResponseToTask(updated));
+    } catch (error: unknown) {
+      rollback();
+      lastError.value = errorMessage(error);
+    }
+  }
+
   function undoLast(): Task | null {
     const last = lastUndoable.value;
     if (!last) return null;
@@ -677,6 +832,7 @@ export const useTasksStore = defineStore("tasks", () => {
         tasks.value = tasks.value.filter((t) => t.id !== last.taskId);
       }
       lastUndoable.value = null;
+      dismissToast();
       return task;
     }
 
@@ -696,6 +852,24 @@ export const useTasksStore = defineStore("tasks", () => {
     } else if (last.kind === "reopen") {
       tasksApi
         .complete(last.taskId)
+        .then((res) => {
+          Object.assign(task, taskResponseToTask(res));
+        })
+        .catch((err) => {
+          lastError.value = errorMessage(err);
+        });
+    } else if (last.kind === "transition") {
+      let revertMutation: Promise<TaskResponse>;
+      if (previousStatus === "PLANNED") {
+        revertMutation = tasksApi.plan(last.taskId);
+      } else if (previousStatus === "IN_PROGRESS") {
+        revertMutation = tasksApi.start(last.taskId);
+      } else if (previousStatus === "CANCELLED") {
+        revertMutation = tasksApi.cancel(last.taskId);
+      } else {
+        revertMutation = tasksApi.plan(last.taskId);
+      }
+      revertMutation
         .then((res) => {
           Object.assign(task, taskResponseToTask(res));
         })
@@ -735,6 +909,7 @@ export const useTasksStore = defineStore("tasks", () => {
     todayISO,
     tomorrowISO,
     visibleTasks,
+    boardColumns,
     inboxTasks,
     inboxCount,
     segmentCounts,
@@ -758,6 +933,7 @@ export const useTasksStore = defineStore("tasks", () => {
     updateTask,
     deleteTask,
     toggleTaskComplete,
+    transitionTaskStatus,
     undoLast,
     lastUndoable,
     togglePin,

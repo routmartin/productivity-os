@@ -90,4 +90,22 @@ class TaskServiceTest {
         assertEquals(TaskStatus.PLANNED, response.status)
         assertNull(response.completedAt)
     }
+
+    @Test
+    fun `plan demotes IN_PROGRESS task to PLANNED (Rule 20, AC-019)`() {
+        val inProgressEntity = TaskEntity(
+            id = taskId,
+            userId = userId,
+            title = "In progress task",
+            status = TaskStatus.IN_PROGRESS,
+            createdAt = Instant.parse("2026-11-12T09:00:00Z")
+        )
+        `when`(taskRepository.findById(taskId)).thenReturn(Optional.of(inProgressEntity))
+        `when`(taskRepository.save(inProgressEntity)).thenReturn(inProgressEntity)
+
+        val response = service.plan(taskId, userId)
+
+        assertEquals(TaskStatus.PLANNED, response.status)
+        assertNull(response.completedAt)
+    }
 }

@@ -85,3 +85,14 @@ export const DATE_SEGMENT_LABELS: Record<DateSegment, string> = {
   BACKLOG: "Backlog",
 };
 
+/** 3-Column Kanban Board column identifiers (Plan 019, AC-UI-018). */
+export type BoardColumnId = "PLANNED" | "IN_PROGRESS" | "COMPLETED";
+
+export interface BoardColumn {
+  id: BoardColumnId;
+  title: string;
+  count: number;
+  tasks: Task[];
+}
+
+

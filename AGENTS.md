@@ -97,6 +97,12 @@ The AI engineering team consists of specialized autonomous agents:
 - **Full-Stack Engineer (`full-stack`)**: Specialist for cross-cutting vertical slices spanning both `apps/api` and `apps/web`.
 - **Code Reviewer (`code-reviewer` / `Cline`)**: Independent reviewer verifying changes against specifications, architecture docs, and ADRs. Does not modify application source code.
 
+### Coordinator Invariant
+
+The Coordinator is strictly an orchestrator and reviewer.
+The Coordinator MUST NEVER use `write_file` or `edit_file` on application code (`apps/**`).
+ALL code modifications in Phase 3 MUST be delegated to `backend`, `frontend`, or `ios-engineer` subagents.
+
 ### 4-Phase Orchestration Lifecycle
 
 Complex vertical slices follow a structured 4-phase lifecycle:

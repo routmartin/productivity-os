@@ -3,14 +3,11 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   CalendarDays,
-  Check,
-  Clock,
+  Columns3,
   FolderKanban,
-  LayoutGrid,
   List,
   ListChecks,
   Plus,
-  Repeat,
   Search,
   SearchX,
   X,
@@ -21,18 +18,17 @@ import EmptyState from '@/components/shared/EmptyState.vue'
 import ErrorState from '@/components/shared/ErrorState.vue'
 import SectionHeader from '@/components/shared/SectionHeader.vue'
 import SkeletonBlock from '@/components/shared/SkeletonBlock.vue'
-import SurfaceCard from '@/components/shared/SurfaceCard.vue'
 import UiButton from '@/components/ui/UiButton.vue'
-import { formatClockTime } from '@/lib/utils/date'
-import { formatMinutes } from '@/lib/utils/duration'
 import type { PreviewState } from '@/features/planning/types'
+import TaskBoardCard from '@/features/tasks/components/TaskBoardCard.vue'
+import TaskBoardColumn from '@/features/tasks/components/TaskBoardColumn.vue'
 import TaskDateSegments from '@/features/tasks/components/TaskDateSegments.vue'
 import TaskFilters from '@/features/tasks/components/TaskFilters.vue'
 import TaskListRow from '@/features/tasks/components/TaskListRow.vue'
-import TaskPrioritySegments from '@/features/tasks/components/TaskPrioritySegments.vue'
+import { useTaskDragAndDrop } from '@/features/tasks/composables/useTaskDragAndDrop'
 import { useProjectsStore } from '@/features/projects/store'
 import { useTasksStore } from '@/features/tasks/store'
-import type { DateSegment, Task } from '@/features/tasks/types'
+import type { BoardColumnId, DateSegment, Task, TaskStatus } from '@/features/tasks/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -54,7 +50,7 @@ const openTaskId = computed(() => {
 
 /* ---------------- View & grouping controls ---------------- */
 
-type ViewMode = 'list' | 'grid'
+type ViewMode = 'list' | 'board'
 type GroupMode = 'date' | 'project'
 
 const viewMode = ref<ViewMode>('list')
@@ -64,6 +60,14 @@ const userOverrodeGrouping = ref(false)
 function setManualGroupMode(mode: GroupMode) {
   userOverrodeGrouping.value = true
   groupMode.value = mode
+}
+
+function parseViewModeQuery(param: unknown): ViewMode | null {
+  if (typeof param !== 'string') return null
+  const lower = param.toLowerCase()
+  if (lower === 'board') return 'board'
+  if (lower === 'list') return 'list'
+  return null
 }
 
 function applyAdaptiveGrouping(segment: DateSegment) {
@@ -132,6 +136,12 @@ onMounted(() => {
     store.setDateSegment('TODAY')
     applyAdaptiveGrouping('TODAY')
   }
+
+  const queryView = parseViewModeQuery(route.query.view)
+  if (queryView) {
+    viewMode.value = queryView
+  }
+
   void loadAndSelect(previewFromQuery())
 })
 
@@ -161,6 +171,32 @@ watch(
         query: {
           ...route.query,
           segment: newSegment.toLowerCase(),
+        },
+      })
+    }
+  },
+)
+
+// Synchronize URL query parameter with view mode changes
+watch(
+  () => route.query.view,
+  (newParam) => {
+    const parsed = parseViewModeQuery(newParam)
+    if (parsed && parsed !== viewMode.value) {
+      viewMode.value = parsed
+    }
+  },
+)
+
+watch(
+  () => viewMode.value,
+  (newMode) => {
+    const currentQuery = typeof route.query.view === 'string' ? route.query.view.toLowerCase() : null
+    if (currentQuery !== newMode) {
+      void router.replace({
+        query: {
+          ...route.query,
+          view: newMode,
         },
       })
     }
@@ -391,13 +427,48 @@ function onSelectTask(taskId: string) {
   panel.toggleTask(taskId)
 }
 
+const {
+  isDragging,
+  draggedTask,
+  hoveredColumn,
+  pointerPos,
+  previewSize,
+  grabbedTaskId,
+  announcement,
+  startPointerDrag,
+  handleKeydown,
+} = useTaskDragAndDrop(onSelectTask)
+
+function onCreateTaskForColumn(columnId: BoardColumnId | TaskStatus) {
+  let dueDate: string | null = null
+  if (store.dateSegment === 'TODAY') {
+    dueDate = store.todayISO
+  } else if (store.dateSegment === 'UPCOMING') {
+    dueDate = store.tomorrowISO
+  } else if (store.dateSegment === 'BACKLOG') {
+    dueDate = null
+  } else {
+    dueDate = store.todayISO
+  }
+
+  const destination = columnId === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'PLANNED'
+  store.openCreateDialog({
+    dueDate,
+    destination,
+  })
+}
+
+const isBoardEmptySearch = computed(() =>
+  viewMode.value === 'board' &&
+  store.hasActiveSearch &&
+  store.boardColumns.PLANNED.length === 0 &&
+  store.boardColumns.IN_PROGRESS.length === 0 &&
+  store.boardColumns.COMPLETED.length === 0,
+)
+
 function onClearSearch() {
   store.setSearch('')
   searchInput.value?.focus()
-}
-
-function canToggleComplete(task: Task): boolean {
-  return task.status !== 'CANCELLED'
 }
 
 function onRetry() {
@@ -457,7 +528,7 @@ function onRetry() {
         </div>
 
         <div class="view-controls" role="group" aria-label="Task view">
-          <div class="seg-toggle" role="group" aria-label="Group tasks by">
+          <div v-if="viewMode === 'list'" class="seg-toggle" role="group" aria-label="Group tasks by">
             <button
               type="button"
               class="seg-btn"
@@ -483,7 +554,7 @@ function onRetry() {
               type="button"
               class="seg-btn icon-only"
               :class="{ active: viewMode === 'list' }"
-              title="List"
+              title="List layout"
               aria-label="List layout"
               @click="viewMode = 'list'"
             >
@@ -492,12 +563,12 @@ function onRetry() {
             <button
               type="button"
               class="seg-btn icon-only"
-              :class="{ active: viewMode === 'grid' }"
-              title="Grid"
-              aria-label="Grid layout"
-              @click="viewMode = 'grid'"
+              :class="{ active: viewMode === 'board' }"
+              title="Board layout"
+              aria-label="Board layout"
+              @click="viewMode = 'board'"
             >
-              <LayoutGrid :size="15" :stroke-width="1.75" />
+              <Columns3 :size="15" :stroke-width="1.75" />
             </button>
           </div>
         </div>
@@ -536,14 +607,15 @@ function onRetry() {
     />
 
     <!-- Empty / no results (AC-UI-015) -->
+    <!-- Empty / no results (AC-UI-015, AC-UI-023) -->
     <EmptyState
-      v-else-if="emptyState"
-      :icon="emptyState.icon"
-      :title="emptyState.title"
-      :description="emptyState.description"
+      v-else-if="(viewMode === 'list' && emptyState) || isBoardEmptySearch"
+      :icon="emptyState?.icon ?? SearchX"
+      :title="emptyState?.title ?? 'No tasks found.'"
+      :description="emptyState?.description ?? 'Nothing matches your search query.'"
     >
       <UiButton
-        v-if="emptyState.actionKind === 'clear-search'"
+        v-if="emptyState?.actionKind === 'clear-search' || isBoardEmptySearch"
         variant="ghost"
         size="sm"
         class="empty-action"
@@ -552,7 +624,7 @@ function onRetry() {
         Clear search
       </UiButton>
       <UiButton
-        v-else-if="emptyState.actionKind === 'clear-filter'"
+        v-else-if="emptyState?.actionKind === 'clear-filter'"
         variant="ghost"
         size="sm"
         class="empty-action"
@@ -568,7 +640,7 @@ function onRetry() {
         @click="openCreateForCurrentSegment"
       >
         <Plus :size="14" :stroke-width="2" />
-        {{ emptyState.actionLabel }}
+        {{ emptyState?.actionLabel }}
       </UiButton>
     </EmptyState>
 
@@ -592,81 +664,78 @@ function onRetry() {
       </section>
     </TransitionGroup>
 
-    <!-- Grid view (secondary) — organized column cards (spec §8, §26) -->
-    <TransitionGroup v-else name="card" tag="div" class="day-grid">
-      <SurfaceCard
-        v-for="group in groups"
-        :key="group.key"
-        class="day-card"
-        :class="{ today: groupMode === 'date' && (group as DateGroup).isToday }"
-        :padded="false"
+    <!-- Board view (Kanban) — 3-column workflow (spec §8.1, AC-UI-018) -->
+    <div v-else class="kanban-board" role="region" aria-label="Kanban board">
+      <TaskBoardColumn
+        column-id="PLANNED"
+        title="To Do"
+        :tasks="store.boardColumns.PLANNED"
+        :active-task-id="panel.activeTaskId"
+        :dragging-task-id="draggedTask?.id"
+        :grabbed-task-id="grabbedTaskId"
+        :is-over="hoveredColumn === 'PLANNED'"
+        @select-task="onSelectTask"
+        @pointerdown-task="startPointerDrag"
+        @keydown-task="handleKeydown"
+        @create-task="onCreateTaskForColumn"
+      />
+
+      <TaskBoardColumn
+        column-id="IN_PROGRESS"
+        title="In Progress"
+        :tasks="store.boardColumns.IN_PROGRESS"
+        :active-task-id="panel.activeTaskId"
+        :dragging-task-id="draggedTask?.id"
+        :grabbed-task-id="grabbedTaskId"
+        :is-over="hoveredColumn === 'IN_PROGRESS'"
+        @select-task="onSelectTask"
+        @pointerdown-task="startPointerDrag"
+        @keydown-task="handleKeydown"
+        @create-task="onCreateTaskForColumn"
+      />
+
+      <TaskBoardColumn
+        column-id="COMPLETED"
+        title="Done"
+        :tasks="store.boardColumns.COMPLETED"
+        :active-task-id="panel.activeTaskId"
+        :dragging-task-id="draggedTask?.id"
+        :grabbed-task-id="grabbedTaskId"
+        :is-over="hoveredColumn === 'COMPLETED'"
+        @select-task="onSelectTask"
+        @pointerdown-task="startPointerDrag"
+        @keydown-task="handleKeydown"
+        @create-task="onCreateTaskForColumn"
+      />
+    </div>
+
+    <!-- Floating Drag Preview Card (AC-UI-021) -->
+    <Teleport to="body">
+      <div
+        v-if="isDragging && draggedTask"
+        class="floating-drag-preview"
+        :style="{
+          transform: `translate3d(${pointerPos.x}px, ${pointerPos.y}px, 0) scale(1.025) rotate(1.5deg)`,
+          width: `${previewSize.width}px`,
+        }"
+        aria-hidden="true"
       >
-        <header class="day-header">
-          <div class="day-titles">
-            <span
-              v-if="groupMode === 'project'"
-              class="project-dot"
-              :style="{ background: (group as ProjectGroup).color ?? 'var(--text-disabled)' }"
-            />
-            <div class="day-label-stack">
-              <h2 class="day-name">{{ groupMode === 'date' ? (group as DateGroup).dayLabel : (group as ProjectGroup).name }}</h2>
-              <span v-if="groupMode === 'date'" class="day-date">{{ (group as DateGroup).dateLabel }}</span>
-            </div>
-          </div>
-          <span class="day-count tnum">{{ group.tasks.length }}</span>
-        </header>
+        <TaskBoardCard
+          :task="draggedTask"
+          is-dragging
+        />
+      </div>
+    </Teleport>
 
-        <div class="day-tasks">
-          <div
-            v-for="(task, idx) in sortTasks(group.tasks)"
-            :key="task.id"
-            class="day-task"
-            :class="{
-              completed: task.status === 'COMPLETED',
-              'has-border': idx > 0,
-            }"
-            role="button"
-            tabindex="0"
-            :aria-pressed="task.id === panel.activeTaskId || undefined"
-            @click="onSelectTask(task.id)"
-            @keydown.enter.prevent="onSelectTask(task.id)"
-            @keydown.space.prevent="onSelectTask(task.id)"
-          >
-            <button
-              class="check"
-              :class="{ checked: task.status === 'COMPLETED' }"
-              type="button"
-              role="checkbox"
-              :aria-checked="task.status === 'COMPLETED'"
-              :aria-label="task.status === 'COMPLETED' ? `Reopen ${task.title}` : `Complete ${task.title}`"
-              :disabled="!canToggleComplete(task)"
-              @click.stop="store.toggleTaskComplete(task.id)"
-            >
-              <Check v-if="task.status === 'COMPLETED'" :size="11" :stroke-width="3" />
-            </button>
-
-            <div class="task-main">
-              <span class="task-title">{{ task.title }}</span>
-              <span class="task-meta">
-                <span v-if="task.scheduledTime" class="chip tnum">
-                  <Clock :size="11" :stroke-width="1.75" />
-                  {{ formatClockTime(task.scheduledTime) }}
-                </span>
-                <span v-if="task.estimatedMinutes" class="chip tnum">
-                  {{ formatMinutes(task.estimatedMinutes) }}
-                </span>
-                <span v-if="task.recurrence" class="chip">
-                  <Repeat :size="11" :stroke-width="1.75" />
-                  {{ task.recurrence }}
-                </span>
-              </span>
-            </div>
-
-            <TaskPrioritySegments v-if="task.priority" :priority="task.priority" class="prio" />
-          </div>
-        </div>
-      </SurfaceCard>
-    </TransitionGroup>
+    <!-- Polite aria-live announcement for screen readers (AC-UI-022) -->
+    <div
+      class="visually-hidden"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      {{ announcement }}
+    </div>
   </div>
 </template>
 
@@ -874,223 +943,53 @@ function onRetry() {
   gap: var(--space-1);
 }
 
-/* ---------- Grid (secondary view) — organized columns ---------- */
+/* ---------- Kanban Board (Board view) ---------- */
 
-.day-grid {
+.kanban-board {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-5);
   align-items: start;
 }
 
-.day-card {
-  padding: 0;
-  overflow: hidden;
-  transition:
-    border-color var(--duration-normal) var(--ease-out),
-    box-shadow var(--duration-normal) var(--ease-out);
+@media (max-width: 1023px) {
+  .kanban-board {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: var(--space-4);
+    padding-bottom: var(--space-4);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .kanban-board > :deep(.board-column) {
+    min-width: 320px;
+    max-width: 360px;
+    flex: 0 0 85vw;
+    scroll-snap-align: start;
+  }
 }
 
-.day-card.today {
-  border-color: var(--accent-border);
+/* ---------- Floating Drag Preview ---------- */
+
+.floating-drag-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1000;
+  will-change: transform;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.25));
+  transform-origin: top left;
 }
 
-.day-card:has(.day-task:hover) {
-  border-color: var(--border-strong);
-}
-
-.day-card.today:has(.day-task:hover) {
-  border-color: var(--accent-strong);
-}
-
-.day-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-5) var(--space-5) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.day-card.today .day-header {
-  background: linear-gradient(180deg, var(--accent-soft) 0%, transparent 100%);
-}
-
-.day-titles {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
-}
-
-.day-label-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.project-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
-  margin-top: 4px;
-}
-
-.day-name {
-  font-size: var(--text-xl);
-  font-weight: 650;
-  letter-spacing: -0.015em;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.2;
-}
-
-.day-date {
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
-  white-space: nowrap;
-  line-height: 1.3;
-}
-
-.day-count {
-  display: inline-grid;
-  place-items: center;
-  min-width: 26px;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: var(--radius-full);
-  background: var(--surface-2);
-  border: 1px solid var(--border-subtle);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.day-card.today .day-count {
-  background: var(--accent-soft);
-  border-color: var(--accent-border);
-  color: var(--accent-strong);
-}
-
-.day-tasks {
-  display: flex;
-  flex-direction: column;
-  padding: var(--space-2) var(--space-3) var(--space-4);
-}
-
-.day-task {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out);
-}
-
-.day-task.has-border {
-  border-top: 1px solid var(--border-subtle);
-  border-radius: 0;
-}
-
-.day-task.has-border:first-child {
-  border-top: none;
-}
-
-.day-task:hover {
-  background: var(--surface-2);
-}
-
-.day-task.has-border:hover {
-  border-radius: var(--radius-md);
-}
-
-.day-task.completed .task-title {
-  color: var(--text-tertiary);
-  text-decoration: line-through;
-  text-decoration-color: var(--text-disabled);
-}
-
-.check {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  margin-top: 1px;
-  border-radius: var(--radius-full);
-  border: 1.5px solid var(--text-disabled);
-  background: transparent;
-  color: var(--surface-1);
-  cursor: pointer;
-  transition:
-    border-color var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out);
-}
-
-.check:hover {
-  border-color: var(--accent-strong);
-  transform: scale(1.08);
-}
-
-.check.checked {
-  border-color: var(--success);
-  background: var(--success);
-  color: #07140e;
-}
-
-.task-main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 0;
-  flex: 1;
-}
-
-.task-title {
-  font-size: var(--text-lg);
-  font-weight: 550;
-  letter-spacing: -0.01em;
-  color: var(--text-primary);
-  line-height: 1.3;
-}
-
-.task-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 9px;
-  border-radius: var(--radius-full);
-  background: var(--surface-2);
-  border: 1px solid var(--border-subtle);
-  font-size: var(--text-xs);
-  font-weight: 500;
-  color: var(--text-tertiary);
-  white-space: nowrap;
-}
-
-.chip svg {
-  color: var(--text-disabled);
-}
-
-.prio {
-  flex-shrink: 0;
-  margin-top: 5px;
+.floating-drag-preview :deep(.board-card) {
+  opacity: 1 !important;
+  border-style: solid !important;
+  border-color: var(--accent-border) !important;
+  box-shadow: var(--shadow-panel) !important;
+  cursor: grabbing !important;
+  background: var(--surface-3) !important;
 }
 
 /* ---------- Skeletons ---------- */
@@ -1139,74 +1038,6 @@ function onRetry() {
   gap: var(--space-2);
 }
 
-/* ---------- Toast ---------- */
-
-.completion-toast {
-  position: fixed;
-  bottom: var(--space-6);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 70;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-full);
-  background: var(--surface-3);
-  box-shadow: var(--shadow-panel);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-.toast-icon {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  border-radius: var(--radius-full);
-  background: var(--success-soft);
-  color: var(--success);
-}
-
-.toast-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.35;
-}
-
-.toast-text strong {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.toast-title {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  max-width: 280px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.undo {
-  margin-left: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: none;
-  border-radius: var(--radius-md);
-  background: var(--surface-2);
-  color: var(--accent-strong);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out);
-}
-
-.undo:hover {
-  background: var(--surface-1);
-}
-
 /* ---------- Empty ---------- */
 
 .empty-action {
@@ -1214,24 +1045,6 @@ function onRetry() {
 }
 
 /* ---------- Transitions ---------- */
-
-.card-move,
-.card-enter-active,
-.card-leave-active {
-  transition:
-    opacity var(--duration-normal) var(--ease-out),
-    transform var(--duration-normal) var(--ease-out);
-}
-
-.card-enter-from,
-.card-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-
-.card-leave-active {
-  position: absolute;
-}
 
 .row-move,
 .row-enter-active,
@@ -1249,24 +1062,6 @@ function onRetry() {
 
 .row-leave-active {
   position: absolute;
-}
-
-.toast-enter-active {
-  transition:
-    opacity var(--motion-standard) var(--ease-out),
-    transform var(--motion-standard) var(--ease-out);
-}
-
-.toast-leave-active {
-  transition:
-    opacity var(--motion-fast) var(--ease-in),
-    transform var(--motion-fast) var(--ease-in);
-}
-
-.toast-enter-from,
-.toast-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(12px);
 }
 
 /* ---------- Responsive ---------- */

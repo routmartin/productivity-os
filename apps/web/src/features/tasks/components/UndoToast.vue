@@ -19,7 +19,7 @@ function onUndo() {
         </span>
         <div class="toast-text">
           <strong class="toast-action">
-            {{ store.toast.kind === 'complete' ? 'Task completed' : 'Task reopened' }}
+            {{ store.toast.message ?? (store.toast.kind === 'complete' ? 'Task completed' : store.toast.kind === 'reopen' ? 'Task reopened' : 'Action completed') }}
           </strong>
           <span class="toast-title">{{ store.toast.title }}</span>
         </div>

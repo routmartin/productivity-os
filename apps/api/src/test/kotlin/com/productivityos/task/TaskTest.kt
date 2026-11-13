@@ -84,4 +84,13 @@ class TaskTest {
             inProgress.uncomplete()
         }
     }
+
+    @Test
+    fun `demote IN_PROGRESS task to PLANNED transitions to PLANNED status (AC-019)`() {
+        val inProgress = Task(id = taskId, ownerId = userId, title = "Test Task", status = TaskStatus.IN_PROGRESS)
+        val planned = inProgress.plan()
+
+        assertEquals(TaskStatus.PLANNED, planned.status)
+        assertNull(planned.completedAt)
+    }
 }

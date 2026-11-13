@@ -8,21 +8,39 @@ A plan is not the source of truth for product behavior.
 ## Plan Template
 
 ```md
-# Plan: Feature
+# Plan: Feature Name
+
+## Status
+Draft / Approved / Completed
 
 ## Specification
+- Primary behavioral source of truth links
+- Acceptance criteria in scope
 
-## Architecture
+## Architectural Decisions
+- D1: Key architectural or product decision
 
-## Step 1
+## Agent Delegation Matrix
 
-## Step 2
+| Agent | Target Slice | Owned Files / Scope | Verification Command | Dispatch Brief |
+| :--- | :--- | :--- | :--- | :--- |
+| `@backend` | Slice 1 | `apps/api/**` | `./gradlew :apps:api:test` | Implement domain/service/endpoints per contract |
+| `@frontend` | Slice 2 | `apps/web/**` | `pnpm typecheck && pnpm lint` | Implement UI components, stores, and views |
+| `@ios-engineer` | Slice 3 | `apps/ios/**` | `swift test --package-path apps/ios` | Implement iOS platform screens and cache |
+| `@code-reviewer` | Slice 4 | `git diff` | `./scripts/agent-review.sh` | Independent audit against specs and ADRs |
 
-## Step 3
+## Concurrent Implementation Slices
 
-## Tests
+### Slice 1: Name
+- **Assigned Agent:** `@backend` | `@frontend` | `@ios-engineer`
+- **Files/Modules:** ...
+- **Acceptance Criteria:** ...
+- **Dispatch Brief:** Exact instructions for the assigned subagent
+- **Verification Command:** ...
 
-## Verification
+## Tests & QA Matrix
+
+## Completion Checklist
 ```
 
 Plans may become obsolete when implementation or architecture changes.
