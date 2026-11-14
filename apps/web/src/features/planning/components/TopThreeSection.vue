@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArrowRight, CalendarCheck2, Check, Flag, Play, X } from 'lucide-vue-next'
+import { ArrowRight, Check, Flag, Play, X } from 'lucide-vue-next'
 
-import EmptyState from '@/components/shared/EmptyState.vue'
 import SectionHeader from '@/components/shared/SectionHeader.vue'
 import { useFocusStore } from '@/features/focus/store'
 import { useProjectsStore } from '@/features/projects/store'
@@ -75,7 +74,7 @@ async function onStartFocus(taskId: string) {
 </script>
 
 <template>
-  <section class="priorities panel">
+  <section v-if="rows.length > 0" class="priorities panel">
     <SectionHeader title="Top Priorities">
       <template #actions>
         <RouterLink :to="{ name: 'tasks' }" class="header-link">
@@ -85,7 +84,7 @@ async function onStartFocus(taskId: string) {
       </template>
     </SectionHeader>
 
-    <ol v-if="rows.length > 0" class="rows">
+    <ol class="rows">
       <li
         v-for="row in rows"
         :key="row.task.id"
@@ -144,19 +143,6 @@ async function onStartFocus(taskId: string) {
         </button>
       </li>
     </ol>
-
-    <div v-else class="empty-wrap">
-      <EmptyState
-        :icon="CalendarCheck2"
-        title="No priorities chosen yet"
-        description="Pick up to three tasks that would make today a win."
-        compact
-      />
-      <RouterLink :to="{ name: 'tasks' }" class="empty-action">
-        Choose from Tasks
-        <ArrowRight :size="14" :stroke-width="2" />
-      </RouterLink>
-    </div>
   </section>
 </template>
 
@@ -368,35 +354,5 @@ async function onStartFocus(taskId: string) {
 
 .remove-btn:hover {
   color: var(--danger);
-}
-
-.empty-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  padding-bottom: var(--space-2);
-}
-
-.empty-action {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--accent-border);
-  background: var(--surface-2);
-  color: var(--accent-strong);
-  font-size: var(--text-sm);
-  font-weight: 550;
-  text-decoration: none;
-  transition:
-    background-color var(--duration-fast) var(--ease-out),
-    border-color var(--duration-fast) var(--ease-out);
-}
-
-.empty-action:hover {
-  background: var(--surface-hover);
-  border-color: var(--accent);
 }
 </style>

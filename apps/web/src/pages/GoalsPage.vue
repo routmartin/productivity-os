@@ -37,24 +37,18 @@ const openGoalId = computed(() => {
   return typeof value === 'string' && value ? value : null
 })
 
-/** Lands the workspace with the first goal's detail open. While loading, a
- *  skeleton reserves the panel so the workspace doesn't reflow on ready. */
+/** Lands the workspace cleanly with no auto-opened dialog (D1). */
 async function loadAndSelect(preview: PreviewState) {
-  if (!panel.isOpen) panel.openSkeleton()
   await store.load(preview)
 
-  // A search result wins over the default first item.
+  // A search result lands with its goal detail open.
   if (openGoalId.value && store.goalById(openGoalId.value)) {
     panel.openGoal(openGoalId.value)
     return
   }
 
-  if (preview === 'loading' || !panel.isSkeleton) return
-  if (store.status === 'ready' && store.visibleGoals.length > 0) {
-    panel.openGoal(store.visibleGoals[0].id)
-  } else {
-    panel.close()
-  }
+  if (preview === 'loading') return
+  panel.close()
 }
 
 onMounted(() => loadAndSelect(previewFromQuery()))

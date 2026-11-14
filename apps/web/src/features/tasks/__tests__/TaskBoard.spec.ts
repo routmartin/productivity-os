@@ -1,8 +1,10 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSSRApp, h } from 'vue'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import { renderToString } from 'vue/server-renderer'
 
+import TasksPage from '@/pages/TasksPage.vue'
 import { tasksApi } from '../api'
 import TaskBoardCard from '../components/TaskBoardCard.vue'
 import TaskBoardColumn from '../components/TaskBoardColumn.vue'
@@ -144,6 +146,79 @@ describe('Kanban Board Layout & Drag-and-Drop (AC-UI-018 - AC-UI-023)', () => {
       expect(html).toContain('count-badge')
       expect(html).toContain('1')
       expect(html).toContain('quick-add-btn')
+    })
+
+    it('partitions tasks into board columns ignoring active statusFilter', () => {
+      const store = useTasksStore()
+      store.tasks = [
+        makeTask({ id: '1', title: 'Task Planned', status: 'PLANNED' }),
+        makeTask({ id: '2', title: 'Task In Progress', status: 'IN_PROGRESS' }),
+        makeTask({ id: '3', title: 'Task Completed', status: 'COMPLETED' }),
+      ]
+      store.setDateSegment('ALL')
+
+      // In list view, filtering by COMPLETED would hide Planned & In Progress
+      store.setFilter('COMPLETED')
+      expect(store.statusFilter).toBe('COMPLETED')
+      expect(store.visibleTasks.map((t) => t.id)).toEqual(['3'])
+
+      // Board columns partition tasks properly ignoring status filter
+      expect(store.boardColumns.PLANNED.map((t) => t.id)).toEqual(['1'])
+      expect(store.boardColumns.IN_PROGRESS.map((t) => t.id)).toEqual(['2'])
+      expect(store.boardColumns.COMPLETED.map((t) => t.id)).toEqual(['3'])
+    })
+
+    it('renders TasksPage in board view without status filter and resets statusFilter to ALL', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const store = useTasksStore()
+      store.status = 'ready'
+      store.setFilter('PLANNED')
+
+      const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [{ path: '/tasks', component: TasksPage }],
+      })
+      await router.push('/tasks?view=board')
+      await router.isReady()
+
+      const app = createSSRApp(TasksPage)
+      app.use(pinia)
+      app.use(router)
+
+      const html = await renderToString(app)
+
+      // TaskFilters should not be rendered in board layout
+      expect(html).not.toContain('aria-label="Filter tasks by status"')
+      // Kanban board is rendered
+      expect(html).toContain('class="kanban-board"')
+      // Status filter is reset to ALL
+      expect(store.statusFilter).toBe('ALL')
+    })
+
+    it('renders TasksPage in list view with status filter', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const store = useTasksStore()
+      store.status = 'ready'
+
+      const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [{ path: '/tasks', component: TasksPage }],
+      })
+      await router.push('/tasks?view=list')
+      await router.isReady()
+
+      const app = createSSRApp(TasksPage)
+      app.use(pinia)
+      app.use(router)
+
+      const html = await renderToString(app)
+
+      // TaskFilters should be rendered in list layout
+      expect(html).toContain('aria-label="Filter tasks by status"')
+      // Kanban board is not rendered
+      expect(html).not.toContain('class="kanban-board"')
     })
   })
 
@@ -460,11 +535,14 @@ describe('Kanban Board Layout & Drag-and-Drop (AC-UI-018 - AC-UI-023)', () => {
     })
 
     it('renders TaskBoardCard with completion checkbox and metadata chips', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const store = useTasksStore()
       const task = makeTask({
         id: 'card-test-1',
         title: 'Review pull request',
         status: 'PLANNED',
-        dueDate: '2026-11-13',
+        dueDate: store.todayISO,
         estimatedMinutes: 30,
       })
 
@@ -474,7 +552,7 @@ describe('Kanban Board Layout & Drag-and-Drop (AC-UI-018 - AC-UI-023)', () => {
             task,
           }),
       })
-      app.use(createPinia())
+      app.use(pinia)
       const html = await renderToString(app)
 
       expect(html).toContain('Review pull request')

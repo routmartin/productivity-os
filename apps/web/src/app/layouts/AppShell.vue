@@ -58,7 +58,7 @@ function handleCreateTask(draft: NewTaskDraft) {
 <style scoped>
 .shell {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto 1fr;
   height: 100vh;
   overflow: hidden;
 }

@@ -53,21 +53,36 @@ const openTaskId = computed(() => {
 type ViewMode = 'list' | 'board'
 type GroupMode = 'date' | 'project'
 
-const viewMode = ref<ViewMode>('list')
-const groupMode = ref<GroupMode>('project')
-const userOverrodeGrouping = ref(false)
-
-function setManualGroupMode(mode: GroupMode) {
-  userOverrodeGrouping.value = true
-  groupMode.value = mode
-}
-
 function parseViewModeQuery(param: unknown): ViewMode | null {
   if (typeof param !== 'string') return null
   const lower = param.toLowerCase()
   if (lower === 'board') return 'board'
   if (lower === 'list') return 'list'
   return null
+}
+
+function parseSegmentQuery(param: unknown): DateSegment | null {
+  if (typeof param !== 'string') return null
+  const lower = param.toLowerCase()
+  if (lower === 'all') return 'ALL'
+  if (lower === 'today') return 'TODAY'
+  if (lower === 'upcoming') return 'UPCOMING'
+  if (lower === 'backlog') return 'BACKLOG'
+  return null
+}
+
+const initialView = parseViewModeQuery(route.query.view) ?? 'list'
+const viewMode = ref<ViewMode>(initialView)
+if (initialView === 'board') {
+  store.setFilter('ALL')
+}
+
+const groupMode = ref<GroupMode>('project')
+const userOverrodeGrouping = ref(false)
+
+function setManualGroupMode(mode: GroupMode) {
+  userOverrodeGrouping.value = true
+  groupMode.value = mode
 }
 
 function applyAdaptiveGrouping(segment: DateSegment) {
@@ -83,15 +98,9 @@ function applyAdaptiveGrouping(segment: DateSegment) {
   }
 }
 
-function parseSegmentQuery(param: unknown): DateSegment | null {
-  if (typeof param !== 'string') return null
-  const lower = param.toLowerCase()
-  if (lower === 'all') return 'ALL'
-  if (lower === 'today') return 'TODAY'
-  if (lower === 'upcoming') return 'UPCOMING'
-  if (lower === 'backlog') return 'BACKLOG'
-  return null
-}
+const initialSegment = parseSegmentQuery(route.query.segment) ?? 'TODAY'
+store.setDateSegment(initialSegment)
+applyAdaptiveGrouping(initialSegment)
 
 function onSegmentChange(segment: DateSegment) {
   store.setDateSegment(segment)
@@ -128,18 +137,17 @@ async function loadAndSelect(preview: PreviewState) {
 
 onMounted(() => {
   const querySegment = parseSegmentQuery(route.query.segment)
-  if (querySegment) {
+  if (querySegment && querySegment !== store.dateSegment) {
     store.setDateSegment(querySegment)
     applyAdaptiveGrouping(querySegment)
-  } else {
-    // D2: Default to TODAY
-    store.setDateSegment('TODAY')
-    applyAdaptiveGrouping('TODAY')
   }
 
   const queryView = parseViewModeQuery(route.query.view)
-  if (queryView) {
+  if (queryView && queryView !== viewMode.value) {
     viewMode.value = queryView
+    if (queryView === 'board') {
+      store.setFilter('ALL')
+    }
   }
 
   void loadAndSelect(previewFromQuery())
@@ -191,6 +199,9 @@ watch(
 watch(
   () => viewMode.value,
   (newMode) => {
+    if (newMode === 'board') {
+      store.setFilter('ALL')
+    }
     const currentQuery = typeof route.query.view === 'string' ? route.query.view.toLowerCase() : null
     if (currentQuery !== newMode) {
       void router.replace({
@@ -499,6 +510,7 @@ function onRetry() {
          (spec §10: "Filters should not dominate") -->
     <div class="toolbar">
       <TaskFilters
+        v-if="viewMode === 'list'"
         :active="store.statusFilter"
         :counts="store.filterCounts"
         @change="store.setFilter($event)"
@@ -858,6 +870,7 @@ function onRetry() {
   gap: var(--space-3);
   flex-wrap: wrap;
   justify-content: flex-end;
+  margin-left: auto;
 }
 
 .view-controls {
@@ -1071,6 +1084,10 @@ function onRetry() {
   .search-view-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .search-view-row {
+    margin-left: 0;
   }
 
   .search {

@@ -9,13 +9,10 @@ import ErrorState from '@/components/shared/ErrorState.vue'
 import FilterChips from '@/components/shared/FilterChips.vue'
 import SkeletonBlock from '@/components/shared/SkeletonBlock.vue'
 import UiButton from '@/components/ui/UiButton.vue'
-import UiDialog from '@/components/ui/UiDialog.vue'
 import type { PreviewState } from '@/features/planning/types'
 import { useGoalsStore } from '@/features/goals/store'
 import NewProjectDialog from '@/features/projects/components/NewProjectDialog.vue'
 import ProjectCard from '@/features/projects/components/ProjectCard.vue'
-import ProjectDetailPanel from '@/features/projects/components/ProjectDetailPanel.vue'
-import TaskDetailPanel from '@/features/tasks/components/TaskDetailPanel.vue'
 import {
   PROJECT_FILTER_LABELS,
   useProjectsStore,
@@ -42,35 +39,6 @@ const openProjectId = computed(() => {
   return typeof value === 'string' && value ? value : null
 })
 
-/** Project whose detail dialog is open. Clicking a card opens it; clicking
- *  the same card again toggles it closed. */
-const detailProjectId = ref<string | null>(null)
-
-/** Task detail dialog stacked above the project dialog. A task picked in
- *  the project detail opens here instead of the side panel, which the
- *  dialog overlay would otherwise hide. */
-const taskDialogId = ref<string | null>(null)
-
-watch(
-  () => panel.activeTaskId,
-  (taskId) => {
-    if (taskId && detailProjectId.value) taskDialogId.value = taskId
-  },
-)
-
-// Deleting a task closes its panel — mirror that by closing the overlay.
-watch(
-  () => panel.isOpen,
-  (open) => {
-    if (!open) taskDialogId.value = null
-  },
-)
-
-function closeTaskDialog() {
-  taskDialogId.value = null
-  panel.close()
-}
-
 function loadAndSelect(preview: PreviewState) {
   void store.load(preview)
   // Goal titles on cards/detail come from the goals store — load it once.
@@ -78,7 +46,7 @@ function loadAndSelect(preview: PreviewState) {
 
   // A search result lands with its project detail open (no default selection).
   if (openProjectId.value && store.projectById(openProjectId.value)) {
-    detailProjectId.value = openProjectId.value
+    panel.openProject(openProjectId.value)
   }
 }
 
@@ -93,8 +61,9 @@ watch(
   () => route.query.open,
   (value) => {
     const id = typeof value === 'string' && value ? value : null
-    if (id && store.status === 'ready' && store.projectById(id))
-      detailProjectId.value = id
+    if (id && store.status === 'ready' && store.projectById(id)) {
+      panel.openProject(id)
+    }
   },
 )
 
@@ -136,7 +105,7 @@ const emptyCopy = computed(() => {
 })
 
 function onSelectProject(projectId: string) {
-  detailProjectId.value = detailProjectId.value === projectId ? null : projectId
+  panel.toggleProject(projectId)
 }
 
 function onCreateProject(draft: NewProjectDraft) {
@@ -219,33 +188,12 @@ function onRetry() {
         :key="project.id"
         :project="project"
         :stats="store.statsForProject(project.id)"
-        :active="project.id === detailProjectId"
+        :active="project.id === panel.activeProjectId"
         @select="onSelectProject"
       />
     </div>
 
     <NewProjectDialog :open="dialogOpen" @close="dialogOpen = false" @create="onCreateProject" />
-
-    <UiDialog
-      :open="detailProjectId !== null"
-      title="Project details"
-      size="lg"
-      @close="detailProjectId = null"
-    >
-      <ProjectDetailPanel
-        v-if="detailProjectId"
-        :project-id="detailProjectId"
-        @delete="detailProjectId = null"
-      />
-    </UiDialog>
-
-    <UiDialog
-      :open="taskDialogId !== null"
-      title="Task details"
-      @close="closeTaskDialog"
-    >
-      <TaskDetailPanel v-if="taskDialogId" :task-id="taskDialogId" />
-    </UiDialog>
   </div>
 </template>
 

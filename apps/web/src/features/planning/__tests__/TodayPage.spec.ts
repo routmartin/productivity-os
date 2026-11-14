@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useRoute, useRouter } from 'vue-router'
 
+import { useTasksStore } from '@/features/tasks/store'
 import { useScheduleStore } from '../scheduleStore'
 import { useTodayStore } from '../todayStore'
 
@@ -119,5 +120,41 @@ describe('TodayPage dynamic AI briefing & telemetry', () => {
     expect(scheduleStore.nodes).toHaveLength(0)
     expect(scheduleStore.overflowMinutes).toBe(0)
     expect(scheduleStore.projectedBedtime).toBe('22:30')
+  })
+
+  it('evaluates hasPriorities correctly based on today.topThree and tasksStore (Today Page refinement)', () => {
+    const todayStore = useTodayStore()
+    const tasksStore = useTasksStore()
+
+    // When empty
+    todayStore.topThree = []
+    let hasPriorities = todayStore.topThree.some((e) => Boolean(tasksStore.taskById(e.taskId)))
+    expect(hasPriorities).toBe(false)
+
+    // When topThree has entry but task is not in tasksStore
+    todayStore.topThree = [{ taskId: 'non-existent-task', position: 1 }]
+    hasPriorities = todayStore.topThree.some((e) => Boolean(tasksStore.taskById(e.taskId)))
+    expect(hasPriorities).toBe(false)
+
+    // When topThree has entry and task exists
+    tasksStore.tasks = [
+      {
+        id: 'real-task-1',
+        title: 'Review proposal',
+        description: null,
+        status: 'PLANNED',
+        priority: 'HIGH',
+        energy: 'HIGH',
+        estimatedMinutes: 30,
+        dueDate: '2026-11-14',
+        projectId: null,
+        completedAt: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ]
+    todayStore.topThree = [{ taskId: 'real-task-1', position: 1 }]
+    hasPriorities = todayStore.topThree.some((e) => Boolean(tasksStore.taskById(e.taskId)))
+    expect(hasPriorities).toBe(true)
   })
 })

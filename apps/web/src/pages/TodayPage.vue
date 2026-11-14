@@ -8,18 +8,14 @@ import SkeletonBlock from '@/components/shared/SkeletonBlock.vue'
 import AiBriefing from '@/features/ai/components/AiBriefing.vue'
 import FocusTipCard from '@/features/ai/components/FocusTipCard.vue'
 import type { Briefing } from '@/features/ai/mock'
-import DailySummaryCard from '@/features/focus/components/DailySummaryCard.vue'
 import FocusTodayCard from '@/features/focus/components/FocusTodayCard.vue'
 import { useFocusStore } from '@/features/focus/store'
-import CalendarRail from '@/features/planning/components/CalendarRail.vue'
-import CapacityTelemetryCard from '@/features/planning/components/CapacityTelemetryCard.vue'
 import ScheduleTimeline from '@/features/planning/components/ScheduleTimeline.vue'
 import TopThreeSection from '@/features/planning/components/TopThreeSection.vue'
 import { useScheduleStore } from '@/features/planning/scheduleStore'
 import { useTodayStore } from '@/features/planning/todayStore'
 import type { PreviewState } from '@/features/planning/types'
 import QuickCapture from '@/features/tasks/components/QuickCapture.vue'
-import RecentActivity, { type ActivityItem } from '@/features/tasks/components/RecentActivity.vue'
 import { useTasksStore } from '@/features/tasks/store'
 
 const route = useRoute()
@@ -55,6 +51,10 @@ watch(
 )
 
 const isLoading = computed(() => today.status === 'loading' || today.status === 'idle')
+
+const hasPriorities = computed(() =>
+  today.topThree.some((e) => Boolean(tasksStore.taskById(e.taskId))),
+)
 
 /** Dynamic AI Briefing computation based on real daily priorities, capacity, and bedtime telemetry (AC-013). */
 const briefingData = computed<Briefing>(() => {
@@ -118,43 +118,6 @@ const briefingData = computed<Briefing>(() => {
   }
 })
 
-/** Recent work mixed with fresh captures, newest first — mirrors the
- *  reference's Completed / Created activity feed. */
-const activityItems = computed<ActivityItem[]>(() => {
-  const completed = today.recentTasks.map((task) => ({
-    id: `completed-${task.id}`,
-    taskId: task.id,
-    kind: 'completed' as const,
-    title: task.title,
-    at: task.completedAt ?? task.updatedAt,
-  }))
-
-  const allInbox = [
-    ...tasksStore.tasks.filter((t) => t.status === 'INBOX'),
-    ...today.unplannedTasks,
-  ]
-  const seen = new Set<string>()
-  const uniqueInbox = allInbox.filter((t) => {
-    if (seen.has(t.id)) return false
-    seen.add(t.id)
-    return true
-  })
-
-  const created = uniqueInbox
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, 2)
-    .map((task) => ({
-      id: `created-${task.id}`,
-      taskId: task.id,
-      kind: 'created' as const,
-      title: task.title,
-      at: task.createdAt,
-    }))
-  return [...completed, ...created]
-    .sort((a, b) => b.at.localeCompare(a.at))
-    .slice(0, 4)
-})
-
 function onSelectTask(taskId: string) {
   panel.toggleTask(taskId)
 }
@@ -174,18 +137,13 @@ function onPlanMyDay() {
     <!-- Loading skeleton matching the 2-column layout to prevent CLS -->
     <div v-if="isLoading" class="layout" aria-busy="true" aria-label="Loading today">
       <div class="main">
-        <SkeletonBlock height="34px" width="420px" rounded="md" />
-        <SkeletonBlock height="218px" rounded="lg" />
-        <SkeletonBlock height="320px" rounded="lg" />
-        <SkeletonBlock height="260px" rounded="lg" />
         <SkeletonBlock height="62px" rounded="lg" />
-        <SkeletonBlock height="220px" rounded="lg" />
+        <SkeletonBlock height="218px" rounded="lg" />
+        <SkeletonBlock v-if="hasPriorities" height="320px" rounded="lg" />
+        <SkeletonBlock height="260px" rounded="lg" />
       </div>
       <aside class="rail">
-        <SkeletonBlock height="180px" rounded="lg" />
         <SkeletonBlock height="210px" rounded="lg" />
-        <SkeletonBlock height="180px" rounded="lg" />
-        <SkeletonBlock height="150px" rounded="lg" />
         <SkeletonBlock height="168px" rounded="lg" />
       </aside>
     </div>
@@ -209,8 +167,10 @@ function onPlanMyDay() {
       <div class="layout">
         <!-- Main Workspace (65-70%) -->
         <main class="main">
+          <QuickCapture />
           <AiBriefing :briefing="briefingData" @plan="onPlanMyDay" />
           <TopThreeSection
+            v-if="hasPriorities"
             :entries="today.topThree"
             :active-task-id="panel.activeTaskId"
             @select="onSelectTask"
@@ -220,16 +180,11 @@ function onPlanMyDay() {
             :habits="scheduleStore.habitNodes"
             @select="onSelectTask"
           />
-          <QuickCapture />
-          <RecentActivity :items="activityItems" @select="onSelectTask" />
         </main>
 
         <!-- Right Context Rail (30-35%) -->
         <aside class="rail">
-          <CalendarRail />
           <FocusTodayCard />
-          <CapacityTelemetryCard />
-          <DailySummaryCard />
           <FocusTipCard />
         </aside>
       </div>
