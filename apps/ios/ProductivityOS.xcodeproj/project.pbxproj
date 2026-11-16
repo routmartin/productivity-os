@@ -19,8 +19,12 @@
 		AA0000052C7F000100000001 /* AppCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000052C7F000100000001 /* AppCard.swift */; };
 		AA0000062C7F000100000001 /* AppButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000062C7F000100000001 /* AppButton.swift */; };
 		AA0000072C7F000100000001 /* TaskRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000072C7F000100000001 /* TaskRowView.swift */; };
+		AA0000622C7F000100000001 /* TaskDateSegmentBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000622C7F000100000001 /* TaskDateSegmentBar.swift */; };
+		AA0000632C7F000100000001 /* StatusFilterChipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000632C7F000100000001 /* StatusFilterChipsView.swift */; };
+		AA0000642C7F000100000001 /* TimeAnchorCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000642C7F000100000001 /* TimeAnchorCardView.swift */; };
 		AA0000082C7F000100000001 /* SectionHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000082C7F000100000001 /* SectionHeaderView.swift */; };
 		AA0000092C7F000100000001 /* FocusClockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000092C7F000100000001 /* FocusClockView.swift */; };
+		AA0000992C7F000100000001 /* MooasFlipClockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000992C7F000100000001 /* MooasFlipClockView.swift */; };
 		AA00000A2C7F000100000001 /* CustomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000A2C7F000100000001 /* CustomTabBar.swift */; };
 		AA00000B2C7F000100000001 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000B2C7F000100000001 /* Color+Hex.swift */; };
 		AA00000C2C7F000100000001 /* View+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00000C2C7F000100000001 /* View+Extensions.swift */; };
@@ -97,6 +101,7 @@
 		AA00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift */; };
 		AA0000602C7F000100000001 /* ScheduleAddStepSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000602C7F000100000001 /* ScheduleAddStepSheet.swift */; };
 		AA0000612C7F000100000001 /* ScheduleEditStepSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000612C7F000100000001 /* ScheduleEditStepSheet.swift */; };
+		AA0000652C7F000100000001 /* ScheduleShiftHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000652C7F000100000001 /* ScheduleShiftHeaderView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -136,8 +141,12 @@
 		BB0000052C7F000100000001 /* AppCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCard.swift; sourceTree = "<group>"; };
 		BB0000062C7F000100000001 /* AppButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppButton.swift; sourceTree = "<group>"; };
 		BB0000072C7F000100000001 /* TaskRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowView.swift; sourceTree = "<group>"; };
+		BB0000622C7F000100000001 /* TaskDateSegmentBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDateSegmentBar.swift; sourceTree = "<group>"; };
+		BB0000632C7F000100000001 /* StatusFilterChipsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusFilterChipsView.swift; sourceTree = "<group>"; };
+		BB0000642C7F000100000001 /* TimeAnchorCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeAnchorCardView.swift; sourceTree = "<group>"; };
 		BB0000082C7F000100000001 /* SectionHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionHeaderView.swift; sourceTree = "<group>"; };
 		BB0000092C7F000100000001 /* FocusClockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusClockView.swift; sourceTree = "<group>"; };
+		BB0000992C7F000100000001 /* MooasFlipClockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MooasFlipClockView.swift; sourceTree = "<group>"; };
 		BB00000A2C7F000100000001 /* CustomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTabBar.swift; sourceTree = "<group>"; };
 		BB00000B2C7F000100000001 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
 		BB00000C2C7F000100000001 /* View+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+Extensions.swift"; sourceTree = "<group>"; };
@@ -217,6 +226,7 @@
 		BB00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleNodeDetailSheet.swift; sourceTree = "<group>"; };
 		BB0000602C7F000100000001 /* ScheduleAddStepSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleAddStepSheet.swift; sourceTree = "<group>"; };
 		BB0000612C7F000100000001 /* ScheduleEditStepSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleEditStepSheet.swift; sourceTree = "<group>"; };
+		BB0000652C7F000100000001 /* ScheduleShiftHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleShiftHeaderView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -431,8 +441,12 @@
 				BB0000052C7F000100000001 /* AppCard.swift */,
 				BB0000062C7F000100000001 /* AppButton.swift */,
 				BB0000072C7F000100000001 /* TaskRowView.swift */,
+				BB0000622C7F000100000001 /* TaskDateSegmentBar.swift */,
+				BB0000632C7F000100000001 /* StatusFilterChipsView.swift */,
+				BB0000642C7F000100000001 /* TimeAnchorCardView.swift */,
 				BB0000082C7F000100000001 /* SectionHeaderView.swift */,
 				BB0000092C7F000100000001 /* FocusClockView.swift */,
+				BB0000992C7F000100000001 /* MooasFlipClockView.swift */,
 				BB00000A2C7F000100000001 /* CustomTabBar.swift */,
 				BB0000252C7F000100000001 /* APIStateView.swift */,
 			);
@@ -556,6 +570,7 @@
 			children = (
 				BB0000552C7F000100000001 /* ScheduleViewSwitcher.swift */,
 				BB0000562C7F000100000001 /* ScheduleBedtimeBanner.swift */,
+				BB0000652C7F000100000001 /* ScheduleShiftHeaderView.swift */,
 				EE00001B2C7F000100000001 /* Nodes */,
 				EE00001C2C7F000100000001 /* Connectors */,
 			);
@@ -715,8 +730,12 @@
 				AA0000052C7F000100000001 /* AppCard.swift in Sources */,
 				AA0000062C7F000100000001 /* AppButton.swift in Sources */,
 				AA0000072C7F000100000001 /* TaskRowView.swift in Sources */,
+				AA0000622C7F000100000001 /* TaskDateSegmentBar.swift in Sources */,
+				AA0000632C7F000100000001 /* StatusFilterChipsView.swift in Sources */,
+				AA0000642C7F000100000001 /* TimeAnchorCardView.swift in Sources */,
 				AA0000082C7F000100000001 /* SectionHeaderView.swift in Sources */,
 				AA0000092C7F000100000001 /* FocusClockView.swift in Sources */,
+				AA0000992C7F000100000001 /* MooasFlipClockView.swift in Sources */,
 				AA00000A2C7F000100000001 /* CustomTabBar.swift in Sources */,
 				AA00000B2C7F000100000001 /* Color+Hex.swift in Sources */,
 				AA00000C2C7F000100000001 /* View+Extensions.swift in Sources */,
@@ -791,6 +810,7 @@
 				AA00005F2C7F000100000001 /* ScheduleNodeDetailSheet.swift in Sources */,
 				AA0000602C7F000100000001 /* ScheduleAddStepSheet.swift in Sources */,
 				AA0000612C7F000100000001 /* ScheduleEditStepSheet.swift in Sources */,
+				AA0000652C7F000100000001 /* ScheduleShiftHeaderView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

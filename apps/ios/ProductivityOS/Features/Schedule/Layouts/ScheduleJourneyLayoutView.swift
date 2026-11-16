@@ -16,15 +16,18 @@ public struct ScheduleJourneyLayoutView: View {
         self.onAddStepInPhase = onAddStepInPhase
     }
 
-    public var body: some View {
-        VStack(spacing: AppSpacing.lg) {
-            ForEach(Array(viewModel.phases.enumerated()), id: \.element.id) { phaseIndex, phase in
-                VStack(spacing: 0) {
-                    journeyPhaseCard(phase: phase, phaseNumber: phaseIndex + 1)
+    private var displayedPhases: [SchedulePhase] {
+        viewModel.phases.filter { $0.id != .deepFocus }
+    }
 
-                    if phaseIndex < viewModel.phases.count - 1 {
-                        serpentinePhaseConnector(isReversed: phaseIndex % 2 == 1)
-                    }
+    public var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(displayedPhases.enumerated()), id: \.element.id) { phaseIndex, phase in
+                journeyPhaseCard(phase: phase, phaseNumber: phaseIndex + 1)
+
+                if phaseIndex < displayedPhases.count - 1 {
+                    serpentinePhaseConnector(isReversed: phaseIndex % 2 == 1)
+                        .padding(.vertical, 6)
                 }
             }
         }
@@ -36,79 +39,51 @@ public struct ScheduleJourneyLayoutView: View {
         let totalCount = phaseNodes.count
 
         return VStack(alignment: .leading, spacing: 12) {
-            // Journey Phase Header
-            HStack(alignment: .center) {
-                HStack(spacing: 8) {
-                    ZStack {
-                        Circle()
-                            .fill(AppColors.primary)
-                            .frame(width: 26, height: 26)
+            ScheduleShiftHeaderView(
+                phase: phase,
+                shiftNumber: phaseNumber,
+                completedCount: completedCount,
+                totalCount: totalCount,
+                onAddStep: { onAddStepInPhase(phase.id) }
+            )
 
-                        Text("\(phaseNumber)")
-                            .font(AppTypography.captionSmall)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(phase.title)
-                            .font(AppTypography.headline)
-                            .foregroundStyle(AppColors.textPrimary)
-
-                        Text(phase.subtitle)
-                            .font(AppTypography.captionSmall)
-                            .foregroundStyle(AppColors.textSecondary)
+            // Nodes inside this Phase
+            if !phaseNodes.isEmpty {
+                VStack(spacing: 8) {
+                    ForEach(phaseNodes) { node in
+                        renderNode(node: node)
                     }
                 }
-
-                Spacer()
-
+            } else {
                 Button {
                     onAddStepInPhase(phase.id)
                 } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(AppColors.primary)
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(phase.id.shiftTheme.accent)
+
+                        Text("No steps scheduled · Tap to add your first step")
+                            .font(AppTypography.captionSmall)
+                            .foregroundStyle(AppColors.textSecondary)
+
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous)
+                            .fill(AppColors.surface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppRadius.md, style: .continuous)
+                                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                                    .foregroundStyle(phase.id.shiftTheme.border.opacity(0.8))
+                            )
+                    )
                 }
                 .buttonStyle(.plain)
             }
-
-            // Phase Progress Pill
-            HStack {
-                Text(phase.timeRange)
-                    .font(AppTypography.captionSmall)
-                    .foregroundStyle(AppColors.textSecondary)
-
-                Spacer()
-
-                if totalCount > 0 {
-                    Text("\(completedCount)/\(totalCount) completed")
-                        .font(AppTypography.captionSmall)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(AppColors.primary)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(Capsule().fill(Color(hex: "F3EFFF")))
-
-            // Nodes inside this Phase
-            VStack(spacing: 8) {
-                ForEach(phaseNodes) { node in
-                    renderNode(node: node)
-                }
-            }
         }
-        .padding(AppSpacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: AppRadius.lg, style: .continuous)
-                .fill(AppColors.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppRadius.lg, style: .continuous)
-                        .stroke(AppColors.surfaceBorder, lineWidth: 1)
-                )
-                .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 3)
-        )
     }
 
     private func serpentinePhaseConnector(isReversed: Bool) -> some View {
@@ -120,7 +95,7 @@ public struct ScheduleJourneyLayoutView: View {
             VStack(spacing: 2) {
                 Circle()
                     .fill(AppColors.primary.opacity(0.6))
-                    .frame(width: 6, height: 6)
+                    .frame(width: 4, height: 4)
 
                 Rectangle()
                     .fill(
@@ -130,11 +105,11 @@ public struct ScheduleJourneyLayoutView: View {
                             endPoint: .bottom
                         )
                     )
-                    .frame(width: 3, height: 28)
+                    .frame(width: 3, height: 16)
 
                 Circle()
                     .fill(Color(hex: "C4B5FD"))
-                    .frame(width: 6, height: 6)
+                    .frame(width: 4, height: 4)
             }
             .padding(.horizontal, 36)
 

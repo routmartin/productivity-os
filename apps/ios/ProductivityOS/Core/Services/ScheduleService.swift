@@ -100,8 +100,8 @@ public final class ScheduleService: ScheduleServicing {
         return days
     }
 
-    public func createDefaultBlueprint(for dateString: String) -> ScheduleGraph {
-        let phases: [SchedulePhase] = [
+    public static func defaultPhases() -> [SchedulePhase] {
+        [
             SchedulePhase(
                 id: .morning,
                 title: SchedulePhaseId.morning.defaultTitle,
@@ -131,6 +131,23 @@ public final class ScheduleService: ScheduleServicing {
                 colorTone: "success"
             )
         ]
+    }
+
+    public func createDefaultBlueprint(for dateString: String) -> ScheduleGraph {
+        ScheduleGraph(
+            date: dateString,
+            wakeTime: "06:30",
+            targetBedtime: "22:30",
+            projectedBedtime: "22:30",
+            overflowMinutes: 0,
+            phases: Self.defaultPhases(),
+            nodes: [],
+            edges: []
+        )
+    }
+
+    public static func createSampleBlueprint(for dateString: String) -> ScheduleGraph {
+        let phases = defaultPhases()
 
         let nodes: [ScheduleNode] = [
             // Morning Phase

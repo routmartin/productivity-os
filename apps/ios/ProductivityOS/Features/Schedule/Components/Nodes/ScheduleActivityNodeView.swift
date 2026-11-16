@@ -78,6 +78,8 @@ public struct ScheduleActivityNodeView: View {
                                         .stroke(inFocus ? AppColors.primary.opacity(0.3) : Color(hex: "C7D2FE").opacity(0.6), lineWidth: 0.8)
                                 )
                         )
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     }
                 }
 
@@ -127,6 +129,8 @@ public struct ScheduleActivityNodeView: View {
                             Capsule()
                                 .fill(AppColors.primaryTint)
                         )
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     } else {
                         HStack(spacing: 5) {
                             Image(systemName: "clock.badge.checkmark.fill")
@@ -155,6 +159,8 @@ public struct ScheduleActivityNodeView: View {
                                         .stroke(Color(hex: "DDD6FE"), lineWidth: 0.8)
                                 )
                         )
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     }
 
                     Spacer()
@@ -182,6 +188,8 @@ public struct ScheduleActivityNodeView: View {
                                 .fill(inFocus ? AppColors.primary : AppColors.primaryTint)
                                 .shadow(color: inFocus ? AppColors.primary.opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
                         )
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                     }
                     .buttonStyle(.plain)
                 }

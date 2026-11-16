@@ -74,9 +74,7 @@ public struct ScheduleHabitNodeView: View {
                             .foregroundStyle(AppColors.textPrimary)
                             .strikethrough(isCompleted, color: AppColors.textSecondary)
 
-                        Spacer()
-
-                        // Streak flame badge
+                        // Streak flame badge adjacent to title
                         if streakCount > 0 {
                             HStack(spacing: 3) {
                                 Text("🔥")
@@ -93,6 +91,8 @@ public struct ScheduleHabitNodeView: View {
                                     .fill(Color(hex: "FFEDD5"))
                             )
                         }
+
+                        Spacer()
                     }
 
                     if let subtitle = node.subtitle, !subtitle.isEmpty {
@@ -108,14 +108,14 @@ public struct ScheduleHabitNodeView: View {
                             if let time = node.time {
                                 HStack(spacing: 4) {
                                     Image(systemName: "clock.fill")
-                                        .font(.system(size: 10, weight: .bold))
+                                        .font(.system(size: 11, weight: .bold))
                                     Text(time)
-                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .font(.system(size: 12, weight: .bold, design: .rounded))
                                         .monospacedDigit()
                                 }
                                 .foregroundStyle(isCompleted ? AppColors.success : AppColors.primary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3.5)
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 4)
                                 .background(
                                     Capsule()
                                         .fill(isCompleted ? AppColors.success.opacity(0.12) : AppColors.primaryTint)
@@ -124,30 +124,36 @@ public struct ScheduleHabitNodeView: View {
                                                 .stroke(isCompleted ? AppColors.success.opacity(0.3) : AppColors.primary.opacity(0.2), lineWidth: 0.8)
                                         )
                                 )
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                             }
 
                             if let duration = node.durationMinutes {
                                 HStack(spacing: 4) {
                                     Image(systemName: "hourglass")
-                                        .font(.system(size: 9, weight: .bold))
+                                        .font(.system(size: 10, weight: .bold))
                                     Text("\(duration)m")
-                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .font(.system(size: 12, weight: .bold, design: .rounded))
                                         .monospacedDigit()
                                 }
                                 .foregroundStyle(Color(hex: "334155"))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3.5)
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 4)
                                 .background(
                                     Capsule()
                                         .fill(Color(hex: "F1F5F9"))
                                         .overlay(
                                             Capsule()
-                                                .stroke(Color(hex: "E2E8F0"), lineWidth: 0.8)
+                                                .stroke(Color(hex: "CBD5E1"), lineWidth: 0.8)
                                         )
                                 )
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                             }
+
+                            Spacer()
                         }
-                        .padding(.top, 1)
+                        .padding(.top, 2)
                     }
                 }
             }

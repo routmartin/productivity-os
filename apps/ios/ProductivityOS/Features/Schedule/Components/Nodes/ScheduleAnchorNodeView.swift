@@ -37,24 +37,32 @@ public struct ScheduleAnchorNodeView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .center, spacing: 6) {
-                        Text(node.title)
-                            .font(AppTypography.headline)
-                            .foregroundStyle(AppColors.textPrimary)
+                    // Row 1: Title
+                    Text(node.title)
+                        .font(AppTypography.headline)
+                        .foregroundStyle(AppColors.textPrimary)
 
-                        Spacer()
+                    // Row 2: Subtitle
+                    if let subtitle = node.subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(AppTypography.captionSmall)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .lineLimit(1)
+                    }
 
+                    // Row 3: Dedicated Time/Bedtime Target Badge Row (Full Width)
+                    HStack(spacing: 6) {
                         if isWake {
                             HStack(spacing: 4) {
                                 Image(systemName: "sunrise.fill")
                                     .font(.system(size: 11, weight: .bold))
                                 Text(node.time ?? "06:30")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
                                     .monospacedDigit()
                             }
                             .foregroundStyle(Color(hex: "C2410C"))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4.5)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
                             .background(
                                 Capsule()
                                     .fill(Color(hex: "FFF7ED"))
@@ -63,23 +71,25 @@ public struct ScheduleAnchorNodeView: View {
                                             .stroke(Color(hex: "FDBA74"), lineWidth: 1)
                                     )
                             )
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                         } else {
                             if isOverflowing, let projected = node.projectedTime {
                                 HStack(spacing: 4) {
                                     Image(systemName: "exclamationmark.triangle.fill")
                                         .font(.system(size: 10, weight: .bold))
                                     Text(projected)
-                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
                                         .monospacedDigit()
                                     if let overflow = node.overflowMinutes, overflow > 0 {
-                                        Text("(+\(overflow)m)")
+                                        Text("(+\(overflow)m overflow)")
                                             .font(.system(size: 11, weight: .bold, design: .rounded))
                                             .monospacedDigit()
                                     }
                                 }
                                 .foregroundStyle(Color(hex: "B45309"))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4.5)
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 4)
                                 .background(
                                     Capsule()
                                         .fill(Color(hex: "FEF3C7"))
@@ -88,20 +98,22 @@ public struct ScheduleAnchorNodeView: View {
                                                 .stroke(Color(hex: "FCD34D"), lineWidth: 1)
                                         )
                                 )
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                             } else {
                                 HStack(spacing: 4) {
                                     Image(systemName: "moon.fill")
                                         .font(.system(size: 10, weight: .bold))
                                     Text(node.targetTime ?? "22:30")
-                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
                                         .monospacedDigit()
                                     Text("Target")
                                         .font(.system(size: 10, weight: .bold, design: .rounded))
                                         .padding(.leading, 1)
                                 }
                                 .foregroundStyle(Color(hex: "4338CA"))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4.5)
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 4)
                                 .background(
                                     Capsule()
                                         .fill(Color(hex: "EEF2FF"))
@@ -110,16 +122,14 @@ public struct ScheduleAnchorNodeView: View {
                                                 .stroke(Color(hex: "C7D2FE"), lineWidth: 1)
                                         )
                                 )
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                             }
                         }
-                    }
 
-                    if let subtitle = node.subtitle, !subtitle.isEmpty {
-                        Text(subtitle)
-                            .font(AppTypography.captionSmall)
-                            .foregroundStyle(AppColors.textSecondary)
-                            .lineLimit(1)
+                        Spacer()
                     }
+                    .padding(.top, 2)
                 }
             }
             .padding(AppSpacing.md)

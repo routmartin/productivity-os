@@ -30,14 +30,12 @@ final class ScheduleViewModelTests: XCTestCase {
         await viewModel.loadData()
 
         XCTAssertEqual(viewModel.phases.count, 4)
-        XCTAssertEqual(viewModel.nodes.count, 16)
-        XCTAssertEqual(viewModel.edges.count, 15)
-
-        // Circadian Anchors exist
-        XCTAssertNotNil(viewModel.wakeAnchor)
-        XCTAssertNotNil(viewModel.bedtimeAnchor)
-        XCTAssertEqual(viewModel.wakeAnchor?.time, "06:30")
-        XCTAssertEqual(viewModel.bedtimeAnchor?.targetTime, "22:30")
+        XCTAssertEqual(viewModel.nodes.count, 0)
+        XCTAssertEqual(viewModel.edges.count, 0)
+        XCTAssertEqual(viewModel.graph?.wakeTime, "06:30")
+        XCTAssertEqual(viewModel.targetBedtime, "22:30")
+        XCTAssertEqual(viewModel.projectedBedtime, "22:30")
+        XCTAssertEqual(viewModel.overflowMinutes, 0)
     }
 
     func testDefaultLayoutIsJourney() {
@@ -62,8 +60,7 @@ final class ScheduleViewModelTests: XCTestCase {
     }
 
     func testHabitToggleUpdatesStreakAndOutgoingEdges() async {
-        let viewModel = makeViewModel()
-        await viewModel.loadData()
+        let viewModel = makeViewModel(initialGraph: ScheduleService.createSampleBlueprint(for: "2026-11-12"))
 
         // Find an incomplete habit: habit-afternoon-walk
         guard let habit = viewModel.nodes.first(where: { $0.id == "habit-afternoon-walk" }) else {
@@ -215,8 +212,7 @@ final class ScheduleViewModelTests: XCTestCase {
     }
 
     func testNativeActivityFocusToggle() async {
-        let viewModel = makeViewModel()
-        await viewModel.loadData()
+        let viewModel = makeViewModel(initialGraph: ScheduleService.createSampleBlueprint(for: "2026-11-12"))
 
         // Start focus on task-top1
         viewModel.startFocus("task-top1")
@@ -259,8 +255,7 @@ final class ScheduleViewModelTests: XCTestCase {
     // MARK: - AC-C08: Anchor Protection & Deletion Tests
 
     func testAnchorNodesCannotBeDeleted() async {
-        let viewModel = makeViewModel()
-        await viewModel.loadData()
+        let viewModel = makeViewModel(initialGraph: ScheduleService.createSampleBlueprint(for: "2026-11-12"))
 
         let initialCount = viewModel.nodes.count
 
@@ -276,8 +271,7 @@ final class ScheduleViewModelTests: XCTestCase {
     }
 
     func testDeleteNonAnchorNodeRemovesItAndBridgesEdges() async {
-        let viewModel = makeViewModel()
-        await viewModel.loadData()
+        let viewModel = makeViewModel(initialGraph: ScheduleService.createSampleBlueprint(for: "2026-11-12"))
 
         let initialCount = viewModel.nodes.count
 
@@ -407,8 +401,7 @@ final class ScheduleViewModelTests: XCTestCase {
     }
 
     func testScheduleNodeTimeAndDurationProperties() async {
-        let viewModel = makeViewModel()
-        await viewModel.loadData()
+        let viewModel = makeViewModel(initialGraph: ScheduleService.createSampleBlueprint(for: "2026-11-12"))
 
         // Verify wake anchor time
         let wakeNode = viewModel.nodes.first { $0.type == .anchor && $0.anchorKind == "wake" }
@@ -442,8 +435,7 @@ final class ScheduleViewModelTests: XCTestCase {
     // MARK: - AC-010, AC-011, AC-012: Step Update Tests
 
     func testUpdateStepOptimisticMutationAndBedtimeRecalculation() async throws {
-        let viewModel = makeViewModel()
-        await viewModel.loadData()
+        let viewModel = makeViewModel(initialGraph: ScheduleService.createSampleBlueprint(for: "2026-11-12"))
 
         guard let initialNode = viewModel.nodes.first(where: { $0.id == "task-top1" }) else {
             XCTFail("Node task-top1 not found")
@@ -497,8 +489,7 @@ final class ScheduleViewModelTests: XCTestCase {
     }
 
     func testUpdateStepPhaseChangeRewiresEdgesWithoutOrphanEdges() async throws {
-        let viewModel = makeViewModel()
-        await viewModel.loadData()
+        let viewModel = makeViewModel(initialGraph: ScheduleService.createSampleBlueprint(for: "2026-11-12"))
 
         guard let task = viewModel.nodes.first(where: { $0.id == "task-top1" }) else {
             XCTFail("task-top1 not found")
@@ -549,8 +540,7 @@ final class ScheduleViewModelTests: XCTestCase {
     }
 
     func testUpdateStepProtectsAnchorNodesFromMutation() async {
-        let viewModel = makeViewModel()
-        await viewModel.loadData()
+        let viewModel = makeViewModel(initialGraph: ScheduleService.createSampleBlueprint(for: "2026-11-12"))
 
         let initialWakeTitle = viewModel.wakeAnchor?.title
 
@@ -573,8 +563,7 @@ final class ScheduleViewModelTests: XCTestCase {
     }
 
     func testUpdateStepRollsBackOnServerFailure() async {
-        let viewModel = makeViewModel()
-        await viewModel.loadData()
+        let viewModel = makeViewModel(initialGraph: ScheduleService.createSampleBlueprint(for: "2026-11-12"))
 
         guard let initialNode = viewModel.nodes.first(where: { $0.id == "task-top1" }) else {
             XCTFail("Node task-top1 not found")

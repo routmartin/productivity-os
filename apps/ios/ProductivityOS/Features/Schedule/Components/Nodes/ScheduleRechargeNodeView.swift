@@ -39,63 +39,71 @@ public struct ScheduleRechargeNodeView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .center) {
-                        Text(node.title)
-                            .font(AppTypography.headline)
-                            .foregroundStyle(AppColors.textPrimary)
+                    // Row 1: Title
+                    Text(node.title)
+                        .font(AppTypography.headline)
+                        .foregroundStyle(AppColors.textPrimary)
 
-                        Spacer()
-
-                        if let duration = node.durationMinutes {
-                            HStack(spacing: 3) {
-                                Image(systemName: "leaf.fill")
-                                    .font(.system(size: 9, weight: .bold))
-                                Text("\(duration)m recovery")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .monospacedDigit()
-                            }
-                            .foregroundStyle(Color(hex: "14532D"))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3.5)
-                            .background(
-                                Capsule()
-                                    .fill(Color(hex: "DCFCE7"))
-                                    .overlay(
-                                        Capsule()
-                                            .stroke(Color(hex: "86EFAC"), lineWidth: 0.8)
-                                    )
-                            )
-                        }
+                    // Row 2: Subtitle (Full-width clean description)
+                    if let subtitle = node.subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(AppTypography.captionSmall)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .lineLimit(1)
                     }
 
-                    HStack(spacing: 6) {
-                        if let time = node.time {
-                            HStack(spacing: 4) {
-                                Image(systemName: "clock.fill")
-                                    .font(.system(size: 9, weight: .bold))
-                                Text("Scheduled: \(time)")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .monospacedDigit()
-                            }
-                            .foregroundStyle(Color(hex: "15803D"))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2.5)
-                            .background(
-                                Capsule()
-                                    .fill(Color(hex: "F0FDF4"))
-                                    .overlay(
-                                        Capsule()
-                                            .stroke(Color(hex: "BBF7D0"), lineWidth: 0.8)
-                                    )
-                            )
-                        }
-
-                        if let subtitle = node.subtitle, !subtitle.isEmpty {
-                            Text(subtitle)
-                                .font(AppTypography.captionSmall)
-                                .foregroundStyle(AppColors.textSecondary)
+                    // Row 3: Metadata Row (Scheduled Time + Recovery duration)
+                    if node.time != nil || node.durationMinutes != nil {
+                        HStack(spacing: 6) {
+                            if let time = node.time {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "clock.fill")
+                                        .font(.system(size: 10, weight: .bold))
+                                    Text(time)
+                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .monospacedDigit()
+                                }
+                                .foregroundStyle(Color(hex: "15803D"))
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(Color(hex: "F0FDF4"))
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(Color(hex: "BBF7D0"), lineWidth: 0.8)
+                                        )
+                                )
                                 .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                            }
+
+                            if let duration = node.durationMinutes {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "leaf.fill")
+                                        .font(.system(size: 10, weight: .bold))
+                                    Text("\(duration)m recovery")
+                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .monospacedDigit()
+                                }
+                                .foregroundStyle(Color(hex: "14532D"))
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(Color(hex: "DCFCE7"))
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(Color(hex: "86EFAC"), lineWidth: 0.8)
+                                        )
+                                )
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                            }
+
+                            Spacer()
                         }
+                        .padding(.top, 2)
                     }
                 }
             }

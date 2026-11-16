@@ -76,16 +76,25 @@ final class ScheduleServiceTests: XCTestCase {
 
         let graph = try await scheduleService.loadSchedule(for: sampleDate)
 
-        // Fallback returns 16-node baseline blueprint
+        // Fallback returns empty baseline blueprint
         XCTAssertEqual(graph.date, "2026-11-12")
         XCTAssertEqual(graph.phases.count, 4)
-        XCTAssertEqual(graph.nodes.count, 16)
-        XCTAssertEqual(graph.edges.count, 15)
+        XCTAssertEqual(graph.nodes.count, 0)
+        XCTAssertEqual(graph.edges.count, 0)
         XCTAssertEqual(graph.wakeTime, "06:30")
         XCTAssertEqual(graph.targetBedtime, "22:30")
 
         let request = try XCTUnwrap(mockAPIClient.recordedRequests.first)
         XCTAssertEqual(request.path, "/api/v1/schedule/2026-11-12")
+    }
+
+    func testCreateSampleBlueprintContainsFixtureData() {
+        let graph = ScheduleService.createSampleBlueprint(for: "2026-11-12")
+        XCTAssertEqual(graph.phases.count, 4)
+        XCTAssertEqual(graph.nodes.count, 16)
+        XCTAssertEqual(graph.edges.count, 15)
+        XCTAssertEqual(graph.wakeTime, "06:30")
+        XCTAssertEqual(graph.targetBedtime, "22:30")
     }
 
     func testLoadScheduleThrowsOnUnauthorized() async throws {
