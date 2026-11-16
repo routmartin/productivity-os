@@ -99,6 +99,14 @@ public final class FocusSessionViewModel {
         syncTask = Task { [weak self] in await self?.syncResume() }
     }
 
+    /// Extends the session duration by additional minutes (e.g. +5 min quick bump).
+    public func addMinutes(_ minutes: Int = 5) {
+        sessionState.extend(by: TimeInterval(minutes * 60))
+        currentDate = Date()
+        updateLiveActivity()
+        Haptics.light()
+    }
+
     /// Begins completion: freezes the clock, confirms with the backend, and
     /// only then marks the session completed locally.
     public func completeFocus() {
@@ -305,7 +313,15 @@ public final class FocusSessionViewModel {
         stopLocalTicker()
         timerTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s refresh
+                // Synchronize with the next wall-clock integer second boundary to eliminate
+                // CPU polling and keep device cores idling between seconds.
+                let now = Date().timeIntervalSince1970
+                let fraction = now - floor(now)
+                let sleepSeconds = max(0.05, 1.0 - fraction + 0.02)
+                let nanoseconds = UInt64(sleepSeconds * 1_000_000_000)
+                try? await Task.sleep(nanoseconds: nanoseconds)
+
+                guard !Task.isCancelled else { break }
                 guard let self, self.sessionState.state == .running else { continue }
                 self.currentDate = Date()
                 self.autoCompleteAtZero()

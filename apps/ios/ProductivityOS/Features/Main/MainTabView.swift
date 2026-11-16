@@ -26,6 +26,11 @@ public struct MainTabView: View {
             Tab(AppTab.tasks.rawValue, systemImage: AppTab.tasks.iconName, value: AppTab.tasks) {
                 TasksView(
                     projectsViewModel: projectsViewModel,
+                    focusViewModel: focusViewModel,
+                    onResumeFocus: {
+                        focusViewModel.resumeFocus()
+                        presentedSessionState = .running
+                    },
                     onSelectTask: { task in
                         focusViewModel.setSelectedTask(task)
                         isShowingFocusSheet = true
@@ -139,12 +144,12 @@ public struct MainTabView: View {
         .onOpenURL { url in
             guard url.scheme == "productivityos" else { return }
             switch url.host {
-            case "today":
+            case "today", "schedule", "deepwork":
                 selectedTab = .schedule
-            case "tasks":
-                selectedTab = .tasks
             case "focus":
                 isShowingFocusSheet = true
+            case "tasks":
+                selectedTab = .tasks
             case "goals":
                 selectedTab = .goals
             case "me", "profile":

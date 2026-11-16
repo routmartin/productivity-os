@@ -7,10 +7,13 @@ public final class MockAPIClient: APIRequesting, @unchecked Sendable {
     public struct Recorded: Sendable {
         public let method: String
         public let path: String
+        public let queryItems: [URLQueryItem]?
         public let body: Data?
     }
 
     public private(set) var recordedRequests: [Recorded] = []
+    /// Responses mapped by endpoint path, useful for concurrent fetches to different endpoints.
+    public var responsesByPath: [String: Result<(Data, Int), Error>] = [:]
     /// Scripted responses consumed in order (one per request).
     public var scriptedResponses: [Result<(Data, Int), Error>] = []
     public var defaultResponse: Result<(Data, Int), Error> = .success((Data("[]".utf8), 200))
@@ -31,12 +34,15 @@ public final class MockAPIClient: APIRequesting, @unchecked Sendable {
             Recorded(
                 method: endpoint.method.rawValue,
                 path: endpoint.path,
+                queryItems: endpoint.queryItems,
                 body: endpoint.body
             )
         )
 
         let outcome: Result<(Data, Int), Error>
-        if !scriptedResponses.isEmpty {
+        if let pathOutcome = responsesByPath[endpoint.path] {
+            outcome = pathOutcome
+        } else if !scriptedResponses.isEmpty {
             outcome = scriptedResponses.removeFirst()
         } else {
             outcome = defaultResponse

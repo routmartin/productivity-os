@@ -37,6 +37,26 @@ public struct TaskService: Sendable {
         return try Self.decodeLoose(data: data)
     }
 
+    /// Fetches completed tasks via `GET /api/v1/tasks/completed`.
+    public func listCompletedTasks(page: Int = 0, size: Int = 50) async throws -> [TaskItem] {
+        let endpoint = AppEndpoint.listCompletedTasks(page: page, size: size)
+        let key = CacheKey(endpoint: endpoint)
+        if let (data, _) = await cache.get(key: key) {
+            return try Self.decodeLoose(data: data)
+        }
+        let (data, response) = try await apiClient.send(endpoint)
+        guard (200...299).contains(response.statusCode) else {
+            throw APIError(statusCode: response.statusCode, data: data)
+        }
+        await cache.set(
+            key: key,
+            data: data,
+            statusCode: response.statusCode,
+            ttl: APICache.TTL.activeTasks
+        )
+        return try Self.decodeLoose(data: data)
+    }
+
     /// PUT /api/v1/tasks/{id}. Mirrors the web Tasks edit flow so the
     /// duration, due date (and other fields) stay in sync between web and iOS.
     public func updateTask(

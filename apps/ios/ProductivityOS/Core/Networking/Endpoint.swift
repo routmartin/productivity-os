@@ -39,6 +39,7 @@ public enum AppEndpoint: Endpoint {
 
     // Tasks (/api/v1/tasks)
     case listTasks(page: Int = 0, size: Int = 50)
+    case listCompletedTasks(page: Int = 0, size: Int = 50)
     case updateTask(id: UUID, body: Data)
 
     // Projects (/api/v1/projects)
@@ -82,6 +83,8 @@ public enum AppEndpoint: Endpoint {
 
         case .listTasks:
             return "/api/v1/tasks"
+        case .listCompletedTasks:
+            return "/api/v1/tasks/completed"
         case .updateTask(let id, _):
             return "/api/v1/tasks/\(id.uuidString.lowercased())"
 
@@ -130,7 +133,7 @@ public enum AppEndpoint: Endpoint {
              .startFocusSession, .pauseFocusSession, .resumeFocusSession, .endFocusSession,
              .toggleHabit, .addScheduleStep:
             return .post
-        case .listTasks, .listProjects, .listProjectTasks, .listGoals, .getGoal, .getDailyTopThree, .getActiveFocusSession, .listFocusSessions,
+        case .listTasks, .listCompletedTasks, .listProjects, .listProjectTasks, .listGoals, .getGoal, .getDailyTopThree, .getActiveFocusSession, .listFocusSessions,
              .getSchedule:
             return .get
         case .updateTask, .updateScheduleStep:
@@ -163,7 +166,7 @@ public enum AppEndpoint: Endpoint {
 
     public var queryItems: [URLQueryItem]? {
         switch self {
-        case .listTasks(let page, let size):
+        case .listTasks(let page, let size), .listCompletedTasks(let page, let size):
             return [
                 URLQueryItem(name: "page", value: "\(page)"),
                 URLQueryItem(name: "size", value: "\(size)")

@@ -8,6 +8,7 @@ public struct TaskRowView: View {
     private let priority: TaskPriority
     private let iconName: String
     private let dueDate: String?
+    private let estimatedDurationMinutes: Int?
     private let onRescheduleToday: (() -> Void)?
     private let onRescheduleTomorrow: (() -> Void)?
     private let onMoveToBacklog: (() -> Void)?
@@ -20,6 +21,7 @@ public struct TaskRowView: View {
         projectName: String? = "Productivity OS",
         priority: TaskPriority = .medium,
         iconName: String = "flag.fill",
+        estimatedDurationMinutes: Int? = nil,
         action: @escaping () -> Void = {}
     ) {
         self.position = position
@@ -28,6 +30,7 @@ public struct TaskRowView: View {
         self.priority = priority
         self.iconName = iconName
         self.dueDate = nil
+        self.estimatedDurationMinutes = estimatedDurationMinutes
         self.onRescheduleToday = nil
         self.onRescheduleTomorrow = nil
         self.onMoveToBacklog = nil
@@ -42,6 +45,7 @@ public struct TaskRowView: View {
         priority: TaskPriority = .medium,
         iconName: String = "flag.fill",
         dueDate: String? = nil,
+        estimatedDurationMinutes: Int? = nil,
         onRescheduleToday: (() -> Void)? = nil,
         onRescheduleTomorrow: (() -> Void)? = nil,
         onMoveToBacklog: (() -> Void)? = nil,
@@ -54,6 +58,7 @@ public struct TaskRowView: View {
         self.priority = priority
         self.iconName = iconName
         self.dueDate = dueDate
+        self.estimatedDurationMinutes = estimatedDurationMinutes
         self.onRescheduleToday = onRescheduleToday
         self.onRescheduleTomorrow = onRescheduleTomorrow
         self.onMoveToBacklog = onMoveToBacklog
@@ -61,11 +66,27 @@ public struct TaskRowView: View {
         self.action = action
     }
 
-    private var isOverdue: Bool {
-        guard let dueDate else { return false }
-        return dueDate < TasksViewModel.todayISO
+    private var effectiveProjectName: String? {
+        guard let projectName else { return nil }
+        let trimmed = projectName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, trimmed != "—", trimmed != "-" else { return nil }
+        return trimmed
     }
-    
+
+    private var formattedDuration: String? {
+        guard let minutes = estimatedDurationMinutes, minutes > 0 else { return nil }
+        if minutes >= 60 {
+            let h = minutes / 60
+            let m = minutes % 60
+            return m > 0 ? "\(h)h \(m)m" : "\(h)h"
+        }
+        return "\(minutes)m"
+    }
+
+    private var dueDateInfo: (text: String, isOverdue: Bool)? {
+        TasksViewModel.relativeDueDateDescription(dueDate: dueDate)
+    }
+
     public var body: some View {
         Button(action: action) {
             HStack(spacing: AppSpacing.sm) {
@@ -88,8 +109,8 @@ public struct TaskRowView: View {
                         .foregroundStyle(AppColors.primary)
                 }
                 
-                // Title and project
-                VStack(alignment: .leading, spacing: 2) {
+                // Title and metadata
+                VStack(alignment: .leading, spacing: 3) {
                     Text(title)
                         .font(AppTypography.numberBadge)
                         .foregroundStyle(AppColors.textPrimary)
@@ -97,47 +118,37 @@ public struct TaskRowView: View {
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    if let projectName {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(AppColors.primary)
-                                .frame(width: 6, height: 6)
-                            Text(projectName)
-                                .font(AppTypography.caption)
-                                .foregroundStyle(AppColors.textSecondary)
-                                .lineLimit(1)
-                            if let dueDate {
-                                Text("•")
-                                    .font(AppTypography.caption)
-                                    .foregroundStyle(AppColors.textTertiary)
-                                HStack(spacing: 2) {
-                                    Image(systemName: isOverdue ? "exclamationmark.circle.fill" : "calendar")
-                                        .font(.system(size: 10))
-                                    Text(dueDate)
-                                        .font(AppTypography.caption)
-                                }
-                                .foregroundStyle(isOverdue ? Color(hex: "FF6B4A") : AppColors.textSecondary)
-                            }
-                        }
-                    } else if let dueDate {
-                        HStack(spacing: 2) {
-                            Image(systemName: isOverdue ? "exclamationmark.circle.fill" : "calendar")
-                                .font(.system(size: 10))
-                            Text(dueDate)
-                                .font(AppTypography.caption)
-                        }
-                        .foregroundStyle(isOverdue ? Color(hex: "FF6B4A") : AppColors.textSecondary)
-                    }
+                    metadataRow
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(1)
 
                 Spacer(minLength: AppSpacing.xs)
 
-                // Priority pill
-                PriorityBadge(priority: priority)
-                    .layoutPriority(0)
-                    .fixedSize()
+                // Trailing priority and duration badges
+                VStack(alignment: .trailing, spacing: 4) {
+                    PriorityBadge(priority: priority)
+                        .fixedSize()
+
+                    if let formattedDuration {
+                        HStack(spacing: 3) {
+                            Image(systemName: "stopwatch")
+                                .font(.system(size: 9))
+                            Text(formattedDuration)
+                                .font(AppTypography.captionSmall)
+                                .fontWeight(.semibold)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(AppColors.canvasSecondary)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .clipShape(Capsule())
+                        .fixedSize()
+                    }
+                }
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(2)
 
                 // Trailing chevron
                 Image(systemName: "chevron.right")
@@ -156,6 +167,52 @@ public struct TaskRowView: View {
             onRescheduleTomorrow: onRescheduleTomorrow,
             onMoveToBacklog: onMoveToBacklog
         ))
+    }
+
+    @ViewBuilder
+    private var metadataRow: some View {
+        let hasProject = effectiveProjectName != nil
+        let hasDueDate = dueDateInfo != nil
+
+        if hasProject || hasDueDate {
+            HStack(spacing: 4) {
+                if let project = effectiveProjectName {
+                    Circle()
+                        .fill(AppColors.primary)
+                        .frame(width: 6, height: 6)
+                    Text(project)
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+
+                if hasProject && hasDueDate {
+                    Text("•")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textTertiary)
+                        .fixedSize()
+                }
+
+                if let info = dueDateInfo {
+                    dueDateBadge(info: info)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func dueDateBadge(info: (text: String, isOverdue: Bool)) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: info.isOverdue ? "exclamationmark.circle.fill" : (info.text == "Today" ? "sun.max.fill" : "calendar"))
+                .font(.system(size: 10))
+            Text(info.text)
+                .font(AppTypography.caption)
+                .fontWeight(info.isOverdue ? .semibold : .regular)
+                .lineLimit(1)
+        }
+        .foregroundStyle(info.isOverdue ? Color(hex: "FF6B4A") : (info.text == "Today" ? AppColors.primary : AppColors.textSecondary))
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
 

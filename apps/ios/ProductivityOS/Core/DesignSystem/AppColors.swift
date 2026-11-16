@@ -84,4 +84,36 @@ public enum AppColors {
     
     /// Unfilled focus ring track color
     public static let focusRingTrack = Color(hex: "1C193F")
+
+    // MARK: - Cozy Mooas Flip Clock & Desk Theme
+    /// Warm linen/oat canvas for light cozy mode
+    public static let cozyCanvasLight = Color(hex: "F7F5F0")
+    /// Deep espresso/charcoal background for dark focus
+    public static let cozyCanvasDark = Color(hex: "191716")
+
+    /// Solid beech / natural warm oak pedestal top
+    public static let woodPedestalLight = Color(hex: "D7A878")
+    /// Warm oak front bevel / shaded edge
+    public static let woodPedestalBevel = Color(hex: "C49563")
+    /// Dark walnut wood pedestal
+    public static let woodPedestalDark = Color(hex: "423327")
+
+    /// Warm matte ivory/cream flap card
+    public static let flapCardLight = Color(hex: "FFFDF9")
+    /// Dark charcoal flap card
+    public static let flapCardDark = Color(hex: "272422")
+    /// Subtle flap card border stroke
+    public static let flapCardBorder = Color(hex: "E4DFD7")
+    /// Equator seam divider color
+    public static let flapCardSeam = Color(hex: "1A1816").opacity(0.18)
+
+    /// High-contrast mechanical graphite digits
+    public static let flapTextDark = Color(hex: "23211E")
+    /// Candlelight cream digits for dark cards
+    public static let flapTextLight = Color(hex: "F5ECE1")
+
+    /// Warm terracotta / amber accent
+    public static let cozyAccent = Color(hex: "D97443")
+    /// Soft terracotta tint for badges and pressed states
+    public static let cozyAccentTint = Color(hex: "FDF1EA")
 }

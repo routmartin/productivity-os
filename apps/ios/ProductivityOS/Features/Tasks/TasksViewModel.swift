@@ -17,6 +17,7 @@ public final class TasksViewModel {
         case today
         case upcoming
         case backlog
+        case completed
         case all
 
         public var id: String { rawValue }
@@ -26,6 +27,7 @@ public final class TasksViewModel {
             case .today: return "Today"
             case .upcoming: return "Upcoming"
             case .backlog: return "Backlog"
+            case .completed: return "Done"
             case .all: return "All"
             }
         }
@@ -56,6 +58,7 @@ public final class TasksViewModel {
     }
 
     public private(set) var loadState: LoadState = .idle
+    public private(set) var completedTasks: [TaskItem] = []
     public var searchText: String = ""
     public var dateSegment: DateSegmentFilter = .today
     public var statusFilter: TaskStatusFilter = .active
@@ -129,20 +132,214 @@ public final class TasksViewModel {
                 }.count
             case .backlog:
                 counts[.backlog] = activeTasks.filter { $0.dueDate == nil }.count
+            case .completed:
+                counts[.completed] = candidateCompletedTasks.count
             }
         }
         return counts
     }
 
+    /// Reactive status counts for the currently selected date segment.
+    /// Reflects tasks in each lifecycle state matching `dateSegment`.
+    public var statusCounts: [TaskStatusFilter: Int] {
+        let today = Self.todayISO
+        let activeList: [TaskItem]
+        if case .loaded(let tasks) = loadState {
+            activeList = tasks
+        } else {
+            activeList = []
+        }
+
+        // Active non-completed tasks matching segment
+        let segmentActive = activeList.filter {
+            Self.matches(dateSegment, task: $0, todayISO: today) && Self.matches(.active, task: $0)
+        }
+
+        // Completed tasks matching segment
+        var seenCompleted = Set<UUID>()
+        var segmentCompleted: [TaskItem] = []
+        for task in completedTasks where task.isCompleted {
+            if Self.matches(dateSegment, task: task, todayISO: today) && seenCompleted.insert(task.id).inserted {
+                segmentCompleted.append(task)
+            }
+        }
+        for task in activeList where task.isCompleted {
+            if Self.matches(dateSegment, task: task, todayISO: today) && seenCompleted.insert(task.id).inserted {
+                segmentCompleted.append(task)
+            }
+        }
+
+        // Cancelled tasks matching segment
+        let segmentCancelled = activeList.filter {
+            Self.matches(dateSegment, task: $0, todayISO: today) && Self.matches(.cancelled, task: $0)
+        }
+
+        var counts: [TaskStatusFilter: Int] = [:]
+        counts[.active] = segmentActive.count
+        counts[.completed] = segmentCompleted.count
+        counts[.cancelled] = segmentCancelled.count
+        counts[.all] = segmentActive.count + segmentCompleted.count + segmentCancelled.count
+        return counts
+    }
+
+    /// Active tasks whose due date has passed (< todayISO).
+    public var overdueTasks: [TaskItem] {
+        guard case .loaded(let tasks) = loadState else { return [] }
+        let today = Self.todayISO
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        return tasks.filter { task in
+            guard Self.matches(.today, task: task, todayISO: today) else { return false }
+            guard Self.matches(.active, task: task) else { return false }
+            guard let due = task.dueDate, due < today else { return false }
+            guard !query.isEmpty else { return true }
+            return task.title.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    /// Active tasks scheduled precisely for today (== todayISO).
+    public var todayScheduledTasks: [TaskItem] {
+        guard case .loaded(let tasks) = loadState else { return [] }
+        let today = Self.todayISO
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        return tasks.filter { task in
+            guard Self.matches(.today, task: task, todayISO: today) else { return false }
+            guard Self.matches(.active, task: task) else { return false }
+            guard task.dueDate == today else { return false }
+            guard !query.isEmpty else { return true }
+            return task.title.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    /// The primary next task to tackle: highest priority scheduled task for today,
+    /// or the highest priority overdue task if no today task exists.
+    public var upNextTask: TaskItem? {
+        func weight(_ p: TaskPriority?) -> Int {
+            switch p {
+            case .high: return 3
+            case .medium: return 2
+            case .low: return 1
+            case .some(.none), nil: return 0
+            }
+        }
+
+        if !todayScheduledTasks.isEmpty {
+            return todayScheduledTasks.max(by: { weight($0.priority) < weight($1.priority) })
+        }
+        if !overdueTasks.isEmpty {
+            return overdueTasks.max(by: { weight($0.priority) < weight($1.priority) })
+        }
+        return nil
+    }
+
+    /// Helper computing relative due date description: e.g. "8d overdue", "Today", "Tomorrow", "Sep 2"
+    public static func relativeDueDateDescription(
+        dueDate: String?,
+        todayISO: String = todayISO,
+        calendar: Calendar = .current
+    ) -> (text: String, isOverdue: Bool)? {
+        guard let dueDate else { return nil }
+
+        let formatter = isoDateFormatter
+        guard let dueDateTime = formatter.date(from: dueDate),
+              let todayDateTime = formatter.date(from: todayISO) else {
+            return (dueDate, dueDate < todayISO)
+        }
+
+        let startOfDue = calendar.startOfDay(for: dueDateTime)
+        let startOfToday = calendar.startOfDay(for: todayDateTime)
+        let components = calendar.dateComponents([.day], from: startOfToday, to: startOfDue)
+        guard let diff = components.day else {
+            return (dueDate, dueDate < todayISO)
+        }
+
+        if diff < 0 {
+            let daysOverdue = abs(diff)
+            if daysOverdue > 90 {
+                let monthDayFormatter = DateFormatter()
+                monthDayFormatter.dateFormat = "MMM d"
+                monthDayFormatter.locale = Locale(identifier: "en_US_POSIX")
+                monthDayFormatter.timeZone = calendar.timeZone
+                let dateStr = monthDayFormatter.string(from: startOfDue)
+                return ("\(dateStr) • Overdue", true)
+            } else {
+                return ("\(daysOverdue)d overdue", true)
+            }
+        } else if diff == 0 {
+            return ("Today", false)
+        } else if diff == 1 {
+            return ("Tomorrow", false)
+        } else {
+            let monthDayFormatter = DateFormatter()
+            monthDayFormatter.dateFormat = "MMM d"
+            monthDayFormatter.locale = Locale(identifier: "en_US_POSIX")
+            monthDayFormatter.timeZone = calendar.timeZone
+            return (monthDayFormatter.string(from: startOfDue), false)
+        }
+    }
+
+    public func relativeDueDateDescription(for task: TaskItem) -> (text: String, isOverdue: Bool)? {
+        Self.relativeDueDateDescription(dueDate: task.dueDate, todayISO: Self.todayISO)
+    }
+
+    private var candidateCompletedTasks: [TaskItem] {
+        var seen = Set<UUID>()
+        var list: [TaskItem] = []
+        for task in completedTasks where task.isCompleted {
+            if seen.insert(task.id).inserted {
+                list.append(task)
+            }
+        }
+        if case .loaded(let tasks) = loadState {
+            for task in tasks where task.isCompleted {
+                if seen.insert(task.id).inserted {
+                    list.append(task)
+                }
+            }
+        }
+        return list
+    }
+
+    private var combinedAllTasks: [TaskItem] {
+        var seen = Set<UUID>()
+        var list: [TaskItem] = []
+        if case .loaded(let tasks) = loadState {
+            for task in tasks {
+                if seen.insert(task.id).inserted {
+                    list.append(task)
+                }
+            }
+        }
+        for task in completedTasks {
+            if seen.insert(task.id).inserted {
+                list.append(task)
+            }
+        }
+        return list
+    }
+
     /// Multi-dimensional filtered view of the loaded tasks:
     /// Conjunction of Date Segment, Status Filter, and Search Text.
     public var filteredTasks: [TaskItem] {
-        guard case .loaded(let tasks) = loadState else { return [] }
         let query = searchText.trimmingCharacters(in: .whitespaces)
         let today = Self.todayISO
-        return tasks.filter { task in
-            guard Self.matches(dateSegment, task: task, todayISO: today) else { return false }
-            guard Self.matches(statusFilter, task: task) else { return false }
+
+        let sourceTasks: [TaskItem]
+        if dateSegment == .completed || statusFilter == .completed {
+            sourceTasks = candidateCompletedTasks
+        } else if statusFilter == .all {
+            sourceTasks = combinedAllTasks
+        } else {
+            if case .loaded(let tasks) = loadState {
+                sourceTasks = tasks.filter { Self.matches(statusFilter, task: $0) }
+            } else {
+                sourceTasks = []
+            }
+        }
+
+        return sourceTasks.filter { task in
+            if dateSegment != .completed {
+                guard Self.matches(dateSegment, task: task, todayISO: today) else { return false }
+            }
             guard !query.isEmpty else { return true }
             return task.title.localizedCaseInsensitiveContains(query)
         }
@@ -162,6 +359,8 @@ public final class TasksViewModel {
             return dueDate > todayISO
         case .backlog:
             return task.dueDate == nil
+        case .completed:
+            return task.isCompleted
         case .all:
             return true
         }
@@ -175,9 +374,12 @@ public final class TasksViewModel {
     public func loadTasks() async {
         loadState = .loading
         do {
-            let tasks = try await taskService.listActiveTasks()
-            loadState = .loaded(tasks)
-            FocusWidgetPublisher.publish(tasks)
+            async let activeFetch = taskService.listActiveTasks()
+            async let completedFetch = taskService.listCompletedTasks()
+            let (active, completed) = try await (activeFetch, completedFetch)
+            self.completedTasks = completed
+            self.loadState = .loaded(active)
+            FocusWidgetPublisher.publish(active)
         } catch {
             loadState = .failed(FocusSessionViewModel.userMessage(for: error))
         }
@@ -199,6 +401,9 @@ public final class TasksViewModel {
             tasks[index] = task
             loadState = .loaded(tasks)
             FocusWidgetPublisher.publish(tasks)
+        }
+        if let compIndex = completedTasks.firstIndex(where: { $0.id == task.id }) {
+            completedTasks[compIndex] = task
         }
     }
 

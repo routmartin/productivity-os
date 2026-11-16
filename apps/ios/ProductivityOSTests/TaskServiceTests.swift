@@ -34,6 +34,41 @@ final class TaskServiceTests: XCTestCase {
         XCTAssertTrue(tasks.isEmpty)
     }
 
+    func testListCompletedTasksHitsCorrectEndpoint() async throws {
+        let mock = MockAPIClient()
+        let taskId = UUID(uuidString: "B1B2C3D4-E5F6-7A8B-9C0D-1E2F3A4B5C6E")!
+        mock.defaultResponse = .success((
+            Data("""
+            [
+              {
+                "id":"\(taskId.uuidString)",
+                "title":"Completed work",
+                "priority":"HIGH",
+                "status":"COMPLETED",
+                "completedAt":"2026-11-14T09:00:00Z",
+                "createdAt":"2026-11-14T08:00:00Z",
+                "updatedAt":"2026-11-14T09:00:00Z"
+              }
+            ]
+            """.utf8),
+            200
+        ))
+
+        let service = TaskService(apiClient: mock, cache: APICache())
+        let completed = try await service.listCompletedTasks(page: 1, size: 25)
+
+        XCTAssertEqual(completed.count, 1)
+        XCTAssertEqual(completed.first?.title, "Completed work")
+        XCTAssertEqual(completed.first?.status, .completed)
+        XCTAssertTrue(completed.first?.isCompleted == true)
+
+        let request = try XCTUnwrap(mock.recordedRequests.first)
+        XCTAssertEqual(request.path, "/api/v1/tasks/completed")
+        XCTAssertEqual(request.method, "GET")
+        XCTAssertTrue(request.queryItems?.contains(URLQueryItem(name: "page", value: "1")) == true)
+        XCTAssertTrue(request.queryItems?.contains(URLQueryItem(name: "size", value: "25")) == true)
+    }
+
     func testUpdateTaskWithDueDateEncodesPayload() async throws {
         let mock = MockAPIClient()
         let taskId = UUID(uuidString: "E8E19BB5-93BB-4D57-9DBD-C36B47C43DF1")!

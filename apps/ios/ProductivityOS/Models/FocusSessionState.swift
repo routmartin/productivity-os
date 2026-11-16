@@ -95,6 +95,17 @@ public struct FocusSessionState: Codable, Sendable {
         self.totalPausedSeconds = 0
         self.endTime = nil
     }
+
+    /// Extends the session duration by additional seconds (e.g. +5 min bump).
+    public mutating func extend(by seconds: TimeInterval = 300, at referenceDate: Date = Date()) {
+        if configuredDuration.isUnlimited {
+            let currentElapsed = elapsedSeconds(at: referenceDate)
+            let newTotal = Int(currentElapsed + seconds)
+            configuredDuration = FocusDuration(totalSeconds: newTotal)
+        } else if let total = configuredDuration.totalSeconds {
+            configuredDuration = FocusDuration(totalSeconds: total + Int(seconds))
+        }
+    }
     
     // MARK: - Deterministic Timestamp Calculations
     

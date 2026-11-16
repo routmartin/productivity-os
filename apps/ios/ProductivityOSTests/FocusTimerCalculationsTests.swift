@@ -45,4 +45,106 @@ final class FocusTimerCalculationsTests: XCTestCase {
         XCTAssertEqual(state.progress(at: overDate), 1.0)
         XCTAssertEqual(state.formattedTimer(at: overDate), "00:00")
     }
+
+    func testSessionDurationExtension() {
+        var state = FocusSessionState()
+        let start = Date(timeIntervalSince1970: 1000)
+        state.start(task: SampleData.taskAuth, duration: FocusDuration(totalSeconds: 1500), at: start)
+
+        // 10 minutes elapsed (600s), 15 minutes left (900s)
+        let checkDate = Date(timeIntervalSince1970: 1000 + 600)
+        XCTAssertEqual(state.remainingSeconds(at: checkDate), 900)
+
+        // User hits +5m bump (300 seconds)
+        state.extend(by: 300)
+
+        // Configured duration should now be 1800s (30m)
+        XCTAssertEqual(state.configuredDuration.totalSeconds, 1800)
+        // Remaining seconds should now be 1200s (20m)
+        XCTAssertEqual(state.remainingSeconds(at: checkDate), 1200)
+        XCTAssertEqual(state.formattedTimer(at: checkDate), "20:00")
+    }
+
+    func testUnlimitedSessionDurationExtension() {
+        var state = FocusSessionState()
+        let start = Date(timeIntervalSince1970: 1000)
+        state.start(task: SampleData.taskAuth, duration: .unlimited, at: start)
+
+        // 10 minutes elapsed (600s)
+        let checkDate = Date(timeIntervalSince1970: 1000 + 600)
+        XCTAssertNil(state.remainingSeconds(at: checkDate))
+
+        // +5m bump converts unlimited into targeted countdown (600 + 300 = 900s total)
+        state.extend(by: 300, at: checkDate)
+        XCTAssertEqual(state.configuredDuration.totalSeconds, 900)
+        XCTAssertEqual(state.remainingSeconds(at: checkDate), 300)
+        XCTAssertEqual(state.formattedTimer(at: checkDate), "05:00")
+    }
+
+    func testMooasTimerParser() {
+        // Standard countdown (MM:SS)
+        let standard = MooasTimerComponents.parse("25:00")
+        XCTAssertEqual(standard.leftValue, "25")
+        XCTAssertEqual(standard.rightValue, "00")
+        XCTAssertEqual(standard.leftSublabel, "MIN")
+        XCTAssertEqual(standard.rightSublabel, "SEC")
+
+        // Single digit minute remaining ("04:15")
+        let singleMin = MooasTimerComponents.parse("04:15")
+        XCTAssertEqual(singleMin.leftValue, "04")
+        XCTAssertEqual(singleMin.rightValue, "15")
+
+        // Over an hour (HH:MM:SS -> "01:25:30")
+        let longSession = MooasTimerComponents.parse("01:25:30")
+        XCTAssertEqual(longSession.leftValue, "01")
+        XCTAssertEqual(longSession.rightValue, "25")
+        XCTAssertEqual(longSession.leftSublabel, "HR")
+        XCTAssertEqual(longSession.rightSublabel, "MIN")
+
+        // TodayView focused time format ("2h 18m")
+        let todayStats = MooasTimerComponents.parse("2h 18m")
+        XCTAssertEqual(todayStats.leftValue, "02")
+        XCTAssertEqual(todayStats.rightValue, "18")
+        XCTAssertEqual(todayStats.leftSublabel, "HR")
+        XCTAssertEqual(todayStats.rightSublabel, "MIN")
+
+        // Sub-hour TodayView stats ("45m")
+        let subHourStats = MooasTimerComponents.parse("45m")
+        XCTAssertEqual(subHourStats.leftValue, "45")
+        XCTAssertEqual(subHourStats.rightValue, "00")
+        XCTAssertEqual(subHourStats.leftSublabel, "MIN")
+        XCTAssertEqual(subHourStats.rightSublabel, "SEC")
+    }
+
+    func testMooasFlipFlapViewAnimatableData() {
+        var flap = MooasFlipFlapView(
+            progress: 0.25,
+            oldDigit: "25",
+            newDigit: "24",
+            sublabel: "MIN",
+            width: 124,
+            height: 136,
+            halfHeight: 67.25,
+            seamHeight: 1.5,
+            cornerRadius: 7.0,
+            theme: .naturalBeech,
+            isMini: false
+        )
+        XCTAssertEqual(flap.animatableData, 0.25, accuracy: 0.0001)
+
+        flap.animatableData = 0.75
+        XCTAssertEqual(flap.progress, 0.75, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testViewModelAddMinutes() {
+        let mock = MockAPIClient()
+        let vm = FocusSessionViewModel(apiClient: mock)
+        vm.selectedTask = SampleData.taskAuth
+        vm.sessionState.start(task: vm.selectedTask, duration: FocusDuration(totalSeconds: 1500))
+
+        XCTAssertEqual(vm.sessionState.configuredDuration.totalSeconds, 1500)
+        vm.addMinutes(5)
+        XCTAssertEqual(vm.sessionState.configuredDuration.totalSeconds, 1800)
+    }
 }

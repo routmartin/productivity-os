@@ -15,4 +15,14 @@ final class AppTabTests: XCTestCase {
             XCTAssertFalse(tab.rawValue.isEmpty, "Tab \(tab) should have a valid rawValue")
         }
     }
+
+    func testScheduleTabCases() {
+        let tabs = ScheduleTab.allCases
+        XCTAssertEqual(tabs.count, 2, "Expected exactly 2 schedule tabs")
+        XCTAssertEqual(tabs, [.routine, .deepWork])
+        XCTAssertEqual(ScheduleTab.routine.rawValue, "Routine")
+        XCTAssertEqual(ScheduleTab.deepWork.rawValue, "Deep Work")
+        XCTAssertEqual(ScheduleTab.routine.id, "Routine")
+        XCTAssertEqual(ScheduleTab.deepWork.id, "Deep Work")
+    }
 }

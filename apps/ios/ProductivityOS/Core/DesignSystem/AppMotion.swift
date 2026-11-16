@@ -15,4 +15,7 @@ public enum AppMotion {
 
     /// Linear cadence for the progress ring between timestamp-derived values.
     public static let ringTick = Animation.linear(duration: 0.5)
+
+    /// Fluid spring animation for fluid pill segments and interactive controls.
+    public static let spring = Animation.spring(response: 0.35, dampingFraction: 0.75)
 }
