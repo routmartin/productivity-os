@@ -78,13 +78,10 @@ class ScheduleService(
     )
 
     fun getSchedule(userId: UUID, date: LocalDate): ScheduleGraphResponse {
-        val habitCount = scheduleHabitRepository.countByUserIdAndDeletedAtIsNull(userId)
         val entryCount = scheduleEntryRepository
             .findByUserIdAndCalendarDateAndDeletedAtIsNullOrderByOrderIndexAsc(userId, date).size
 
-        if (habitCount == 0L) {
-            seedDefaultBlueprint(userId, date)
-        } else if (entryCount == 0) {
+        if (entryCount == 0) {
             seedDefaultEntriesForDate(userId, date)
         }
 

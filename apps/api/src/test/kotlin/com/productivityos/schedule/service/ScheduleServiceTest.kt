@@ -24,9 +24,11 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyList
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import java.time.Clock
 import java.time.Instant
@@ -79,28 +81,8 @@ class ScheduleServiceTest {
     // AC-B02: Baseline Blueprint Auto-Seeding (Spec AC-009)
     @Test
     @Suppress("UNCHECKED_CAST")
-    fun `fresh user accessing schedule gets auto-seeded with 5 baseline blueprint habits and 16-node graph`() {
-        `when`(habitRepository.countByUserIdAndDeletedAtIsNull(userId)).thenReturn(0L)
-        `when`(entryRepository.findByUserIdAndCalendarDateAndDeletedAtIsNullOrderByOrderIndexAsc(userId, date))
-            .thenReturn(emptyList())
-
-        // Capture saved habits
-        val habitCaptor = ArgumentCaptor.forClass(List::class.java as Class<List<ScheduleHabitEntity>>)
+    fun `fresh user accessing schedule seeds default entries but does not auto-seed habits`() {
         val entryCaptor = ArgumentCaptor.forClass(List::class.java as Class<List<ScheduleEntryEntity>>)
-
-        val habit1Id = UUID.randomUUID()
-        val habit2Id = UUID.randomUUID()
-        val habit3Id = UUID.randomUUID()
-        val habit4Id = UUID.randomUUID()
-        val habit5Id = UUID.randomUUID()
-
-        val seededHabits = listOf(
-            ScheduleHabitEntity(id = habit1Id, userId = userId, title = "Hydration & Mineral Salts", phase = "morning", orderIndex = 2, createdAt = now),
-            ScheduleHabitEntity(id = habit2Id, userId = userId, title = "Zone 2 Cardio & Mobility", phase = "morning", orderIndex = 3, createdAt = now),
-            ScheduleHabitEntity(id = habit3Id, userId = userId, title = "Cold Rinse & Grooming", phase = "morning", orderIndex = 4, createdAt = now),
-            ScheduleHabitEntity(id = habit4Id, userId = userId, title = "Daily Top 3 Planning", phase = "morning", orderIndex = 5, createdAt = now),
-            ScheduleHabitEntity(id = habit5Id, userId = userId, title = "Evening Wind-Down", phase = "bedtime", orderIndex = 15, createdAt = now)
-        )
 
         val seededEntries = (6..14).map { idx ->
             ScheduleEntryEntity(
@@ -115,7 +97,7 @@ class ScheduleServiceTest {
             )
         }
 
-        `when`(habitRepository.findByUserIdAndDeletedAtIsNullOrderByOrderIndexAsc(userId)).thenReturn(seededHabits)
+        `when`(habitRepository.findByUserIdAndDeletedAtIsNullOrderByOrderIndexAsc(userId)).thenReturn(emptyList())
         `when`(entryRepository.findByUserIdAndCalendarDateAndDeletedAtIsNullOrderByOrderIndexAsc(userId, date))
             .thenReturn(emptyList(), seededEntries)
 
@@ -124,6 +106,29 @@ class ScheduleServiceTest {
             .thenReturn(emptyList())
 
         val response = service.getSchedule(userId, date)
+
+        // Habits must NOT be auto-seeded on schedule fetch
+        verify(habitRepository, never()).saveAll(anyList())
+
+        // Default entries are seeded when entryCount == 0
+        verify(entryRepository).saveAll(entryCaptor.capture())
+        assertEquals(9, entryCaptor.value.size)
+
+        // 11-node circadian graph: 2 anchors + 0 habits + 9 entries
+        assertEquals(11, response.nodes.size)
+        assertEquals("anchor-wake", response.nodes.first().id)
+        assertEquals("anchor-bedtime", response.nodes.last().id)
+        assertEquals(4, response.phases.size)
+        assertEquals(10, response.edges.size)
+    }
+
+    @Test
+    @Suppress("UNCHECKED_CAST")
+    fun `seedDefaultBlueprint seeds 5 baseline habits and default entries when called directly`() {
+        val habitCaptor = ArgumentCaptor.forClass(List::class.java as Class<List<ScheduleHabitEntity>>)
+        val entryCaptor = ArgumentCaptor.forClass(List::class.java as Class<List<ScheduleEntryEntity>>)
+
+        service.seedDefaultBlueprint(userId, date)
 
         verify(habitRepository).saveAll(habitCaptor.capture())
         assertEquals(5, habitCaptor.value.size)
@@ -134,16 +139,8 @@ class ScheduleServiceTest {
         assertTrue(habitTitles.contains("Daily Top 3 Planning"))
         assertTrue(habitTitles.contains("Evening Wind-Down"))
 
-        // 16-node circadian graph: 2 anchors + 5 habits + 9 entries
-        assertEquals(16, response.nodes.size)
-        assertEquals("anchor-wake", response.nodes.first().id)
-        assertEquals("anchor-bedtime", response.nodes.last().id)
-        assertEquals(4, response.phases.size)
-        assertEquals(15, response.edges.size)
-        // Zero initial completions
-        response.nodes.filter { it.type == "habit" }.forEach {
-            assertFalse(it.completed ?: true)
-        }
+        verify(entryRepository).saveAll(entryCaptor.capture())
+        assertEquals(9, entryCaptor.value.size)
     }
 
     // AC-B01: Unified Schedule Graph Retrieval
