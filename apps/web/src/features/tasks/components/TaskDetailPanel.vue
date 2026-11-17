@@ -179,6 +179,14 @@ function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1])
         <Flag :size="11" :stroke-width="2" />
         {{ PRIORITY_LABELS[task.priority] }} priority
       </UiPill>
+      <UiPill v-if="task.pinned" tone="accent">
+        <Pin :size="11" :stroke-width="2" />
+        Pinned
+      </UiPill>
+      <UiPill v-if="inTopThree" tone="accent">
+        <Flag :size="11" :stroke-width="2" />
+        Top 3
+      </UiPill>
     </div>
 
     <h2 class="title">{{ task.title }}</h2>
@@ -251,136 +259,142 @@ function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1])
     </dl>
 
     <div class="actions">
-      <UiButton
-        variant="ghost"
-        full-width
-        @click="onPin"
-      >
-        <Pin :size="15" :stroke-width="1.75" />
-        {{ task.pinned ? 'Unpin' : 'Pin to top' }}
-      </UiButton>
+      <!-- Tier 1: Primary Action (Workflow Lifecycle) -->
+      <div v-if="task.status === 'IN_PROGRESS'" class="primary-actions">
+        <UiButton
+          variant="primary"
+          full-width
+          :disabled="!canToggle"
+          @click="onComplete"
+        >
+          <CheckCircle2 :size="16" :stroke-width="2" />
+          Mark complete
+        </UiButton>
+      </div>
 
-      <UiButton
-        v-if="!inTopThree"
-        variant="ghost"
-        full-width
-        :disabled="todayStore.topThree.length >= 3"
-        @click="onAddToTopThree"
-      >
-        <Flag :size="15" :stroke-width="1.75" />
-        Add to Top 3
-      </UiButton>
+      <div v-else-if="task.status === 'INBOX'" class="primary-actions pair">
+        <UiButton variant="primary" full-width @click="onStart">
+          <Play :size="16" :stroke-width="2" />
+          Start task
+        </UiButton>
+        <UiButton variant="subtle" full-width @click="onPlan">
+          <CalendarPlus :size="16" :stroke-width="1.75" />
+          Plan for today
+        </UiButton>
+      </div>
 
-      <UiButton
-        v-else
-        variant="ghost"
-        full-width
-        @click="onRemoveFromTopThree"
-      >
-        <Flag :size="15" :stroke-width="1.75" />
-        Remove from Top 3
-      </UiButton>
+      <div v-else-if="task.status === 'PLANNED'" class="primary-actions">
+        <UiButton variant="primary" full-width @click="onStart">
+          <Play :size="16" :stroke-width="2" />
+          Start task
+        </UiButton>
+      </div>
 
-      <UiButton
-        v-if="task.status === 'INBOX'"
-        variant="ghost"
-        full-width
-        @click="onPlan"
-      >
-        <CalendarPlus :size="15" :stroke-width="1.75" />
-        Plan for today
-      </UiButton>
+      <div v-else-if="task.status === 'CANCELLED'" class="primary-actions">
+        <UiButton variant="subtle" full-width @click="onReopen">
+          <RotateCcw :size="16" :stroke-width="1.75" />
+          Reopen task
+        </UiButton>
+      </div>
 
-      <UiButton
-        v-if="task.status === 'INBOX' || task.status === 'PLANNED'"
-        variant="ghost"
-        full-width
-        @click="onStart"
-      >
-        <Play :size="15" :stroke-width="1.75" />
-        Start
-      </UiButton>
+      <!-- Tier 2: Secondary / Quick Actions Grid -->
+      <div class="secondary-actions">
+        <UiButton
+          v-if="task.status !== 'COMPLETED'"
+          variant="subtle"
+          size="sm"
+          @click="editOpen = true"
+        >
+          <Pencil :size="14" :stroke-width="1.75" />
+          Edit task
+        </UiButton>
 
-      <UiButton
-        v-if="task.status === 'IN_PROGRESS'"
-        variant="ghost"
-        full-width
-        :disabled="!canToggle"
-        @click="onComplete"
-      >
-        <CheckCircle2 :size="15" :stroke-width="1.75" />
-        Mark complete
-      </UiButton>
+        <UiButton
+          variant="subtle"
+          size="sm"
+          :class="{ 'is-active': task.pinned }"
+          :title="task.pinned ? 'Unpin task' : 'Pin to top'"
+          @click="onPin"
+        >
+          <Pin :size="14" :stroke-width="1.75" />
+          {{ task.pinned ? 'Unpin' : 'Pin to top' }}
+        </UiButton>
 
-      <UiButton
-        v-if="task.status === 'CANCELLED'"
-        variant="ghost"
-        full-width
-        @click="onReopen"
-      >
-        <RotateCcw :size="15" :stroke-width="1.75" />
-        Reopen
-      </UiButton>
+        <UiButton
+          v-if="!inTopThree"
+          variant="subtle"
+          size="sm"
+          :disabled="todayStore.topThree.length >= 3"
+          @click="onAddToTopThree"
+        >
+          <Flag :size="14" :stroke-width="1.75" />
+          Add to Top 3
+        </UiButton>
+        <UiButton
+          v-else
+          variant="subtle"
+          size="sm"
+          class="is-active"
+          @click="onRemoveFromTopThree"
+        >
+          <Flag :size="14" :stroke-width="1.75" />
+          Remove from Top 3
+        </UiButton>
+      </div>
 
-      <UiButton
-        v-if="task.status !== 'COMPLETED'"
-        variant="ghost"
-        full-width
-        @click="editOpen = true"
-      >
-        <Pencil :size="15" :stroke-width="1.75" />
-        Edit task
-      </UiButton>
-
-      <UiButton
-        v-if="task.status !== 'COMPLETED' && task.status !== 'CANCELLED'"
-        variant="ghost"
-        full-width
-        class="danger-btn"
-        @click="confirmingAction = 'cancel'"
-      >
-        <XCircle :size="15" :stroke-width="1.75" />
-        Cancel task
-      </UiButton>
-
-      <template v-if="confirmingAction === 'cancel'">
-        <div class="confirm-box">
-          <p class="confirm-copy">Cancel "{{ task.title }}"? It moves to Cancelled and can be reopened later.</p>
-          <div class="confirm-row">
-            <UiButton variant="ghost" size="sm" full-width @click="confirmingAction = null">
-              Keep it
-            </UiButton>
-            <UiButton variant="ghost" size="sm" full-width class="danger-btn" @click="onCancel">
-              Cancel task
-            </UiButton>
-          </div>
+      <!-- Tier 3: Destructive Actions (Danger Zone) -->
+      <div v-if="task.status !== 'COMPLETED' && task.status !== 'CANCELLED'" class="danger-section">
+        <div v-if="!confirmingAction" class="danger-row">
+          <UiButton
+            variant="ghost"
+            size="sm"
+            full-width
+            class="danger-btn"
+            @click="confirmingAction = 'cancel'"
+          >
+            <XCircle :size="14" :stroke-width="1.75" />
+            Cancel task
+          </UiButton>
+          <UiButton
+            variant="ghost"
+            size="sm"
+            full-width
+            class="danger-btn"
+            @click="confirmingAction = 'delete'"
+          >
+            <Trash2 :size="14" :stroke-width="1.75" />
+            Delete task
+          </UiButton>
         </div>
-      </template>
 
-      <UiButton
-        v-if="confirmingAction !== 'cancel' && task.status !== 'COMPLETED' && task.status !== 'CANCELLED'"
-        variant="ghost"
-        full-width
-        class="danger-btn"
-        @click="confirmingAction = 'delete'"
-      >
-        <Trash2 :size="15" :stroke-width="1.75" />
-        Delete task
-      </UiButton>
-
-      <template v-if="confirmingAction === 'delete'">
-        <div class="confirm-box">
-          <p class="confirm-copy">Delete "{{ task.title }}"? This can't be undone.</p>
-          <div class="confirm-row">
-            <UiButton variant="ghost" size="sm" full-width @click="confirmingAction = null">
-              Cancel
-            </UiButton>
-            <UiButton variant="ghost" size="sm" full-width class="danger-btn" @click="onDelete">
-              Delete
-            </UiButton>
+        <template v-if="confirmingAction === 'cancel'">
+          <div class="confirm-box">
+            <p class="confirm-copy">Cancel "{{ task.title }}"? It moves to Cancelled and can be reopened later.</p>
+            <div class="confirm-row">
+              <UiButton variant="ghost" size="sm" full-width @click="confirmingAction = null">
+                Keep it
+              </UiButton>
+              <UiButton variant="ghost" size="sm" full-width class="danger-btn" @click="onCancel">
+                Cancel task
+              </UiButton>
+            </div>
           </div>
-        </div>
-      </template>
+        </template>
+
+        <template v-if="confirmingAction === 'delete'">
+          <div class="confirm-box">
+            <p class="confirm-copy">Delete "{{ task.title }}"? This can't be undone.</p>
+            <div class="confirm-row">
+              <UiButton variant="ghost" size="sm" full-width @click="confirmingAction = null">
+                Cancel
+              </UiButton>
+              <UiButton variant="ghost" size="sm" full-width class="danger-btn" @click="onDelete">
+                Delete
+              </UiButton>
+            </div>
+          </div>
+        </template>
+      </div>
     </div>
 
     <footer class="footer tnum">
@@ -534,6 +548,48 @@ function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1])
 .actions {
   display: flex;
   flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.primary-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.primary-actions.pair {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+.secondary-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.secondary-actions :deep(.ui-button) {
+  min-width: 0;
+  padding: 0 var(--space-2);
+}
+
+.secondary-actions :deep(.is-active) {
+  background: var(--surface-3);
+  color: var(--accent);
+  border-color: var(--accent-border);
+  font-weight: 600;
+}
+
+.danger-section {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.danger-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-2);
 }
 
@@ -563,6 +619,14 @@ function onUpdate(taskId: string, draft: Parameters<typeof store.updateTask>[1])
 .confirm-row {
   display: flex;
   gap: var(--space-2);
+}
+
+@media (max-width: 520px) {
+  .primary-actions.pair,
+  .secondary-actions,
+  .danger-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .footer {

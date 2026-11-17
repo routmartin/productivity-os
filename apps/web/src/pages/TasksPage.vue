@@ -71,7 +71,7 @@ function parseSegmentQuery(param: unknown): DateSegment | null {
   return null
 }
 
-const initialView = parseViewModeQuery(route.query.view) ?? 'list'
+const initialView = parseViewModeQuery(route.query.view) ?? 'board'
 const viewMode = ref<ViewMode>(initialView)
 if (initialView === 'board') {
   store.setFilter('ALL')
@@ -142,8 +142,8 @@ onMounted(() => {
     applyAdaptiveGrouping(querySegment)
   }
 
-  const queryView = parseViewModeQuery(route.query.view)
-  if (queryView && queryView !== viewMode.value) {
+  const queryView = parseViewModeQuery(route.query.view) ?? 'board'
+  if (queryView !== viewMode.value) {
     viewMode.value = queryView
     if (queryView === 'board') {
       store.setFilter('ALL')
@@ -189,8 +189,8 @@ watch(
 watch(
   () => route.query.view,
   (newParam) => {
-    const parsed = parseViewModeQuery(newParam)
-    if (parsed && parsed !== viewMode.value) {
+    const parsed = parseViewModeQuery(newParam) ?? 'board'
+    if (parsed !== viewMode.value) {
       viewMode.value = parsed
     }
   },

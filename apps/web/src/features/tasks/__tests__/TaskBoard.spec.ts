@@ -168,7 +168,35 @@ describe('Kanban Board Layout & Drag-and-Drop (AC-UI-018 - AC-UI-023)', () => {
       expect(store.boardColumns.COMPLETED.map((t) => t.id)).toEqual(['3'])
     })
 
-    it('renders TasksPage in board view without status filter and resets statusFilter to ALL', async () => {
+    it('defaults to Kanban board layout when visiting /tasks without a view query parameter', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const store = useTasksStore()
+      store.status = 'ready'
+      store.setFilter('PLANNED')
+
+      const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [{ path: '/tasks', component: TasksPage }],
+      })
+      await router.push('/tasks')
+      await router.isReady()
+
+      const app = createSSRApp(TasksPage)
+      app.use(pinia)
+      app.use(router)
+
+      const html = await renderToString(app)
+
+      // TaskFilters should not be rendered in default board layout
+      expect(html).not.toContain('aria-label="Filter tasks by status"')
+      // Kanban board is rendered by default
+      expect(html).toContain('class="kanban-board"')
+      // Status filter is reset to ALL
+      expect(store.statusFilter).toBe('ALL')
+    })
+
+    it('renders TasksPage in board view when explicitly requested via ?view=board', async () => {
       const pinia = createPinia()
       setActivePinia(pinia)
       const store = useTasksStore()

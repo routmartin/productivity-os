@@ -81,9 +81,9 @@ class ScheduleService(
         val entryCount = scheduleEntryRepository
             .findByUserIdAndCalendarDateAndDeletedAtIsNullOrderByOrderIndexAsc(userId, date).size
 
-        if (entryCount == 0) {
-            seedDefaultEntriesForDate(userId, date)
-        }
+        // if (entryCount == 0) {
+        //     seedDefaultEntriesForDate(userId, date)
+        // }
 
         return buildScheduleGraph(userId, date)
     }
@@ -596,7 +596,7 @@ class ScheduleService(
         var incompleteActivities = 0
         val entryNodes = entries.map { entry ->
             val isIncomplete = entry.stepType == ScheduleNodeType.TASK.value &&
-                (entry.completedMinutes < entry.durationMinutes)
+                    (entry.completedMinutes < entry.durationMinutes)
             if (isIncomplete) incompleteActivities++
 
             ScheduleNodeDTO(
@@ -673,6 +673,7 @@ class ScheduleService(
                 from.phase != to.phase -> ScheduleEdgeType.PHASE.value
                 from.type == ScheduleNodeType.HABIT.value && to.type == ScheduleNodeType.HABIT.value ->
                     ScheduleEdgeType.PREREQUISITE.value
+
                 else -> ScheduleEdgeType.SEQUENTIAL.value
             }
 
