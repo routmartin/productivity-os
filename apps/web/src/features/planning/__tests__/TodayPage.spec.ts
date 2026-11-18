@@ -119,7 +119,7 @@ describe('TodayPage dynamic AI briefing & telemetry', () => {
     expect(todayStore.schedule).toHaveLength(0)
     expect(scheduleStore.nodes).toHaveLength(0)
     expect(scheduleStore.overflowMinutes).toBe(0)
-    expect(scheduleStore.projectedBedtime).toBe('22:30')
+    expect(scheduleStore.projectedBedtime).toBe('23:20')
   })
 
   it('evaluates hasPriorities correctly based on today.topThree and tasksStore (Today Page refinement)', () => {

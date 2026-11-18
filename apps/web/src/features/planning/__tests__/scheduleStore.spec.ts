@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { scheduleApi } from '../scheduleApi'
 import { createMockScheduleGraph, useScheduleStore } from '../scheduleStore'
@@ -16,12 +16,12 @@ describe('scheduleStore - updateStep', () => {
     store.graph = createMockScheduleGraph()
 
     const updatedNodeMock: ScheduleNode = {
-      id: 'task-top1',
-      type: 'task',
+      id: 'habit-morning-deep-work',
+      type: 'habit',
       phase: 'deep-focus',
       title: 'Architect Secure Auth Core',
       subtitle: 'Updated Subtitle',
-      time: '09:45',
+      time: '10:00',
       durationMinutes: 120,
       totalMinutes: 120,
       notes: 'New protocol notes',
@@ -35,20 +35,20 @@ describe('scheduleStore - updateStep', () => {
     const payload: UpdateStepPayload = {
       title: 'Architect Secure Auth Core',
       subtitle: 'Updated Subtitle',
-      timeSlot: '09:45',
+      timeSlot: '10:00',
       durationMinutes: 120,
       notes: 'New protocol notes',
     }
 
-    const result = await store.updateStep('task-top1', payload)
+    const result = await store.updateStep('habit-morning-deep-work', payload)
 
     expect(apiSpy).toHaveBeenCalledTimes(1)
     expect(apiSpy).toHaveBeenCalledWith(
-      'task-top1',
+      'habit-morning-deep-work',
       expect.objectContaining({
         title: 'Architect Secure Auth Core',
         subtitle: 'Updated Subtitle',
-        timeSlot: '09:45',
+        timeSlot: '10:00',
         durationMinutes: 120,
         notes: 'New protocol notes',
       }),
@@ -56,11 +56,11 @@ describe('scheduleStore - updateStep', () => {
 
     expect(result.title).toBe('Architect Secure Auth Core')
     expect(result.subtitle).toBe('Updated Subtitle')
-    expect(result.time).toBe('09:45')
+    expect(result.time).toBe('10:00')
     expect(result.durationMinutes).toBe(120)
     expect(result.notes).toBe('New protocol notes')
 
-    const nodeInStore = store.nodes.find((n) => n.id === 'task-top1')
+    const nodeInStore = store.nodes.find((n) => n.id === 'habit-morning-deep-work')
     expect(nodeInStore?.title).toBe('Architect Secure Auth Core')
     expect(nodeInStore?.durationMinutes).toBe(120)
   })
@@ -70,7 +70,7 @@ describe('scheduleStore - updateStep', () => {
     store.graph = createMockScheduleGraph()
 
     vi.spyOn(scheduleApi, 'updateStep').mockImplementation(async (_id, payload) => {
-      const existing = store.nodes.find((n) => n.id === 'task-top1')!
+      const existing = store.nodes.find((n) => n.id === 'habit-morning-deep-work')!
       return {
         ...existing,
         title: payload.title,
@@ -78,16 +78,16 @@ describe('scheduleStore - updateStep', () => {
       }
     })
 
-    const initialNode = store.nodes.find((n) => n.id === 'task-top1')!
+    const initialNode = store.nodes.find((n) => n.id === 'habit-morning-deep-work')!
     expect(initialNode.phase).toBe('deep-focus')
 
-    // Reassign task-top1 to afternoon phase
-    await store.updateStep('task-top1', {
+    // Reassign habit-morning-deep-work to afternoon phase
+    await store.updateStep('habit-morning-deep-work', {
       title: initialNode.title,
       phase: 'afternoon',
     })
 
-    const movedNode = store.nodes.find((n) => n.id === 'task-top1')!
+    const movedNode = store.nodes.find((n) => n.id === 'habit-morning-deep-work')!
     expect(movedNode.phase).toBe('afternoon')
 
     // Verify topological sequence: all edges cleanly connect consecutive nodes without orphan edges
@@ -122,7 +122,7 @@ describe('scheduleStore - updateStep', () => {
     store.graph = createMockScheduleGraph()
 
     vi.spyOn(scheduleApi, 'updateStep').mockImplementation(async (_id, payload) => {
-      const existing = store.nodes.find((n) => n.id === 'task-top1')!
+      const existing = store.nodes.find((n) => n.id === 'habit-morning-deep-work')!
       return {
         ...existing,
         title: payload.title,
@@ -131,21 +131,21 @@ describe('scheduleStore - updateStep', () => {
     })
 
     const initialOverflow = store.overflowMinutes
-    expect(initialOverflow).toBe(45)
-    expect(store.projectedBedtime).toBe('23:15')
+    expect(initialOverflow).toBe(0)
+    expect(store.projectedBedtime).toBe('23:20')
 
     // Increase duration from 90 to 150 (+60 minutes)
-    await store.updateStep('task-top1', {
-      title: 'Finish authentication architecture',
+    await store.updateStep('habit-morning-deep-work', {
+      title: 'Morning Deep Work Session',
       durationMinutes: 150,
     })
 
     expect(store.overflowMinutes).toBe(initialOverflow + 60)
-    expect(store.projectedBedtime).toBe('00:15')
+    expect(store.projectedBedtime).toBe('00:20')
 
     const bedtimeAnchor = store.bedtimeAnchor
     expect(bedtimeAnchor?.overflowMinutes).toBe(initialOverflow + 60)
-    expect(bedtimeAnchor?.projectedTime).toBe('00:15')
+    expect(bedtimeAnchor?.projectedTime).toBe('00:20')
   })
 
   it('protects anchor nodes from being updated and rejects edit actions (AC-011)', async () => {
@@ -184,7 +184,7 @@ describe('scheduleStore - updateStep', () => {
     store.graph = createMockScheduleGraph()
 
     const initialNode = JSON.parse(
-      JSON.stringify(store.nodes.find((n) => n.id === 'task-top1')),
+      JSON.stringify(store.nodes.find((n) => n.id === 'habit-morning-deep-work')),
     )
     const initialEdges = JSON.parse(JSON.stringify(store.edges))
 
@@ -193,7 +193,7 @@ describe('scheduleStore - updateStep', () => {
     )
 
     await expect(
-      store.updateStep('task-top1', {
+      store.updateStep('habit-morning-deep-work', {
         title: 'New Failed Title',
         phase: 'afternoon',
         durationMinutes: 200,
@@ -201,7 +201,7 @@ describe('scheduleStore - updateStep', () => {
     ).rejects.toThrow('500 Internal Server Error')
 
     // State must be completely restored to pre-mutation snapshot
-    const rolledBackNode = store.nodes.find((n) => n.id === 'task-top1')!
+    const rolledBackNode = store.nodes.find((n) => n.id === 'habit-morning-deep-work')!
     expect(rolledBackNode.title).toBe(initialNode.title)
     expect(rolledBackNode.phase).toBe(initialNode.phase)
     expect(rolledBackNode.durationMinutes).toBe(initialNode.durationMinutes)
@@ -231,11 +231,11 @@ describe('scheduleStore - toggleHabit', () => {
     const store = useScheduleStore()
     store.graph = createMockScheduleGraph()
 
-    const habit = store.nodes.find((n) => n.id === 'habit-curfew')!
+    const habit = store.nodes.find((n) => n.id === 'habit-winddown')!
     expect(habit.completed).toBe(false)
     const prevStreak = habit.streak ?? 0
 
-    await store.toggleHabit('habit-curfew')
+    await store.toggleHabit('habit-winddown')
 
     expect(habit.completed).toBe(true)
     expect(habit.streak).toBe(prevStreak + 1)
@@ -246,8 +246,9 @@ describe('scheduleStore - toggleHabit', () => {
     store.graph = createMockScheduleGraph()
 
     const habit = store.nodes.find((n) => n.id === 'habit-hydration')!
-    expect(habit.completed).toBe(true)
-    const prevStreak = habit.streak ?? 12
+    habit.completed = true
+    habit.streak = 12
+    const prevStreak = habit.streak
 
     await store.toggleHabit('habit-hydration')
 
@@ -259,10 +260,10 @@ describe('scheduleStore - toggleHabit', () => {
     const store = useScheduleStore()
     store.graph = createMockScheduleGraph()
 
-    // Completing pending habits shrinks overflow
+    // Completing pending habits maintains or shrinks overflow
     const prevOverflow = store.overflowMinutes
-    await store.toggleHabit('habit-curfew')
-    await store.toggleHabit('habit-journal')
+    await store.toggleHabit('habit-dinner')
+    await store.toggleHabit('habit-hobby')
     await store.toggleHabit('habit-winddown')
 
     expect(store.overflowMinutes).toBeLessThanOrEqual(prevOverflow)
@@ -293,3 +294,67 @@ describe('scheduleStore - toggleHabit', () => {
     expect(store.errorMessage).toContain('500 Internal Server Error')
   })
 })
+
+describe('scheduleStore - layout preference migration (AC-001 amended)', () => {
+  const STORAGE_KEY = 'productivity-os:schedule-layout'
+  let mockStorage: Record<string, string>
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    mockStorage = {}
+    const storageMock = {
+      getItem: (key: string) => mockStorage[key] ?? null,
+      setItem: (key: string, val: string) => {
+        mockStorage[key] = String(val)
+      },
+      removeItem: (key: string) => {
+        delete mockStorage[key]
+      },
+      clear: () => {
+        mockStorage = {}
+      },
+    }
+    vi.stubGlobal('window', { localStorage: storageMock })
+    vi.stubGlobal('localStorage', storageMock)
+    vi.restoreAllMocks()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('initializes activeLayout as journey and sets localStorage when storage is empty', () => {
+    const store = useScheduleStore()
+    expect(store.activeLayout).toBe('journey')
+    expect(mockStorage[STORAGE_KEY]).toBe('journey')
+  })
+
+  it('migrates legacy spine preference to journey and updates localStorage', () => {
+    mockStorage[STORAGE_KEY] = 'spine'
+    const store = useScheduleStore()
+    expect(store.activeLayout).toBe('journey')
+    expect(mockStorage[STORAGE_KEY]).toBe('journey')
+  })
+
+  it('migrates legacy matrix preference to journey and updates localStorage', () => {
+    mockStorage[STORAGE_KEY] = 'matrix'
+    const store = useScheduleStore()
+    expect(store.activeLayout).toBe('journey')
+    expect(mockStorage[STORAGE_KEY]).toBe('journey')
+  })
+
+  it('preserves journey preference if already stored', () => {
+    mockStorage[STORAGE_KEY] = 'journey'
+    const store = useScheduleStore()
+    expect(store.activeLayout).toBe('journey')
+    expect(mockStorage[STORAGE_KEY]).toBe('journey')
+  })
+
+  it('persists layout update when setLayout is called', () => {
+    const store = useScheduleStore()
+    store.setLayout('journey')
+    expect(store.activeLayout).toBe('journey')
+    expect(mockStorage[STORAGE_KEY]).toBe('journey')
+  })
+})
+

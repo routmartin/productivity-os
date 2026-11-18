@@ -24,12 +24,17 @@ function isUuid(id: string): boolean {
 }
 
 function getSavedLayout(): ScheduleLayoutMode {
-  if (typeof window === 'undefined') return 'spine'
+  if (typeof window === 'undefined') return 'journey'
   const saved = localStorage.getItem(STORAGE_KEY)
-  if (saved === 'spine' || saved === 'journey' || saved === 'matrix') {
+  if (saved === 'journey') {
     return saved
   }
-  return 'spine'
+  try {
+    localStorage.setItem(STORAGE_KEY, 'journey')
+  } catch {
+    // Ignore storage write issues
+  }
+  return 'journey'
 }
 
 function generateHistory(streakDays: number): HabitStreakDay[] {
@@ -52,28 +57,28 @@ export function createMockScheduleGraph(): ScheduleGraph {
       id: 'morning',
       title: 'Morning Activation',
       subtitle: 'Rise, hydrate, move & set daily direction',
-      timeRange: '06:30 – 09:00',
+      timeRange: '06:20 – 10:00',
       colorTone: 'warning',
     },
     {
       id: 'deep-focus',
       title: 'Deep Focus Work',
-      subtitle: 'Uninterrupted creative flow on Daily Top 1 & Top 2',
-      timeRange: '09:00 – 12:30',
+      subtitle: 'Uninterrupted creative flow on primary deliverables',
+      timeRange: '10:00 – 12:00',
       colorTone: 'accent',
     },
     {
       id: 'afternoon',
       title: 'Afternoon Momentum',
-      subtitle: 'Top 3, collaboration, shallow work & reset',
-      timeRange: '12:30 – 18:00',
+      subtitle: 'Review, collaboration, deep execution & wrap-up',
+      timeRange: '12:00 – 18:30',
       colorTone: 'blue',
     },
     {
       id: 'bedtime',
       title: 'Bedtime Sanctuary',
-      subtitle: 'Digital curfew, reflection, reading & sleep recovery',
-      timeRange: '21:00 – 22:30',
+      subtitle: 'Dinner, decompression, learning & sleep recovery',
+      timeRange: '20:00 – 23:20',
       colorTone: 'success',
     },
   ]
@@ -85,11 +90,11 @@ export function createMockScheduleGraph(): ScheduleGraph {
       type: 'anchor',
       phase: 'morning',
       anchorKind: 'wake',
-      title: 'Wake Up & Natural Sunlight',
+      title: 'Wake Up & Circadian Anchor',
       subtitle: 'Anchor routine to reset circadian clock',
-      time: '06:30',
-      targetTime: '06:30',
-      durationMinutes: 15,
+      time: '06:20',
+      targetTime: '06:20',
+      durationMinutes: 10,
       order: 1,
       notes: 'Get 10 minutes of direct sunlight outdoors within 30 minutes of waking.',
     },
@@ -98,234 +103,261 @@ export function createMockScheduleGraph(): ScheduleGraph {
       type: 'habit',
       phase: 'morning',
       habitId: 'habit-hydration',
-      title: '500ml Mineral Water & Salts',
-      subtitle: 'Rehydrate brain and kickstart metabolism',
+      title: 'Deep Breaths & Hydration',
+      subtitle: 'Kickstart metabolism & oxygenate brain',
       icon: 'Droplets',
-      time: '06:45',
-      durationMinutes: 15,
-      streak: 12,
-      completed: true,
+      time: '06:20',
+      durationMinutes: 10,
+      streak: 0,
+      completed: false,
       frequency: 'Daily · Morning Stack',
-      history: generateHistory(12),
+      history: generateHistory(0),
       order: 2,
-      notes: 'Filtered water with a pinch of Himalayan pink salt and lemon.',
+      notes: 'Full glass of water, 10 deep diaphragmatic breaths.',
     },
     {
       id: 'habit-workout',
       type: 'habit',
       phase: 'morning',
       habitId: 'habit-workout',
-      title: 'Zone 2 Cardio & Mobility',
-      subtitle: 'Light jog or bodyweight mobility flow',
+      title: 'Morning Run or Workout',
+      subtitle: 'Cardio, mobility & morning energy',
       icon: 'Dumbbell',
-      time: '07:00',
-      durationMinutes: 45,
-      streak: 8,
-      completed: true,
+      time: '06:30',
+      durationMinutes: 30,
+      streak: 0,
+      completed: false,
       frequency: 'Daily · Morning Stack',
-      history: generateHistory(8),
+      history: generateHistory(0),
       order: 3,
-      notes: 'Elevate heart rate to 125-135 bpm for mitochondrial health.',
+      notes: 'Outdoor run or indoor workout to elevate heart rate and boost dopamine.',
     },
     {
-      id: 'habit-cold-shower',
+      id: 'habit-grooming',
       type: 'habit',
       phase: 'morning',
-      habitId: 'habit-cold-shower',
-      title: 'Cold Rinse & Grooming',
-      subtitle: 'Dopamine surge and alertness spike',
-      icon: 'Droplets',
-      time: '07:45',
-      durationMinutes: 15,
-      streak: 5,
-      completed: true,
+      habitId: 'habit-grooming',
+      title: 'Grooming & Get Ready: Shower, teeth, dress up',
+      subtitle: 'Shower, brush teeth, dress up & prepare',
+      icon: 'Sparkles',
+      time: '07:00',
+      durationMinutes: 40,
+      streak: 0,
+      completed: false,
       frequency: 'Daily · Morning Stack',
-      history: generateHistory(5),
+      history: generateHistory(0),
       order: 4,
-      notes: '2 minutes cold finish to boost norepinephrine.',
+      notes: 'Warm shower with cool rinse finish, brush teeth, prepare clothes.',
     },
     {
       id: 'habit-planning',
       type: 'habit',
       phase: 'morning',
       habitId: 'habit-planning',
-      title: 'Daily Top 3 Planning & Intent',
-      subtitle: 'Review priorities and calibrate focus blocks',
+      title: 'Arrive Work & Daily Task Planning',
+      subtitle: 'Set up workspace & lock in daily task priorities',
       icon: 'Target',
-      time: '08:15',
-      durationMinutes: 30,
-      streak: 14,
-      completed: true,
+      time: '09:30',
+      durationMinutes: 20,
+      streak: 0,
+      completed: false,
       frequency: 'Daily · Morning Stack',
-      history: generateHistory(14),
+      history: generateHistory(0),
       order: 5,
-      notes: 'Lock in Daily Top 3 and silence notification channels.',
+      notes: 'Arrive at office/desk, review daily agenda, set Top 3 priorities.',
     },
 
     // Deep Focus Phase
     {
-      id: 'task-top1',
-      type: 'task',
+      id: 'habit-morning-deep-work',
+      type: 'habit',
       phase: 'deep-focus',
-      taskId: 'task-01',
-      title: 'Finish authentication architecture',
-      subtitle: 'Top 1 Priority · Core Security & JWT flow',
-      time: '09:00',
+      habitId: 'habit-morning-deep-work',
+      title: 'Morning Deep Work Session',
+      subtitle: 'Uninterrupted focus on high-impact core priorities',
+      icon: 'Brain',
+      time: '10:00',
       durationMinutes: 90,
-      priority: 'HIGH',
-      inFocus: false,
-      completedMinutes: 0,
-      totalMinutes: 90,
-      projectName: 'Productivity OS',
+      streak: 0,
+      completed: false,
+      frequency: 'Daily · Deep Focus Stack',
+      history: generateHistory(0),
       order: 6,
-      notes: 'Implement refresh tokens, user isolation tests, and session revocation.',
-    },
-    {
-      id: 'recharge-pause',
-      type: 'recharge',
-      phase: 'deep-focus',
-      rechargeKind: 'walk',
-      title: 'Eye Rest & Hydration Walk',
-      subtitle: 'Disengage focus network and look at distance',
-      time: '10:30',
-      durationMinutes: 15,
-      order: 7,
-      notes: 'Step away from screen. Look at horizon to relax ciliary eye muscles.',
-    },
-    {
-      id: 'task-top2',
-      type: 'task',
-      phase: 'deep-focus',
-      taskId: 'task-02',
-      title: 'Build task dashboard layout',
-      subtitle: 'Top 2 Priority · Kanban & List hybrid',
-      time: '10:45',
-      durationMinutes: 75,
-      priority: 'HIGH',
-      inFocus: false,
-      completedMinutes: 0,
-      totalMinutes: 75,
-      projectName: 'Productivity OS',
-      order: 8,
-      notes: 'Desktop 1600px responsive grid with priority column drag-drop.',
+      notes: 'No email, no Slack. 90 minutes of flow state on complex cognitive task.',
     },
 
     // Afternoon Phase
     {
-      id: 'recharge-lunch',
-      type: 'recharge',
-      phase: 'afternoon',
-      rechargeKind: 'nutrition',
-      title: 'Nutritious Lunch & Outdoor Walk',
-      subtitle: 'Balanced protein + low glycemic index carbs',
-      time: '12:00',
-      durationMinutes: 60,
-      order: 9,
-      notes: 'Avoid heavy sugars to prevent post-lunch sluggishness.',
-    },
-    {
-      id: 'task-top3',
-      type: 'task',
-      phase: 'afternoon',
-      taskId: 'task-03',
-      title: 'Review API implementation',
-      subtitle: 'Top 3 Priority · Verification & OpenAPI docs',
-      time: '13:00',
-      durationMinutes: 60,
-      priority: 'MEDIUM',
-      inFocus: false,
-      completedMinutes: 0,
-      totalMinutes: 60,
-      projectName: 'Productivity OS',
-      order: 10,
-      notes: 'Review error schemas, DTOs, and test coverage on PR #42.',
-    },
-    {
-      id: 'task-shallow',
-      type: 'task',
-      phase: 'afternoon',
-      taskId: 'task-05',
-      title: 'Write documentation & Team Sync',
-      subtitle: 'Low cognitive load · Clean inbox & sync updates',
-      time: '14:00',
-      durationMinutes: 60,
-      priority: 'LOW',
-      inFocus: false,
-      completedMinutes: 0,
-      totalMinutes: 60,
-      projectName: 'Productivity OS',
-      order: 11,
-      notes: 'Update README architecture diagrams and respond to team RFC comments.',
-    },
-    {
-      id: 'habit-afternoon-walk',
+      id: 'habit-lunch-reset',
       type: 'habit',
       phase: 'afternoon',
-      habitId: 'habit-afternoon-walk',
-      title: 'Afternoon Sunset Stride',
-      subtitle: 'Evening light cues to initiate melatonin onset',
-      icon: 'Footprints',
-      time: '16:00',
-      durationMinutes: 30,
-      streak: 4,
+      habitId: 'habit-lunch-reset',
+      title: 'Lunch Break & Reset: Eat, commute, relax / play game',
+      subtitle: 'Nutritious lunch, commute, relax & recharge',
+      icon: 'Gamepad2',
+      time: '12:00',
+      durationMinutes: 60,
+      streak: 0,
       completed: false,
       frequency: 'Daily · Afternoon Stack',
-      history: generateHistory(4),
-      order: 12,
-      notes: '20-30 min brisk walk outdoors during golden hour.',
+      history: generateHistory(0),
+      order: 7,
+      notes: 'Wholesome lunch, step away from screens or enjoy casual gaming/walk.',
+    },
+    {
+      id: 'habit-admin-meetings',
+      type: 'habit',
+      phase: 'afternoon',
+      habitId: 'habit-admin-meetings',
+      title: 'Daily Review, Admin & Meetings',
+      subtitle: 'Email review, admin coordination & syncs',
+      icon: 'Users',
+      time: '13:00',
+      durationMinutes: 60,
+      streak: 0,
+      completed: false,
+      frequency: 'Daily · Afternoon Stack',
+      history: generateHistory(0),
+      order: 8,
+      notes: 'Address messages, attend team standups/syncs, clear paperwork.',
+    },
+    {
+      id: 'habit-afternoon-deep-work',
+      type: 'habit',
+      phase: 'afternoon',
+      habitId: 'habit-afternoon-deep-work',
+      title: 'Afternoon Deep Work',
+      subtitle: 'Second deep focus block for key deliverables',
+      icon: 'Flame',
+      time: '14:00',
+      durationMinutes: 120,
+      streak: 0,
+      completed: false,
+      frequency: 'Daily · Afternoon Stack',
+      history: generateHistory(0),
+      order: 9,
+      notes: 'Two hours of deep execution on code, design, or architecture deliverables.',
+    },
+    {
+      id: 'habit-short-break',
+      type: 'habit',
+      phase: 'afternoon',
+      habitId: 'habit-short-break',
+      title: 'Short Break: Light Workout & Breathwork',
+      subtitle: 'Physical reset, stretching & parasympathetic breath',
+      icon: 'HeartPulse',
+      time: '16:30',
+      durationMinutes: 30,
+      streak: 0,
+      completed: false,
+      frequency: 'Daily · Afternoon Stack',
+      history: generateHistory(0),
+      order: 10,
+      notes: 'Stretch shoulders, walk around, 5 minutes physiological sigh or box breathing.',
+    },
+    {
+      id: 'habit-wrap-up',
+      type: 'habit',
+      phase: 'afternoon',
+      habitId: 'habit-wrap-up',
+      title: 'Continue Work & Wrap-Up',
+      subtitle: 'Close loops, tidy tasks & daily wrap-up',
+      icon: 'Briefcase',
+      time: '17:00',
+      durationMinutes: 90,
+      streak: 0,
+      completed: false,
+      frequency: 'Daily · Afternoon Stack',
+      history: generateHistory(0),
+      order: 11,
+      notes: 'Close out open PRs/tickets, log daily notes, clear desk for tomorrow.',
     },
 
     // Bedtime Sanctuary Phase
     {
-      id: 'habit-curfew',
+      id: 'habit-dinner',
       type: 'habit',
       phase: 'bedtime',
-      habitId: 'habit-curfew',
-      title: 'Digital Screen Curfew',
-      subtitle: 'Turn off blue light displays and dock phone away from bed',
-      icon: 'Moon',
-      time: '21:00',
-      durationMinutes: 15,
-      streak: 9,
+      habitId: 'habit-dinner',
+      title: 'Shower & Dinner',
+      subtitle: 'Evening shower and mindful dinner',
+      icon: 'Utensils',
+      time: '20:00',
+      durationMinutes: 30,
+      streak: 0,
       completed: false,
       frequency: 'Daily · Bedtime Stack',
-      history: generateHistory(9),
-      order: 13,
-      notes: 'All screens off. Night lighting turned to warm amber dim mode.',
+      history: generateHistory(0),
+      order: 12,
+      notes: 'Relaxing warm shower followed by a nutritious dinner; disconnect from work.',
     },
     {
-      id: 'habit-journal',
+      id: 'habit-hobby',
       type: 'habit',
       phase: 'bedtime',
-      habitId: 'habit-journal',
-      title: 'Evening Reflection & Fiction Reading',
-      subtitle: '3 wins of the day, brain dump & analog paper book',
+      habitId: 'habit-hobby',
+      title: 'Hobby Time',
+      subtitle: 'Creative expression, gaming, or personal projects',
+      icon: 'Sparkles',
+      time: '20:30',
+      durationMinutes: 60,
+      streak: 0,
+      completed: false,
+      frequency: 'Daily · Bedtime Stack',
+      history: generateHistory(0),
+      order: 13,
+      notes: 'Spend uninterrupted time on personal hobbies, music, or creative play.',
+    },
+    {
+      id: 'habit-reading',
+      type: 'habit',
+      phase: 'bedtime',
+      habitId: 'habit-reading',
+      title: 'Reading Time',
+      subtitle: 'Physical book or quiet reading',
       icon: 'BookOpen',
       time: '21:30',
       durationMinutes: 30,
-      streak: 21,
+      streak: 0,
       completed: false,
       frequency: 'Daily · Bedtime Stack',
-      history: generateHistory(21),
+      history: generateHistory(0),
       order: 14,
-      notes: 'Write 3 wins in physical notebook, read 15-20 pages fiction.',
+      notes: 'Read non-work literature or fiction in warm ambient light.',
+    },
+    {
+      id: 'habit-skill',
+      type: 'habit',
+      phase: 'bedtime',
+      habitId: 'habit-skill',
+      title: 'Learn New Skill',
+      subtitle: 'Dedicated self-improvement and study',
+      icon: 'GraduationCap',
+      time: '22:15',
+      durationMinutes: 50,
+      streak: 0,
+      completed: false,
+      frequency: 'Daily · Bedtime Stack',
+      history: generateHistory(0),
+      order: 15,
+      notes: 'Focused study or practice session to build a new capability.',
     },
     {
       id: 'habit-winddown',
       type: 'habit',
       phase: 'bedtime',
       habitId: 'habit-winddown',
-      title: 'Chamomile Tea & 4-7-8 Breathing',
-      subtitle: 'Down-regulate central nervous system',
-      icon: 'Coffee',
-      time: '22:00',
+      title: 'Wind-Down & Tomorrow Prep',
+      subtitle: 'Dim lights, prep clothing, calm central nervous system',
+      icon: 'Shirt',
+      time: '23:05',
       durationMinutes: 15,
-      streak: 11,
+      streak: 0,
       completed: false,
       frequency: 'Daily · Bedtime Stack',
-      history: generateHistory(11),
-      order: 15,
-      notes: 'Warm herbal tea, 5 minutes 4-7-8 parasympathetic breathing.',
+      history: generateHistory(0),
+      order: 16,
+      notes: 'Lay out clothes for tomorrow, dim bedroom lights, phone on airplane mode.',
     },
     {
       id: 'anchor-bedtime',
@@ -333,48 +365,49 @@ export function createMockScheduleGraph(): ScheduleGraph {
       phase: 'bedtime',
       anchorKind: 'bedtime',
       title: 'Sleep Target & Bedtime Terminus',
-      subtitle: 'Target 22:30 · 8h Recovery Sleep Target',
-      time: '22:30',
-      targetTime: '22:30',
-      projectedTime: '23:15',
-      overflowMinutes: 45,
-      durationMinutes: 480,
-      order: 16,
+      subtitle: 'Target 23:20 · 7h Recovery Sleep Target',
+      time: '23:20',
+      targetTime: '23:20',
+      projectedTime: '23:20',
+      overflowMinutes: 0,
+      durationMinutes: 420,
+      order: 17,
       notes: 'Room temperature 18°C, total blackout, earplugs ready.',
     },
   ]
 
   const edges: ScheduleEdge[] = [
     // Morning Stack
-    { id: 'e-wake-hydro', fromNodeId: 'anchor-wake', toNodeId: 'habit-hydration', type: 'sequential', active: true },
-    { id: 'e-hydro-workout', fromNodeId: 'habit-hydration', toNodeId: 'habit-workout', type: 'prerequisite', active: true },
-    { id: 'e-workout-shower', fromNodeId: 'habit-workout', toNodeId: 'habit-cold-shower', type: 'prerequisite', active: true },
-    { id: 'e-shower-plan', fromNodeId: 'habit-cold-shower', toNodeId: 'habit-planning', type: 'prerequisite', active: true },
-    { id: 'e-plan-top1', fromNodeId: 'habit-planning', toNodeId: 'task-top1', type: 'phase', active: true },
+    { id: 'e-wake-hydration', fromNodeId: 'anchor-wake', toNodeId: 'habit-hydration', type: 'sequential', active: false },
+    { id: 'e-hydration-workout', fromNodeId: 'habit-hydration', toNodeId: 'habit-workout', type: 'prerequisite', active: false },
+    { id: 'e-workout-grooming', fromNodeId: 'habit-workout', toNodeId: 'habit-grooming', type: 'prerequisite', active: false },
+    { id: 'e-grooming-plan', fromNodeId: 'habit-grooming', toNodeId: 'habit-planning', type: 'prerequisite', active: false },
+    { id: 'e-plan-morning-deep', fromNodeId: 'habit-planning', toNodeId: 'habit-morning-deep-work', type: 'phase', active: false },
 
     // Deep Focus
-    { id: 'e-top1-pause', fromNodeId: 'task-top1', toNodeId: 'recharge-pause', type: 'sequential', active: false },
-    { id: 'e-pause-top2', fromNodeId: 'recharge-pause', toNodeId: 'task-top2', type: 'sequential', active: false },
-    { id: 'e-top2-lunch', fromNodeId: 'task-top2', toNodeId: 'recharge-lunch', type: 'phase', active: false },
+    { id: 'e-morning-deep-lunch', fromNodeId: 'habit-morning-deep-work', toNodeId: 'habit-lunch-reset', type: 'phase', active: false },
 
     // Afternoon Momentum
-    { id: 'e-lunch-top3', fromNodeId: 'recharge-lunch', toNodeId: 'task-top3', type: 'sequential', active: false },
-    { id: 'e-top3-shallow', fromNodeId: 'task-top3', toNodeId: 'task-shallow', type: 'sequential', active: false },
-    { id: 'e-shallow-walk', fromNodeId: 'task-shallow', toNodeId: 'habit-afternoon-walk', type: 'prerequisite', active: false },
-    { id: 'e-walk-curfew', fromNodeId: 'habit-afternoon-walk', toNodeId: 'habit-curfew', type: 'phase', active: false },
+    { id: 'e-lunch-admin', fromNodeId: 'habit-lunch-reset', toNodeId: 'habit-admin-meetings', type: 'prerequisite', active: false },
+    { id: 'e-admin-afternoon-deep', fromNodeId: 'habit-admin-meetings', toNodeId: 'habit-afternoon-deep-work', type: 'prerequisite', active: false },
+    { id: 'e-afternoon-deep-break', fromNodeId: 'habit-afternoon-deep-work', toNodeId: 'habit-short-break', type: 'prerequisite', active: false },
+    { id: 'e-break-wrap', fromNodeId: 'habit-short-break', toNodeId: 'habit-wrap-up', type: 'prerequisite', active: false },
+    { id: 'e-wrap-dinner', fromNodeId: 'habit-wrap-up', toNodeId: 'habit-dinner', type: 'phase', active: false },
 
     // Bedtime Sanctuary
-    { id: 'e-curfew-journal', fromNodeId: 'habit-curfew', toNodeId: 'habit-journal', type: 'prerequisite', active: false },
-    { id: 'e-journal-tea', fromNodeId: 'habit-journal', toNodeId: 'habit-winddown', type: 'prerequisite', active: false },
-    { id: 'e-tea-bed', fromNodeId: 'habit-winddown', toNodeId: 'anchor-bedtime', type: 'sequential', active: false },
+    { id: 'e-dinner-hobby', fromNodeId: 'habit-dinner', toNodeId: 'habit-hobby', type: 'prerequisite', active: false },
+    { id: 'e-hobby-reading', fromNodeId: 'habit-hobby', toNodeId: 'habit-reading', type: 'prerequisite', active: false },
+    { id: 'e-reading-skill', fromNodeId: 'habit-reading', toNodeId: 'habit-skill', type: 'prerequisite', active: false },
+    { id: 'e-skill-winddown', fromNodeId: 'habit-skill', toNodeId: 'habit-winddown', type: 'prerequisite', active: false },
+    { id: 'e-winddown-bed', fromNodeId: 'habit-winddown', toNodeId: 'anchor-bedtime', type: 'sequential', active: false },
   ]
 
   return {
     date: new Date().toISOString().slice(0, 10),
-    wakeTime: '06:30',
-    targetBedtime: '22:30',
-    projectedBedtime: '23:15',
-    overflowMinutes: 45,
+    wakeTime: '06:20',
+    targetBedtime: '23:20',
+    projectedBedtime: '23:20',
+    overflowMinutes: 0,
     phases,
     nodes,
     edges,
@@ -421,8 +454,8 @@ export const useScheduleStore = defineStore('schedule', () => {
 
   const overflowMinutes = computed(() => graph.value?.overflowMinutes ?? 0)
   const isOverflowing = computed(() => overflowMinutes.value > 0)
-  const projectedBedtime = computed(() => graph.value?.projectedBedtime ?? '22:30')
-  const targetBedtime = computed(() => graph.value?.targetBedtime ?? '22:30')
+  const projectedBedtime = computed(() => graph.value?.projectedBedtime ?? '23:20')
+  const targetBedtime = computed(() => graph.value?.targetBedtime ?? '23:20')
 
   const bedtimeStatusMessage = computed(() => {
     if (isOverflowing.value) {
@@ -435,30 +468,25 @@ export const useScheduleStore = defineStore('schedule', () => {
   function recalculateBedtime(): void {
     if (!graph.value) return
 
-    // Count pending habits and incomplete tasks
-    const pendingHabits = habitNodes.value.filter((h) => !h.completed).length
-    const incompleteTasks = taskNodes.value.filter((t) => (t.completedMinutes ?? 0) < (t.totalMinutes ?? 60)).length
+    // Baseline scheduled habit minutes = 735 minutes
+    const baselineHabitDuration = 735
+    const totalHabitDuration = habitNodes.value.reduce(
+      (sum, h) => sum + (h.durationMinutes ?? 15),
+      0,
+    )
+    const habitDurationDelta = Math.max(0, totalHabitDuration - baselineHabitDuration)
 
-    // In the sample day, base overflow is 45m if afternoon/evening pending
-    // As items complete, overflow shrinks proportionally
-    let baseOverflow = 0
-    if (pendingHabits > 0 || incompleteTasks > 0) {
-      // 15m per pending habit/task up to max 45m
-      baseOverflow = Math.min(45, (pendingHabits + incompleteTasks) * 15)
-    }
-
-    // Additional duration overflow beyond standard 285m total planned task time (if any)
+    // Additional duration overflow beyond baseline from planned task activities (if any)
     const totalTaskMinutes = taskNodes.value.reduce(
       (sum, t) => sum + (t.durationMinutes ?? t.totalMinutes ?? 60),
       0,
     )
-    const durationDelta = Math.max(0, totalTaskMinutes - 285)
 
-    const newOverflow = baseOverflow + durationDelta
+    const newOverflow = habitDurationDelta + totalTaskMinutes
 
     graph.value.overflowMinutes = newOverflow
 
-    // Calculate projected time from 22:30 target
+    // Calculate projected time from target bedtime
     const [targetHour, targetMinute] = targetBedtime.value.split(':').map(Number)
     const totalMinutes = targetHour * 60 + targetMinute + newOverflow
     const projectedHour = Math.floor(totalMinutes / 60) % 24
@@ -477,7 +505,7 @@ export const useScheduleStore = defineStore('schedule', () => {
   }
 
   // Actions
-  function setLayout(mode: ScheduleLayoutMode): void {
+  function setLayout(mode: ScheduleLayoutMode = 'journey'): void {
     activeLayout.value = mode
     if (typeof window !== 'undefined') {
       try {
@@ -1036,9 +1064,9 @@ export const useScheduleStore = defineStore('schedule', () => {
       status.value = 'empty'
       graph.value = {
         date: date ?? todayISODate(),
-        wakeTime: '06:30',
-        targetBedtime: '22:30',
-        projectedBedtime: '22:30',
+        wakeTime: '06:20',
+        targetBedtime: '23:20',
+        projectedBedtime: '23:20',
         overflowMinutes: 0,
         phases: [],
         nodes: [],

@@ -110,17 +110,17 @@ describe('ScheduleTimeline', () => {
     const store = useScheduleStore()
     store.graph = createMockScheduleGraph()
 
-    const habit = store.nodes.find((n) => n.id === 'habit-curfew')!
+    const habit = store.nodes.find((n) => n.id === 'habit-winddown')!
     expect(habit.completed).toBe(false)
     const initialStreak = habit.streak ?? 0
 
     // Toggle to completed
-    await store.toggleHabit('habit-curfew')
+    await store.toggleHabit('habit-winddown')
     expect(habit.completed).toBe(true)
     expect(habit.streak).toBe(initialStreak + 1)
 
     // Toggle again (unchecking)
-    await store.toggleHabit('habit-curfew')
+    await store.toggleHabit('habit-winddown')
     expect(habit.completed).toBe(false)
     expect(habit.streak).toBe(initialStreak)
   })

@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import {
   ArrowRight,
   BookOpen,
+  Brain,
+  Briefcase,
   CalendarClock,
   Check,
   Coffee,
@@ -10,10 +12,16 @@ import {
   Dumbbell,
   Flame,
   Footprints,
+  Gamepad2,
+  GraduationCap,
+  HeartPulse,
   Moon,
+  Shirt,
   Smile,
   Sparkles,
   Target,
+  Users,
+  Utensils,
   Zap,
 } from 'lucide-vue-next'
 
@@ -50,23 +58,63 @@ function onKeydown(event: KeyboardEvent, taskId: string | null) {
 function getHabitIcon(iconName?: string) {
   switch (iconName) {
     case 'Droplets':
+    case 'drop.fill':
     case 'water':
       return Droplets
     case 'Dumbbell':
+    case 'figure.run':
     case 'dumbbell':
       return Dumbbell
     case 'Target':
+    case 'list.bullet.clipboard':
+    case 'target':
       return Target
+    case 'Brain':
+    case 'brain.head.profile':
+    case 'brain':
+      return Brain
+    case 'Gamepad2':
+    case 'gamecontroller.fill':
+    case 'gamepad':
+      return Gamepad2
+    case 'Users':
+    case 'person.2.fill':
+    case 'users':
+      return Users
+    case 'Flame':
+    case 'flame.fill':
+    case 'flame':
+      return Flame
+    case 'HeartPulse':
+    case 'figure.cooldown':
+    case 'heart':
+      return HeartPulse
+    case 'Briefcase':
+    case 'briefcase.fill':
+    case 'briefcase':
+      return Briefcase
+    case 'Utensils':
+    case 'fork.knife':
+    case 'dinner':
+      return Utensils
+    case 'BookOpen':
+    case 'book.fill':
+    case 'book':
+      return BookOpen
+    case 'GraduationCap':
+    case 'graduationcap.fill':
+    case 'learn':
+      return GraduationCap
+    case 'Shirt':
+    case 'tshirt.fill':
+    case 'shirt':
+      return Shirt
     case 'Footprints':
       return Footprints
     case 'Moon':
     case 'moon':
       return Moon
-    case 'BookOpen':
-    case 'book':
-      return BookOpen
     case 'Coffee':
-    case 'coffee':
       return Coffee
     case 'Zap':
     case 'zap':
@@ -75,6 +123,8 @@ function getHabitIcon(iconName?: string) {
     case 'smile':
       return Smile
     case 'Sparkles':
+    case 'shower.fill':
+    case 'sparkles':
       return Sparkles
     default:
       return Flame
