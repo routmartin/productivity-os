@@ -1093,6 +1093,28 @@ export const useScheduleStore = defineStore('schedule', () => {
     }
   }
 
+  async function resetToDefaultBlueprint(): Promise<void> {
+    status.value = 'loading'
+    errorMessage.value = null
+    try {
+      if (previewMode.value !== null) {
+        graph.value = createMockScheduleGraph()
+      } else {
+        const response = await scheduleApi.resetBlueprint()
+        graph.value = response
+      }
+      recalculateBedtime()
+      status.value = 'ready'
+    } catch (err) {
+      console.error('Failed to reset blueprint:', err)
+      status.value = 'error'
+      errorMessage.value = err instanceof Error ? err.message : 'Failed to load recommended schedule'
+      if (!graph.value) {
+        graph.value = createMockScheduleGraph()
+      }
+    }
+  }
+
   return {
     status,
     graph,
@@ -1131,5 +1153,6 @@ export const useScheduleStore = defineStore('schedule', () => {
     recalculateBedtime,
     rewireEdges,
     load,
+    resetToDefaultBlueprint,
   }
 })

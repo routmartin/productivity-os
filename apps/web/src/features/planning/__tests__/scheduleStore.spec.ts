@@ -358,3 +358,45 @@ describe('scheduleStore - layout preference migration (AC-001 amended)', () => {
   })
 })
 
+describe('scheduleStore - resetToDefaultBlueprint', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.restoreAllMocks()
+  })
+
+  it('loads mock schedule graph in preview mode', async () => {
+    const store = useScheduleStore()
+    store.previewMode = 'empty'
+
+    await store.resetToDefaultBlueprint()
+
+    expect(store.status).toBe('ready')
+    expect(store.graph).not.toBeNull()
+    expect(store.habitNodes.length).toBeGreaterThan(0)
+  })
+
+  it('calls scheduleApi.resetBlueprint and sets ready status when successful', async () => {
+    const store = useScheduleStore()
+    const mockGraph = createMockScheduleGraph()
+    const apiSpy = vi.spyOn(scheduleApi, 'resetBlueprint').mockResolvedValueOnce(mockGraph)
+
+    await store.resetToDefaultBlueprint()
+
+    expect(apiSpy).toHaveBeenCalledTimes(1)
+    expect(store.status).toBe('ready')
+    expect(store.graph).toEqual(mockGraph)
+    expect(store.habitNodes.length).toBe(15)
+  })
+
+  it('handles API error, setting error status and fallback message', async () => {
+    const store = useScheduleStore()
+    vi.spyOn(scheduleApi, 'resetBlueprint').mockRejectedValueOnce(new Error('Network error'))
+
+    await store.resetToDefaultBlueprint()
+
+    expect(store.status).toBe('error')
+    expect(store.errorMessage).toBe('Network error')
+  })
+})
+
+

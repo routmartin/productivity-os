@@ -22,6 +22,7 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.doNothing
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
@@ -88,6 +89,30 @@ class ScheduleControllerTest {
             .andExpect(jsonPath("$.targetBedtime").value("23:20"))
             .andExpect(jsonPath("$.projectedBedtime").value("23:20"))
             .andExpect(jsonPath("$.overflowMinutes").value(0))
+    }
+
+    // POST /api/v1/schedule/blueprint/reset
+    @Test
+    fun `resetBlueprint returns 200 OK with reset ScheduleGraphResponse`() {
+        val graphResponse = ScheduleGraphResponse(
+            date = date.toString(),
+            wakeTime = "06:20",
+            targetBedtime = "23:20",
+            projectedBedtime = "23:20",
+            overflowMinutes = 0,
+            phases = emptyList(),
+            nodes = emptyList(),
+            edges = emptyList()
+        )
+        `when`(scheduleService.resetToDefaultBlueprint(userId, date)).thenReturn(graphResponse)
+
+        mockMvc.perform(post("/api/v1/schedule/blueprint/reset"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.date").value("2026-11-11"))
+            .andExpect(jsonPath("$.wakeTime").value("06:20"))
+            .andExpect(jsonPath("$.targetBedtime").value("23:20"))
+
+        verify(scheduleService).resetToDefaultBlueprint(userId, date)
     }
 
     // AC-B03: POST /api/v1/schedule/habits/{id}/toggle

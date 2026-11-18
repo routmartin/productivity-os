@@ -78,6 +78,10 @@ class ScheduleService(
     )
 
     fun getSchedule(userId: UUID, date: LocalDate): ScheduleGraphResponse {
+        val habitCount = scheduleHabitRepository.countByUserIdAndDeletedAtIsNull(userId)
+        if (habitCount == 0L) {
+            seedDefaultBlueprint(userId, date)
+        }
         return buildScheduleGraph(userId, date)
     }
 
@@ -534,6 +538,22 @@ class ScheduleService(
             )
         )
         scheduleHabitRepository.saveAll(habits)
+    }
+
+    fun resetToDefaultBlueprint(userId: UUID, date: LocalDate? = null): ScheduleGraphResponse {
+        val targetDate = date ?: userTimezoneService.today(userId)
+        val now = clock.instant()
+        // Delete existing habits and entries for clean reset
+        val habits = scheduleHabitRepository.findByUserIdAndDeletedAtIsNullOrderByOrderIndexAsc(userId)
+        habits.forEach { it.deletedAt = now }
+        scheduleHabitRepository.saveAll(habits)
+
+        val entries = scheduleEntryRepository.findByUserIdAndCalendarDateAndDeletedAtIsNullOrderByOrderIndexAsc(userId, targetDate)
+        entries.forEach { it.deletedAt = now }
+        scheduleEntryRepository.saveAll(entries)
+
+        seedDefaultBlueprint(userId, targetDate)
+        return getSchedule(userId, targetDate)
     }
 
     private fun buildScheduleGraph(userId: UUID, date: LocalDate): ScheduleGraphResponse {

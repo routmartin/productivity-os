@@ -42,6 +42,13 @@ class ScheduleController(
         return ResponseEntity.ok(response)
     }
 
+    @PostMapping("/blueprint/reset")
+    fun resetBlueprint(): ResponseEntity<ScheduleGraphResponse> {
+        val today = userTimezoneService.today(currentUser.id())
+        val response = scheduleService.resetToDefaultBlueprint(currentUser.id(), today)
+        return ResponseEntity.ok(response)
+    }
+
     @PostMapping("/habits/{id}/toggle")
     fun toggleHabit(
         @PathVariable("id") habitId: UUID,

@@ -55,7 +55,11 @@ watch(
 
 const isLoading = computed(() => scheduleStore.status === 'loading' || scheduleStore.status === 'idle')
 const isError = computed(() => scheduleStore.status === 'error')
-const isEmpty = computed(() => scheduleStore.status === 'empty' || scheduleStore.nodes.length === 0)
+const isEmpty = computed(
+  () =>
+    scheduleStore.status === 'empty' ||
+    scheduleStore.nodes.filter((n) => n.type !== 'anchor').length === 0,
+)
 
 const formattedDate = computed(() => {
   if (scheduleStore.graph?.date) {
@@ -85,9 +89,8 @@ function onDismissError() {
   scheduleStore.errorMessage = null
 }
 
-function onLoadSample() {
-  const dateParam = typeof route.query.date === 'string' ? route.query.date : undefined
-  scheduleStore.load(null, dateParam)
+async function onLoadSample() {
+  await scheduleStore.resetToDefaultBlueprint()
 }
 </script>
 
@@ -177,6 +180,15 @@ function onLoadSample() {
         </div>
 
         <div class="header-right">
+          <UiButton
+            v-if="scheduleStore.habitNodes.length === 0 && !isLoading && !isError"
+            variant="subtle"
+            size="sm"
+            @click="onLoadSample"
+          >
+            <RotateCcw :size="14" />
+            <span>Load Recommended Blueprint</span>
+          </UiButton>
           <UiButton variant="primary" size="sm" @click="onOpenAddStep()">
             <Plus :size="14" />
             <span>Add Step</span>

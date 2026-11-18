@@ -125,10 +125,15 @@ async function updateStep(
   return apiClient.put<ScheduleNode>(`${BASE}/steps/${stepId}`, body)
 }
 
+async function resetBlueprint(): Promise<ScheduleGraphResponse> {
+  return apiClient.post<ScheduleGraphResponse>(`${BASE}/blueprint/reset`)
+}
+
 export const scheduleApi = {
   getSchedule,
   toggleHabit,
   addStep,
   deleteStep,
   updateStep,
+  resetBlueprint,
 }

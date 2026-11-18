@@ -80,7 +80,9 @@ class ScheduleServiceTest {
 
     // AC-B02: Baseline Blueprint Auto-Seeding (Spec AC-009)
     @Test
-    fun `fresh user accessing schedule returns empty middle graph when no habits or entries exist`() {
+    @Suppress("UNCHECKED_CAST")
+    fun `fresh user accessing schedule auto-seeds 15 baseline habits into habitRepository and zero entries`() {
+        `when`(habitRepository.countByUserIdAndDeletedAtIsNull(userId)).thenReturn(0L)
         `when`(habitRepository.findByUserIdAndDeletedAtIsNullOrderByOrderIndexAsc(userId)).thenReturn(emptyList())
         `when`(entryRepository.findByUserIdAndCalendarDateAndDeletedAtIsNullOrderByOrderIndexAsc(userId, date))
             .thenReturn(emptyList())
@@ -91,8 +93,11 @@ class ScheduleServiceTest {
 
         val response = service.getSchedule(userId, date)
 
-        // Habits must NOT be auto-seeded on schedule fetch
-        verify(habitRepository, never()).saveAll(anyList())
+        // Habits MUST be auto-seeded on schedule fetch when habit count is 0
+        val habitCaptor = ArgumentCaptor.forClass(List::class.java as Class<List<ScheduleHabitEntity>>)
+        verify(habitRepository).saveAll(habitCaptor.capture())
+        assertEquals(15, habitCaptor.value.size)
+
         // Entries must NOT be auto-seeded on schedule fetch
         verify(entryRepository, never()).saveAll(anyList())
 
@@ -105,6 +110,55 @@ class ScheduleServiceTest {
         assertEquals(4, response.phases.size)
         assertEquals(1, response.edges.size)
         assertEquals("e-anchor-wake-anchor-bedtime", response.edges.first().id)
+    }
+
+    @Test
+    @Suppress("UNCHECKED_CAST")
+    fun `resetToDefaultBlueprint soft deletes existing habits and entries and seeds default blueprint`() {
+        val existingHabit = ScheduleHabitEntity(
+            id = UUID.randomUUID(),
+            userId = userId,
+            title = "Old Habit",
+            phase = "morning",
+            createdAt = now.minusSeconds(3600)
+        )
+        val existingEntry = ScheduleEntryEntity(
+            id = UUID.randomUUID(),
+            userId = userId,
+            calendarDate = date,
+            stepType = "task",
+            phase = "morning",
+            title = "Old Entry",
+            createdAt = now.minusSeconds(3600)
+        )
+
+        `when`(habitRepository.findByUserIdAndDeletedAtIsNullOrderByOrderIndexAsc(userId))
+            .thenReturn(listOf(existingHabit))
+        `when`(entryRepository.findByUserIdAndCalendarDateAndDeletedAtIsNullOrderByOrderIndexAsc(userId, date))
+            .thenReturn(listOf(existingEntry))
+        `when`(habitRepository.countByUserIdAndDeletedAtIsNull(userId))
+            .thenReturn(15L)
+        `when`(occurrenceRepository.findByUserIdAndCalendarDate(userId, date))
+            .thenReturn(emptyList())
+        `when`(occurrenceRepository.findByUserIdAndCalendarDateBetween(userId, date.minusDays(365), date))
+            .thenReturn(emptyList())
+
+        val response = service.resetToDefaultBlueprint(userId, date)
+
+        assertEquals(now, existingHabit.deletedAt)
+        verify(entryRepository).saveAll(listOf(existingEntry))
+
+        val habitCaptor = ArgumentCaptor.forClass(List::class.java as Class<List<ScheduleHabitEntity>>)
+        verify(habitRepository, org.mockito.Mockito.times(2)).saveAll(habitCaptor.capture())
+        val allCaptured = habitCaptor.allValues
+        assertEquals(1, allCaptured[0].size)
+        assertEquals(existingHabit, allCaptured[0][0])
+        assertEquals(15, allCaptured[1].size)
+
+        assertNotNull(response)
+        assertEquals(date.toString(), response.date)
+        assertEquals("06:20", response.wakeTime)
+        assertEquals("23:20", response.targetBedtime)
     }
 
     @Test
