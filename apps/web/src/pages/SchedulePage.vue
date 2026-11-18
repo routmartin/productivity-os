@@ -18,10 +18,7 @@ import SkeletonBlock from '@/components/shared/SkeletonBlock.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import ScheduleAddStepDialog from '@/features/planning/components/ScheduleAddStepDialog.vue'
 import ScheduleContextPanel from '@/features/planning/components/ScheduleContextPanel.vue'
-import ScheduleViewSwitcher from '@/features/planning/components/ScheduleViewSwitcher.vue'
 import ScheduleJourneyLayout from '@/features/planning/components/layouts/ScheduleJourneyLayout.vue'
-import ScheduleMatrixLayout from '@/features/planning/components/layouts/ScheduleMatrixLayout.vue'
-import ScheduleSpineLayout from '@/features/planning/components/layouts/ScheduleSpineLayout.vue'
 import { useScheduleStore } from '@/features/planning/scheduleStore'
 import type { PreviewState } from '@/features/planning/types'
 
@@ -59,18 +56,6 @@ watch(
 const isLoading = computed(() => scheduleStore.status === 'loading' || scheduleStore.status === 'idle')
 const isError = computed(() => scheduleStore.status === 'error')
 const isEmpty = computed(() => scheduleStore.status === 'empty' || scheduleStore.nodes.length === 0)
-
-const activeLayoutComponent = computed(() => {
-  switch (scheduleStore.activeLayout) {
-    case 'journey':
-      return ScheduleJourneyLayout
-    case 'matrix':
-      return ScheduleMatrixLayout
-    case 'spine':
-    default:
-      return ScheduleSpineLayout
-  }
-})
 
 const formattedDate = computed(() => {
   if (scheduleStore.graph?.date) {
@@ -114,9 +99,6 @@ function onLoadSample() {
         <SkeletonBlock height="24px" width="180px" rounded="md" />
         <SkeletonBlock height="40px" width="360px" rounded="lg" />
         <SkeletonBlock height="20px" width="440px" rounded="md" />
-      </div>
-      <div class="skeleton-switcher">
-        <SkeletonBlock height="36px" width="280px" rounded="full" />
       </div>
       <SkeletonBlock height="540px" rounded="lg" />
     </div>
@@ -199,7 +181,6 @@ function onLoadSample() {
             <Plus :size="14" />
             <span>Add Step</span>
           </UiButton>
-          <ScheduleViewSwitcher v-model="scheduleStore.activeLayout" />
         </div>
       </header>
 
@@ -219,10 +200,10 @@ function onLoadSample() {
         </EmptyState>
       </div>
 
-      <!-- Active Layout Projection View (Spine | Journey | Matrix) -->
+      <!-- Active Layout Projection View (Serpentine Journey Link-Map) -->
       <main v-else class="schedule-canvas">
         <Transition name="layout-fade" mode="out-in">
-          <component :is="activeLayoutComponent" @add-step="onOpenAddStep" />
+          <ScheduleJourneyLayout @add-step="onOpenAddStep" />
         </Transition>
       </main>
 
@@ -325,11 +306,6 @@ function onLoadSample() {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-
-.skeleton-switcher {
-  display: flex;
-  justify-content: flex-end;
 }
 
 /* Page Header */

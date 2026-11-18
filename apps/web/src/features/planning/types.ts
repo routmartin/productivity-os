@@ -66,7 +66,7 @@ export interface CalendarEvent {
 }
 
 /** Layout projections for the Daily Schedule Link-Map (Spec AC-001). */
-export type ScheduleLayoutMode = 'spine' | 'journey' | 'matrix'
+export type ScheduleLayoutMode = 'journey'
 
 export type ScheduleNodeType = 'anchor' | 'habit' | 'task' | 'recharge'
 
