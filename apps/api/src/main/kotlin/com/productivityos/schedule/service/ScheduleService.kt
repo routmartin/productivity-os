@@ -40,8 +40,8 @@ class ScheduleService(
 ) {
 
     companion object {
-        const val WAKE_TIME = "06:30"
-        const val TARGET_BEDTIME = "22:30"
+        const val WAKE_TIME = "06:20"
+        const val TARGET_BEDTIME = "23:20"
         const val ANCHOR_WAKE_ID = "anchor-wake"
         const val ANCHOR_BEDTIME_ID = "anchor-bedtime"
     }
@@ -78,13 +78,6 @@ class ScheduleService(
     )
 
     fun getSchedule(userId: UUID, date: LocalDate): ScheduleGraphResponse {
-        val entryCount = scheduleEntryRepository
-            .findByUserIdAndCalendarDateAndDeletedAtIsNullOrderByOrderIndexAsc(userId, date).size
-
-        // if (entryCount == 0) {
-        //     seedDefaultEntriesForDate(userId, date)
-        // }
-
         return buildScheduleGraph(userId, date)
     }
 
@@ -357,198 +350,190 @@ class ScheduleService(
 
     fun seedDefaultBlueprint(userId: UUID, date: LocalDate? = null) {
         val now = clock.instant()
-        val targetDate = date ?: userTimezoneService.today(userId)
 
-        // Seed standard 5 baseline habits (AC-B02)
         val habits = listOf(
             ScheduleHabitEntity(
                 userId = userId,
-                title = "Hydration & Mineral Salts",
-                subtitle = "Rehydrate brain and kickstart metabolism",
+                title = "Deep Breaths & Hydration",
+                subtitle = "Kickstart metabolism & oxygenate brain",
                 icon = "drop.fill",
                 phase = SchedulePhaseId.MORNING.value,
-                targetTime = "06:45",
-                durationMinutes = 15,
+                targetTime = "06:20",
+                durationMinutes = 10,
                 orderIndex = 2,
-                notes = "Filtered water with a pinch of Himalayan pink salt and lemon.",
+                notes = "Full glass of water, 10 deep diaphragmatic breaths.",
                 createdAt = now
             ),
             ScheduleHabitEntity(
                 userId = userId,
-                title = "Zone 2 Cardio & Mobility",
-                subtitle = "Light jog or bodyweight mobility flow",
+                title = "Morning Run or Workout",
+                subtitle = "Cardio, mobility & morning energy",
                 icon = "figure.run",
                 phase = SchedulePhaseId.MORNING.value,
-                targetTime = "07:00",
-                durationMinutes = 45,
+                targetTime = "06:30",
+                durationMinutes = 30,
                 orderIndex = 3,
-                notes = "Elevate heart rate to 125-135 bpm for mitochondrial health.",
+                notes = "Outdoor run or indoor workout to elevate heart rate and boost dopamine.",
                 createdAt = now
             ),
             ScheduleHabitEntity(
                 userId = userId,
-                title = "Cold Rinse & Grooming",
-                subtitle = "Dopamine surge and alertness spike",
+                title = "Grooming & Get Ready: Shower, teeth, dress up",
+                subtitle = "Shower, brush teeth, dress up & prepare",
                 icon = "shower.fill",
                 phase = SchedulePhaseId.MORNING.value,
-                targetTime = "07:45",
-                durationMinutes = 15,
+                targetTime = "07:00",
+                durationMinutes = 40,
                 orderIndex = 4,
-                notes = "2 minutes cold finish to boost norepinephrine.",
+                notes = "Warm shower with cool rinse finish, brush teeth, prepare clothes.",
                 createdAt = now
             ),
             ScheduleHabitEntity(
                 userId = userId,
-                title = "Daily Top 3 Planning",
-                subtitle = "Review priorities and calibrate focus blocks",
-                icon = "target",
+                title = "Arrive Work & Daily Task Planning",
+                subtitle = "Set up workspace & lock in daily task priorities",
+                icon = "list.bullet.clipboard",
                 phase = SchedulePhaseId.MORNING.value,
-                targetTime = "08:15",
-                durationMinutes = 30,
+                targetTime = "09:30",
+                durationMinutes = 20,
                 orderIndex = 5,
-                notes = "Lock in Daily Top 3 and silence notification channels.",
+                notes = "Arrive at office/desk, review daily agenda, set Top 3 priorities.",
                 createdAt = now
             ),
             ScheduleHabitEntity(
                 userId = userId,
-                title = "Evening Wind-Down",
-                subtitle = "Down-regulate central nervous system",
-                icon = "cup.and.saucer.fill",
+                title = "Morning Deep Work Session",
+                subtitle = "Uninterrupted focus on high-impact core priorities",
+                icon = "brain.head.profile",
+                phase = SchedulePhaseId.DEEP_FOCUS.value,
+                targetTime = "10:00",
+                durationMinutes = 90,
+                orderIndex = 6,
+                notes = "No email, no Slack. 90 minutes of flow state on complex cognitive task.",
+                createdAt = now
+            ),
+            ScheduleHabitEntity(
+                userId = userId,
+                title = "Lunch Break & Reset: Eat, commute, relax / play game",
+                subtitle = "Nutritious lunch, commute, relax & recharge",
+                icon = "gamecontroller.fill",
+                phase = SchedulePhaseId.AFTERNOON.value,
+                targetTime = "12:00",
+                durationMinutes = 60,
+                orderIndex = 7,
+                notes = "Wholesome lunch, step away from screens or enjoy casual gaming/walk.",
+                createdAt = now
+            ),
+            ScheduleHabitEntity(
+                userId = userId,
+                title = "Daily Review, Admin & Meetings",
+                subtitle = "Email review, admin coordination & syncs",
+                icon = "person.2.fill",
+                phase = SchedulePhaseId.AFTERNOON.value,
+                targetTime = "13:00",
+                durationMinutes = 60,
+                orderIndex = 8,
+                notes = "Address messages, attend team standups/syncs, clear paperwork.",
+                createdAt = now
+            ),
+            ScheduleHabitEntity(
+                userId = userId,
+                title = "Afternoon Deep Work",
+                subtitle = "Second deep focus block for key deliverables",
+                icon = "flame.fill",
+                phase = SchedulePhaseId.AFTERNOON.value,
+                targetTime = "14:00",
+                durationMinutes = 120,
+                orderIndex = 9,
+                notes = "Two hours of deep execution on code, design, or architecture deliverables.",
+                createdAt = now
+            ),
+            ScheduleHabitEntity(
+                userId = userId,
+                title = "Short Break: Light Workout & Breathwork",
+                subtitle = "Physical reset, stretching & parasympathetic breath",
+                icon = "figure.cooldown",
+                phase = SchedulePhaseId.AFTERNOON.value,
+                targetTime = "16:30",
+                durationMinutes = 30,
+                orderIndex = 10,
+                notes = "Stretch shoulders, walk around, 5 minutes physiological sigh or box breathing.",
+                createdAt = now
+            ),
+            ScheduleHabitEntity(
+                userId = userId,
+                title = "Continue Work & Wrap-Up",
+                subtitle = "Close loops, tidy tasks & daily wrap-up",
+                icon = "briefcase.fill",
+                phase = SchedulePhaseId.AFTERNOON.value,
+                targetTime = "17:00",
+                durationMinutes = 90,
+                orderIndex = 11,
+                notes = "Close out open PRs/tickets, log daily notes, clear desk for tomorrow.",
+                createdAt = now
+            ),
+            ScheduleHabitEntity(
+                userId = userId,
+                title = "Shower & Dinner",
+                subtitle = "Evening shower and mindful dinner",
+                icon = "fork.knife",
                 phase = SchedulePhaseId.BEDTIME.value,
-                targetTime = "22:00",
-                durationMinutes = 15,
+                targetTime = "20:00",
+                durationMinutes = 30,
+                orderIndex = 12,
+                notes = "Relaxing warm shower followed by a nutritious dinner; disconnect from work.",
+                createdAt = now
+            ),
+            ScheduleHabitEntity(
+                userId = userId,
+                title = "Hobby Time",
+                subtitle = "Creative expression, gaming, or personal projects",
+                icon = "sparkles",
+                phase = SchedulePhaseId.BEDTIME.value,
+                targetTime = "20:30",
+                durationMinutes = 60,
+                orderIndex = 13,
+                notes = "Spend uninterrupted time on personal hobbies, music, or creative play.",
+                createdAt = now
+            ),
+            ScheduleHabitEntity(
+                userId = userId,
+                title = "Reading Time",
+                subtitle = "Physical book or quiet reading",
+                icon = "book.fill",
+                phase = SchedulePhaseId.BEDTIME.value,
+                targetTime = "21:30",
+                durationMinutes = 30,
+                orderIndex = 14,
+                notes = "Read non-work literature or fiction in warm ambient light.",
+                createdAt = now
+            ),
+            ScheduleHabitEntity(
+                userId = userId,
+                title = "Learn New Skill",
+                subtitle = "Dedicated self-improvement and study",
+                icon = "graduationcap.fill",
+                phase = SchedulePhaseId.BEDTIME.value,
+                targetTime = "22:15",
+                durationMinutes = 50,
                 orderIndex = 15,
-                notes = "Warm herbal tea, 5 minutes 4-7-8 parasympathetic breathing.",
+                notes = "Focused study or practice session to build a new capability.",
+                createdAt = now
+            ),
+            ScheduleHabitEntity(
+                userId = userId,
+                title = "Wind-Down & Tomorrow Prep",
+                subtitle = "Dim lights, prep clothing, calm central nervous system",
+                icon = "tshirt.fill",
+                phase = SchedulePhaseId.BEDTIME.value,
+                targetTime = "23:05",
+                durationMinutes = 15,
+                orderIndex = 16,
+                notes = "Lay out clothes for tomorrow, dim bedroom lights, phone on airplane mode.",
                 createdAt = now
             )
         )
         scheduleHabitRepository.saveAll(habits)
-
-        seedDefaultEntriesForDate(userId, targetDate)
-    }
-
-    private fun seedDefaultEntriesForDate(userId: UUID, date: LocalDate) {
-        val now = clock.instant()
-        val entries = listOf(
-            ScheduleEntryEntity(
-                userId = userId,
-                calendarDate = date,
-                stepType = ScheduleNodeType.TASK.value,
-                phase = SchedulePhaseId.DEEP_FOCUS.value,
-                title = "Finish authentication architecture",
-                subtitle = "Top 1 Priority · Core Security & JWT flow",
-                timeLabel = "09:00",
-                durationMinutes = 90,
-                orderIndex = 6,
-                notes = "Implement refresh tokens, user isolation tests, and session revocation.",
-                createdAt = now
-            ),
-            ScheduleEntryEntity(
-                userId = userId,
-                calendarDate = date,
-                stepType = ScheduleNodeType.RECHARGE.value,
-                phase = SchedulePhaseId.DEEP_FOCUS.value,
-                title = "Eye Rest & Hydration Walk",
-                subtitle = "Disengage focus network and look at distance",
-                timeLabel = "10:30",
-                durationMinutes = 15,
-                orderIndex = 7,
-                notes = "Step away from screen. Look at horizon to relax ciliary eye muscles.",
-                createdAt = now
-            ),
-            ScheduleEntryEntity(
-                userId = userId,
-                calendarDate = date,
-                stepType = ScheduleNodeType.TASK.value,
-                phase = SchedulePhaseId.DEEP_FOCUS.value,
-                title = "Build task dashboard layout",
-                subtitle = "Top 2 Priority · Kanban & List hybrid",
-                timeLabel = "10:45",
-                durationMinutes = 75,
-                orderIndex = 8,
-                notes = "Desktop 1600px responsive grid with priority column drag-drop.",
-                createdAt = now
-            ),
-            ScheduleEntryEntity(
-                userId = userId,
-                calendarDate = date,
-                stepType = ScheduleNodeType.RECHARGE.value,
-                phase = SchedulePhaseId.AFTERNOON.value,
-                title = "Nutritious Lunch & Outdoor Walk",
-                subtitle = "Balanced protein + low glycemic index carbs",
-                timeLabel = "12:00",
-                durationMinutes = 60,
-                orderIndex = 9,
-                notes = "Avoid heavy sugars to prevent post-lunch sluggishness.",
-                createdAt = now
-            ),
-            ScheduleEntryEntity(
-                userId = userId,
-                calendarDate = date,
-                stepType = ScheduleNodeType.TASK.value,
-                phase = SchedulePhaseId.AFTERNOON.value,
-                title = "Review API implementation",
-                subtitle = "Top 3 Priority · Verification & OpenAPI docs",
-                timeLabel = "13:00",
-                durationMinutes = 60,
-                orderIndex = 10,
-                notes = "Review error schemas, DTOs, and test coverage on PR #42.",
-                createdAt = now
-            ),
-            ScheduleEntryEntity(
-                userId = userId,
-                calendarDate = date,
-                stepType = ScheduleNodeType.TASK.value,
-                phase = SchedulePhaseId.AFTERNOON.value,
-                title = "Write documentation & Team Sync",
-                subtitle = "Low cognitive load · Clean inbox & sync updates",
-                timeLabel = "14:00",
-                durationMinutes = 60,
-                orderIndex = 11,
-                notes = "Update README architecture diagrams and respond to team RFC comments.",
-                createdAt = now
-            ),
-            ScheduleEntryEntity(
-                userId = userId,
-                calendarDate = date,
-                stepType = ScheduleNodeType.RECHARGE.value,
-                phase = SchedulePhaseId.AFTERNOON.value,
-                title = "Afternoon Sunset Stride",
-                subtitle = "Evening light cues to initiate melatonin onset",
-                timeLabel = "16:00",
-                durationMinutes = 30,
-                orderIndex = 12,
-                notes = "20-30 min brisk walk outdoors during golden hour.",
-                createdAt = now
-            ),
-            ScheduleEntryEntity(
-                userId = userId,
-                calendarDate = date,
-                stepType = ScheduleNodeType.RECHARGE.value,
-                phase = SchedulePhaseId.BEDTIME.value,
-                title = "Digital Screen Curfew",
-                subtitle = "Turn off blue light displays and dock phone away from bed",
-                timeLabel = "21:00",
-                durationMinutes = 15,
-                orderIndex = 13,
-                notes = "All screens off. Night lighting turned to warm amber dim mode.",
-                createdAt = now
-            ),
-            ScheduleEntryEntity(
-                userId = userId,
-                calendarDate = date,
-                stepType = ScheduleNodeType.RECHARGE.value,
-                phase = SchedulePhaseId.BEDTIME.value,
-                title = "Evening Reflection & Fiction Reading",
-                subtitle = "3 wins of the day, brain dump & analog paper book",
-                timeLabel = "21:30",
-                durationMinutes = 30,
-                orderIndex = 14,
-                notes = "Write 3 wins in physical notebook, read 15-20 pages fiction.",
-                createdAt = now
-            )
-        )
-        scheduleEntryRepository.saveAll(entries)
     }
 
     private fun buildScheduleGraph(userId: UUID, date: LocalDate): ScheduleGraphResponse {
@@ -623,10 +608,10 @@ class ScheduleService(
             id = ANCHOR_WAKE_ID,
             type = ScheduleNodeType.ANCHOR.value,
             phase = SchedulePhaseId.MORNING.value,
-            title = "Wake Up & Natural Sunlight",
+            title = "Wake Up & Circadian Anchor",
             subtitle = "Anchor routine to reset circadian clock",
             time = WAKE_TIME,
-            durationMinutes = 15,
+            durationMinutes = 10,
             anchorKind = "wake",
             targetTime = WAKE_TIME,
             notes = "Get 10 minutes of direct sunlight outdoors within 30 minutes of waking.",
@@ -638,15 +623,15 @@ class ScheduleService(
             type = ScheduleNodeType.ANCHOR.value,
             phase = SchedulePhaseId.BEDTIME.value,
             title = "Sleep Target & Bedtime Terminus",
-            subtitle = "Target $TARGET_BEDTIME · 8h Recovery Sleep Target",
+            subtitle = "Target $TARGET_BEDTIME · 7h Recovery Sleep Target",
             time = TARGET_BEDTIME,
-            durationMinutes = 480,
+            durationMinutes = 420,
             anchorKind = "bedtime",
             targetTime = TARGET_BEDTIME,
             projectedTime = projectedBedtime,
             overflowMinutes = overflowMinutes,
             notes = "Room temperature 18°C, total blackout, earplugs ready.",
-            order = 16
+            order = 17
         )
 
         val phaseOrder = mapOf(
@@ -661,7 +646,11 @@ class ScheduleService(
                 .thenBy { it.order ?: 999 }
         )
 
-        val allNodes = listOf(wakeAnchor) + middleNodes + listOf(bedtimeAnchor)
+        val allNodes = buildList {
+            addAll(listOf(wakeAnchor))
+            addAll(middleNodes)
+            addAll(listOf(bedtimeAnchor))
+        }
 
         // Topological Edge Wiring
         val edges = ArrayList<ScheduleEdgeDTO>()

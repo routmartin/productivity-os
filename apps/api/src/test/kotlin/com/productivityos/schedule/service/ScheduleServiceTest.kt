@@ -80,26 +80,10 @@ class ScheduleServiceTest {
 
     // AC-B02: Baseline Blueprint Auto-Seeding (Spec AC-009)
     @Test
-    @Suppress("UNCHECKED_CAST")
-    fun `fresh user accessing schedule seeds default entries but does not auto-seed habits`() {
-        val entryCaptor = ArgumentCaptor.forClass(List::class.java as Class<List<ScheduleEntryEntity>>)
-
-        val seededEntries = (6..14).map { idx ->
-            ScheduleEntryEntity(
-                id = UUID.randomUUID(),
-                userId = userId,
-                calendarDate = date,
-                stepType = if (idx in listOf(6, 8, 10, 11)) "task" else "recharge",
-                phase = if (idx in 6..8) "deep-focus" else if (idx in 9..12) "afternoon" else "bedtime",
-                title = "Entry $idx",
-                orderIndex = idx,
-                createdAt = now
-            )
-        }
-
+    fun `fresh user accessing schedule returns empty middle graph when no habits or entries exist`() {
         `when`(habitRepository.findByUserIdAndDeletedAtIsNullOrderByOrderIndexAsc(userId)).thenReturn(emptyList())
         `when`(entryRepository.findByUserIdAndCalendarDateAndDeletedAtIsNullOrderByOrderIndexAsc(userId, date))
-            .thenReturn(emptyList(), seededEntries)
+            .thenReturn(emptyList())
 
         `when`(occurrenceRepository.findByUserIdAndCalendarDate(userId, date)).thenReturn(emptyList())
         `when`(occurrenceRepository.findByUserIdAndCalendarDateBetween(userId, date.minusDays(365), date))
@@ -109,38 +93,47 @@ class ScheduleServiceTest {
 
         // Habits must NOT be auto-seeded on schedule fetch
         verify(habitRepository, never()).saveAll(anyList())
+        // Entries must NOT be auto-seeded on schedule fetch
+        verify(entryRepository, never()).saveAll(anyList())
 
-        // Default entries are seeded when entryCount == 0
-        verify(entryRepository).saveAll(entryCaptor.capture())
-        assertEquals(9, entryCaptor.value.size)
-
-        // 11-node circadian graph: 2 anchors + 0 habits + 9 entries
-        assertEquals(11, response.nodes.size)
+        // 2-node circadian graph: 2 anchors (wake and bedtime), 0 habits, 0 entries
+        assertEquals(2, response.nodes.size)
         assertEquals("anchor-wake", response.nodes.first().id)
         assertEquals("anchor-bedtime", response.nodes.last().id)
+        assertEquals("06:20", response.wakeTime)
+        assertEquals("23:20", response.targetBedtime)
         assertEquals(4, response.phases.size)
-        assertEquals(10, response.edges.size)
+        assertEquals(1, response.edges.size)
+        assertEquals("e-anchor-wake-anchor-bedtime", response.edges.first().id)
     }
 
     @Test
     @Suppress("UNCHECKED_CAST")
-    fun `seedDefaultBlueprint seeds 5 baseline habits and default entries when called directly`() {
+    fun `seedDefaultBlueprint seeds 15 baseline habits and zero entries when called directly`() {
         val habitCaptor = ArgumentCaptor.forClass(List::class.java as Class<List<ScheduleHabitEntity>>)
-        val entryCaptor = ArgumentCaptor.forClass(List::class.java as Class<List<ScheduleEntryEntity>>)
 
         service.seedDefaultBlueprint(userId, date)
 
         verify(habitRepository).saveAll(habitCaptor.capture())
-        assertEquals(5, habitCaptor.value.size)
+        assertEquals(15, habitCaptor.value.size)
         val habitTitles = habitCaptor.value.map { it.title }
-        assertTrue(habitTitles.contains("Hydration & Mineral Salts"))
-        assertTrue(habitTitles.contains("Zone 2 Cardio & Mobility"))
-        assertTrue(habitTitles.contains("Cold Rinse & Grooming"))
-        assertTrue(habitTitles.contains("Daily Top 3 Planning"))
-        assertTrue(habitTitles.contains("Evening Wind-Down"))
+        assertTrue(habitTitles.contains("Deep Breaths & Hydration"))
+        assertTrue(habitTitles.contains("Morning Run or Workout"))
+        assertTrue(habitTitles.contains("Grooming & Get Ready: Shower, teeth, dress up"))
+        assertTrue(habitTitles.contains("Arrive Work & Daily Task Planning"))
+        assertTrue(habitTitles.contains("Morning Deep Work Session"))
+        assertTrue(habitTitles.contains("Lunch Break & Reset: Eat, commute, relax / play game"))
+        assertTrue(habitTitles.contains("Daily Review, Admin & Meetings"))
+        assertTrue(habitTitles.contains("Afternoon Deep Work"))
+        assertTrue(habitTitles.contains("Short Break: Light Workout & Breathwork"))
+        assertTrue(habitTitles.contains("Continue Work & Wrap-Up"))
+        assertTrue(habitTitles.contains("Shower & Dinner"))
+        assertTrue(habitTitles.contains("Hobby Time"))
+        assertTrue(habitTitles.contains("Reading Time"))
+        assertTrue(habitTitles.contains("Learn New Skill"))
+        assertTrue(habitTitles.contains("Wind-Down & Tomorrow Prep"))
 
-        verify(entryRepository).saveAll(entryCaptor.capture())
-        assertEquals(9, entryCaptor.value.size)
+        verify(entryRepository, never()).saveAll(anyList())
     }
 
     // AC-B01: Unified Schedule Graph Retrieval
@@ -166,8 +159,8 @@ class ScheduleServiceTest {
         val response = service.getSchedule(userId, date)
 
         assertEquals(date.toString(), response.date)
-        assertEquals("06:30", response.wakeTime)
-        assertEquals("22:30", response.targetBedtime)
+        assertEquals("06:20", response.wakeTime)
+        assertEquals("23:20", response.targetBedtime)
         assertEquals(4, response.phases.size)
         // Wake anchor + 1 habit + Bedtime anchor = 3 nodes
         assertEquals(3, response.nodes.size)
@@ -327,10 +320,10 @@ class ScheduleServiceTest {
         val response = service.getSchedule(userId, date)
 
         assertEquals(30, response.overflowMinutes)
-        assertEquals("23:00", response.projectedBedtime)
+        assertEquals("23:50", response.projectedBedtime)
         val bedtimeNode = response.nodes.first { it.id == "anchor-bedtime" }
         assertEquals(30, bedtimeNode.overflowMinutes)
-        assertEquals("23:00", bedtimeNode.projectedTime)
+        assertEquals("23:50", bedtimeNode.projectedTime)
     }
 
     // AC-B06: In-Line Step Creation

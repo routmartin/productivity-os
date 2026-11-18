@@ -30,28 +30,28 @@ enum class SchedulePhaseId(
         "morning",
         "Morning Activation",
         "Rise, hydrate, move & set daily direction",
-        "06:30 – 09:00",
+        "06:20 – 10:00",
         "warning"
     ),
     DEEP_FOCUS(
         "deep-focus",
         "Deep Focus Work",
-        "Uninterrupted creative flow on Top 1 & Top 2",
-        "09:00 – 12:30",
+        "Uninterrupted creative flow on primary deliverables",
+        "10:00 – 12:00",
         "accent"
     ),
     AFTERNOON(
         "afternoon",
         "Afternoon Momentum",
-        "Top 3, collaboration, shallow work & reset",
-        "12:30 – 18:00",
+        "Review, collaboration, deep execution & wrap-up",
+        "12:00 – 18:30",
         "blue"
     ),
     BEDTIME(
         "bedtime",
         "Bedtime Sanctuary",
-        "Digital curfew, reflection, reading & sleep recovery",
-        "21:00 – 22:30",
+        "Dinner, decompression, learning & sleep recovery",
+        "20:00 – 23:20",
         "success"
     );
 

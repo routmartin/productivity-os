@@ -71,9 +71,9 @@ class ScheduleControllerTest {
     fun `getSchedule returns 200 OK with ScheduleGraphResponse`() {
         val graphResponse = ScheduleGraphResponse(
             date = date.toString(),
-            wakeTime = "06:30",
-            targetBedtime = "22:30",
-            projectedBedtime = "22:30",
+            wakeTime = "06:20",
+            targetBedtime = "23:20",
+            projectedBedtime = "23:20",
             overflowMinutes = 0,
             phases = emptyList(),
             nodes = emptyList(),
@@ -84,9 +84,9 @@ class ScheduleControllerTest {
         mockMvc.perform(get("/api/v1/schedule/2026-11-11"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.date").value("2026-11-11"))
-            .andExpect(jsonPath("$.wakeTime").value("06:30"))
-            .andExpect(jsonPath("$.targetBedtime").value("22:30"))
-            .andExpect(jsonPath("$.projectedBedtime").value("22:30"))
+            .andExpect(jsonPath("$.wakeTime").value("06:20"))
+            .andExpect(jsonPath("$.targetBedtime").value("23:20"))
+            .andExpect(jsonPath("$.projectedBedtime").value("23:20"))
             .andExpect(jsonPath("$.overflowMinutes").value(0))
     }
 
@@ -100,7 +100,7 @@ class ScheduleControllerTest {
             streak = 5,
             history = emptyList(),
             updatedEdges = emptyList(),
-            projectedBedtime = "22:30",
+            projectedBedtime = "23:20",
             overflowMinutes = 0
         )
         val request = ToggleHabitRequest(date = date)
